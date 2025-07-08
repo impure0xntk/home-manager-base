@@ -1,0 +1,16 @@
+[terminal.shell]
+# program = "powershell.exe"
+# args = [ "~" ]
+program = "busybox64u.exe"
+args = [ "bash" ]
+[window]
+opacity = 0.8
+[keyboard]
+bindings = [
+  # https://www.reddit.com/r/neovim/comments/mbj8m5/how_to_setup_ctrlshiftkey_mappings_in_neovim_and/
+  # https://github.com/alacritty/alacritty/issues/4090#issuecomment-1705918869
+  # { key = "J", mods = "Control|Shift", chars = "\x1b[74;5u" },
+  { key = "F", mods = "Control|Shift", chars = "\u001b[70;5u" },
+  { key = "Slash", mods = "Control", chars = "\u001f" },
+]
+
