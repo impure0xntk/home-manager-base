@@ -53,22 +53,31 @@
         inherit system;
       };
       lib = nixpkgs.lib.extend nix-lib.overlays.default;
-    in
-    {
-      homeManagerModules.myHomeModules = {...}: {
-        nixpkgs = {
-          config.allowUnfree = true;
-          overlays = nix-pkgs.nixpkgs.overlays ++ [
-            nix4vscode.overlays.forVscode
-            mcp-servers-nix.overlays.default
-          ];
-        };
+      
+      createModules = args: {...}: args // {
         imports = [
           vscode-server.homeModules.default
           sops-nix.homeManagerModules.sops
         ] ++ (lib.flatten (
           lib.forEach [ ./modules ] (path: lib.my.listDefaultNixDirs { inherit path; })
         ));
+      };
+      overlays = nix-pkgs.nixpkgs.overlays ++ [
+        nix4vscode.overlays.forVscode
+        mcp-servers-nix.overlays.default
+      ];
+    in
+    {
+      # For nixos: import myHomeModules and overlays separately
+      nixosModules.myHomeModules = createModules {};
+      nixpkgs.overlays = overlays;
+
+      # For home-manager
+      homeManagerModules.myHomeModules = createModules {
+        nixpkgs = {
+          config.allowUnfree = true;
+          overlays = overlays;
+        };
       };
 
       homeManagerModules.myHomePlatform = {
