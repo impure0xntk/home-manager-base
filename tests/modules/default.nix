@@ -3,7 +3,7 @@
 (home-manager.lib.homeManagerConfiguration {
   inherit pkgs lib;
   modules = [
-    self.homeManagerModules.myHomeModulesStandalone
+    self.homeManagerModules.myHomeModules
     self.homeManagerModules.myHomePlatform.native-linux
     {
       home.stateVersion = "25.05";
@@ -11,6 +11,9 @@
       home.homeDirectory = "/home/nixos";
 
       my.home.networks.hostname = "nixos";
+
+      # my.home.ai.enable = true;
+      my.home.languages.java.enable = true;
     }
   ];
 }).activationPackage
