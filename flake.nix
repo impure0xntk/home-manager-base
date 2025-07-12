@@ -62,6 +62,11 @@
           lib.forEach [ ./modules ] (path: lib.my.listDefaultNixDirs { inherit path; })
         ));
       };
+      platform = {
+        native-linux = {...}: {imports = [./platform/native-linux];};
+        docker = {...}: {imports = [./platform/docker];};
+        wsl = {...}: {imports = [./platform/wsl];};
+      };
       overlays = nix-pkgs.nixpkgs.overlays ++ [
         nix4vscode.overlays.forVscode
         mcp-servers-nix.overlays.default
@@ -69,23 +74,26 @@
     in
     {
       # For nixos: import myHomeModules and overlays separately
-      nixosModules.myHomeModules = createModules {};
-      nixpkgs.overlays = overlays;
+      nixosModules = {
+        myHomeModules = createModules {};
+        myHomePlatform = platform;
+        nixpkgs.overlays = overlays;
+      };
 
       # For home-manager
-      homeManagerModules.myHomeModules = createModules {
-        nixpkgs = {
-          config.allowUnfree = true;
-          overlays = overlays;
+      homeManagerModules = {
+        myHomeModules = createModules {
+          nixpkgs = {
+            config.allowUnfree = true;
+            overlays = overlays;
+          };
         };
+        myHomePlatform = platform;
       };
 
-      homeManagerModules.myHomePlatform = {
-        native-linux = {...}: {imports = [./platform/native-linux];};
-        docker = {...}: {imports = [./platform/docker];};
-        wsl = {...}: {imports = [./platform/wsl];};
+      checks.${system} = {
+        homeManagerModules = import ./tests/flake/home-manager.nix {inherit pkgs lib system self home-manager;};
+        nixosModules = import ./tests/flake/nixos.nix {inherit pkgs lib system self home-manager;};
       };
-
-      checks.${system}.myHomeModules = import ./tests/modules {inherit pkgs lib system self home-manager;};
     };
 }
