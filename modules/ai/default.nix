@@ -335,6 +335,12 @@ in
     home.file.".llm-tools-mcp/mcp.json".text = builtins.toJSON {
       mcpServers = lib.filterAttrs (_: v: !(builtins.hasAttr "url" v)) cfg.mcp.servers;
     };
+    home.file.".gemini/settings.json".text = builtins.toJSON {
+      selectedAuthType = "oauth-personal";
+      theme = "GitHub";
+      preferredEditor = "vscode";
+      mcpServers = cfg.mcp.servers;
+    };
     home.file.".continue/config.yaml".source = lib.my.toYaml {
       name = "Local Assistant";
       version = "1.0.0";

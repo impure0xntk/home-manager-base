@@ -20,7 +20,19 @@
 
       my.home.networks.hostname = "nixos";
 
-      # my.home.ai.enable = true;
+      my.home.ai = {
+        enable = true;
+        providers = [{
+          name = "test";
+          url = "http://localhost:12345";
+          apiKey = "teststring";
+          models = [{
+            name = "testmodel";
+            model = "model";
+            roles = ["chat" "edit"];
+          }];
+        }];
+      };
       # my.home.languages.java.enable = true; # zulu: x86_64-linux only
       my.home.languages.shell.enable = true;
     }
