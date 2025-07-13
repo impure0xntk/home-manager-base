@@ -2,8 +2,8 @@
 (home-manager.lib.homeManagerConfiguration {
   inherit pkgs lib;
   modules = [
-    self.homeManagerModules.myHomeModules
-    self.homeManagerModules.myHomePlatform.native-linux
+    self.homeManagerModules.${system}.myHomeModules
+    self.homeManagerModules.${system}.myHomePlatform.native-linux
     {
       home.stateVersion = "25.05";
       home.username = "nixos";
@@ -12,7 +12,8 @@
       my.home.networks.hostname = "nixos";
 
       # my.home.ai.enable = true;
-      my.home.languages.java.enable = true;
+      # my.home.languages.java.enable = true; # zulu: x86_64-linux only
+      my.home.languages.shell.enable = true;
     }
   ];
 }).activationPackage

@@ -6,12 +6,12 @@
 (home-manager.lib.homeManagerConfiguration {
   inherit pkgs lib;
   modules = [
-    self.nixosModules.myHomeModules
-    self.nixosModules.myHomePlatform.native-linux
+    self.nixosModules.${system}.myHomeModules
+    self.nixosModules.${system}.myHomePlatform.native-linux
     {
       nixpkgs = {
         config.allowUnfree = true;
-        overlays = self.nixosModules.nixpkgs.overlays;
+        overlays = self.nixosModules.${system}.nixpkgs.overlays;
       };
 
       home.stateVersion = "25.05";
@@ -21,7 +21,8 @@
       my.home.networks.hostname = "nixos";
 
       # my.home.ai.enable = true;
-      my.home.languages.java.enable = true;
+      # my.home.languages.java.enable = true; # zulu: x86_64-linux only
+      my.home.languages.shell.enable = true;
     }
   ];
 }).activationPackage

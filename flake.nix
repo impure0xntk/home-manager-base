@@ -1,6 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/release-25.05";
+    flake-utils.url = "github:numtide/flake-utils";
     home-manager = {
       url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -11,7 +12,10 @@
     };
     vscode-server = {
       url = "github:nix-community/nixos-vscode-server";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+      };
     };
     mcp-servers-nix = {
       url = "github:natsukium/mcp-servers-nix";
@@ -26,11 +30,17 @@
     # sh-utils.url = "git+ssh://git@github.com/828132de77965787/sh-utils";
     nix-lib = {
       url = "github:impure0xntk/nix-lib";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+      };
     };
     nix-pkgs = {
       url = "github:impure0xntk/nix-pkgs";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+      };
     };
   };
 
@@ -38,6 +48,7 @@
     {
       self,
       nixpkgs,
+      flake-utils,
       home-manager,
       nix4vscode,
       vscode-server,
@@ -46,13 +57,17 @@
       nix-lib,
       nix-pkgs,
       ...
-    }:
+    }: flake-utils.lib.eachSystem (
+      with flake-utils.lib.system; [ # supported system
+        x86_64-linux
+        aarch64-linux
+      ]
+    ) (system:
     let
-      system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
       };
-      lib = nixpkgs.lib.extend nix-lib.overlays.default;
+      lib = nix-lib.lib.${system};
       
       createModules = args: {...}: args // {
         imports = [
@@ -67,7 +82,7 @@
         docker = {...}: {imports = [./platform/docker];};
         wsl = {...}: {imports = [./platform/wsl];};
       };
-      overlays = nix-pkgs.nixpkgs.overlays ++ [
+      overlays = nix-pkgs.pkgsOverlay.${system} ++ [
         nix4vscode.overlays.forVscode
         mcp-servers-nix.overlays.default
       ];
@@ -91,9 +106,9 @@
         myHomePlatform = platform;
       };
 
-      checks.${system} = {
+      checks = {
         homeManagerModules = import ./tests/flake/home-manager.nix {inherit pkgs lib system self home-manager;};
         nixosModules = import ./tests/flake/nixos.nix {inherit pkgs lib system self home-manager;};
       };
-    };
+    });
 }
