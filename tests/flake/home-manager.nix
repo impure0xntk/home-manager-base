@@ -1,4 +1,4 @@
-{ pkgs, lib, system, self, home-manager, }:
+{ pkgs, lib, system, self, home-manager, }@args:
 (home-manager.lib.homeManagerConfiguration {
   inherit pkgs lib;
   modules = [
@@ -15,5 +15,7 @@
       # my.home.languages.java.enable = true; # zulu: x86_64-linux only
       my.home.languages.shell.enable = true;
     }
+    # (import ./../modules/ide/jetbrains-remote.nix args)
+    # (import ./../modules/languages/java.nix args)
   ];
 }).activationPackage
