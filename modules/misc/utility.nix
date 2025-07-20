@@ -87,9 +87,9 @@ EOF
     };
     nixPatchelf = pkgs.writeShellApplication {
       name = "nix-patchelf";
-      runtimeInputs = [pkgs.patchelf];
+      runtimeInputs = [pkgs.patchelf pkgs.stdenv.cc];
       text = ''
-        patchelf --set-interpreter "$(cat "$NIX_CC"/nix-support/dynamic-linker)" "$@"
+        patchelf --set-interpreter "$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)" "$@"
       '';
     };
     # docker
