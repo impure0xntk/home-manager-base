@@ -41,19 +41,6 @@ let
     in
     if builtins.length models > 0 then builtins.head models else null;
 
-  llm =
-    let
-      llmUnwrapped = pkgs.python3.withPackages (ps: [
-        ps.llm
-        ps.llm-ollama
-
-        pkgs.llm-tools-mcp # self maid
-      ]);
-    in
-    pkgs.writeShellScriptBin "llm" ''
-      OLLAMA_HOST=${ollomaProvider.url} ${llmUnwrapped}/bin/llm "$@"
-    '';
-
   prompts = import ./prompt.nix { inherit lib; };
   roles =
     with prompts.chat;
@@ -331,10 +318,6 @@ in
 
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
-    # TODO: llm has not support url yet.
-    home.file.".llm-tools-mcp/mcp.json".text = builtins.toJSON {
-      mcpServers = lib.filterAttrs (_: v: !(builtins.hasAttr "url" v)) cfg.mcp.servers;
-    };
     home.file.".gemini/settings.json".text = builtins.toJSON {
       selectedAuthType = "oauth-personal";
       theme = "GitHub";
@@ -443,7 +426,6 @@ in
     # shellgpt
     home.packages = with pkgs; [
       shell-gpt
-      llm
       gemini-cli
     ];
     programs.bash.shellAliases = shellAliases;

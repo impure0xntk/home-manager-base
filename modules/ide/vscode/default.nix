@@ -219,6 +219,7 @@ in
             extensions = {
               autoUpdate = false;
               verifySignature = false;
+              ignoreRecommendations = true;
             };
 
             editor = {
