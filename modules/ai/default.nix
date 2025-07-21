@@ -39,6 +39,12 @@ let
     ${pkgs.shell-gpt}/bin/sgpt "$@"
   '';
 
+  openRouterFreeModels = pkgs.writeShellScriptBin "openrouter-free-models" ''
+    ${pkgs.curl}/bin/curl -s "https://openrouter.ai/api/v1/models" \
+      | ${pkgs.jq}/bin/jq -r ".data[] | select(.id | endswith(\":free\")) | .id" \
+      | fzf
+  '';
+
   prompts = import ./prompt.nix { inherit lib; };
   roles =
     with prompts.chat;
@@ -347,6 +353,7 @@ in
       llxprt-code-static # for openrouter
       
       shell-gpt
+      openRouterFreeModels
     ];
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
