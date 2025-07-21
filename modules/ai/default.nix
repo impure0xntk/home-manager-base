@@ -89,6 +89,10 @@ let
         role = withNoThink (toLang "java" "17" shell.codeRefactor);
       }
       {
+        name = "Nix Teacher";
+        role = withNoThink (toLang "nix" "" shell.codeRefactor);
+      }
+      {
         name = "Commit Message Generator";
         role = withNoThink (shell.commitMessageGenerator);
       }
@@ -109,6 +113,7 @@ let
 
       # TODO: generate chat for each language modules
       "chatjava" = chat "Java Teacher";
+      "chatnix" = chat "Nix Teacher";
     };
 in
 {

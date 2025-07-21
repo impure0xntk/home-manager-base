@@ -24,6 +24,17 @@ let
       Use Java ${version} features only.
       Prefer modern syntax where available.
     '';
+
+    nix = _: ''
+      Nix code review points:
+
+      1. Verify dependency accuracy.
+      2. Eliminate environment variable dependencies.
+      3. Adhere to Nix best practices.
+      4. Reduce unnecessary dependencies.
+      5. Check for security vulnerabilities.
+      6. Consider compatibility.
+    '';
   };
 
   mk = {
