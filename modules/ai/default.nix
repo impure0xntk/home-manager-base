@@ -80,6 +80,10 @@ let
         name = "Commit Message Generator";
         role = withNoThink (shell.commitMessageGenerator);
       }
+      {
+        name = "Commit Cleaner";
+        role = withNoThink (shell.commitCleaner);
+      }
     ];
 
   shellAliases =

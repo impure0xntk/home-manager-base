@@ -28,12 +28,12 @@ let
     nix = _: ''
       Nix code review points:
 
-      1. Verify dependency accuracy.
-      2. Eliminate environment variable dependencies.
-      3. Adhere to Nix best practices.
-      4. Reduce unnecessary dependencies.
-      5. Check for security vulnerabilities.
-      6. Consider compatibility.
+      - Verify dependency accuracy.
+      - Eliminate environment variable dependencies.
+      - Adhere to Nix best practices.
+      - Reduce unnecessary dependencies.
+      - Check for security vulnerabilities.
+      - Consider compatibility.
     '';
   };
 
@@ -72,7 +72,6 @@ let
 
   commit = {
     conventional = ''
-      Read `git diff` from stdin.
       Output one-line commit message using Conventional Commits.
       Format: <type>(<scope>): <subject>
       Max 72 chars, imperative mood, no punctuation.
@@ -88,6 +87,17 @@ let
       - chore: update eslint config
 
       No body, no footer, no markdown.
+    '';
+    grouping = ''
+      You are assisting with a Git interactive rebase.
+
+      - Include only unpushed commits.
+      - Preserve commit order unless stated below:
+        - If two commits touch the **same file**, do not reorder them. If needed, squash instead.
+        - If two commits touch **different files**, reordering is allowed.
+      - Output as `git rebase -i` TODO list using: `pick`, `squash`, `fixup`, `reword`, `drop`.
+      - One action per line, e.g. `pick abc123 Add feature`.
+      - Improve commit messages if unclear.
     '';
   };
 
@@ -123,5 +133,6 @@ in {
     shellCommandGenerator = shell.commandGenerator;
     codeRefactor = code.refactor;
     commitMessageGenerator = commit.conventional;
+    commitCleaner = commit.grouping;
   };
 }
