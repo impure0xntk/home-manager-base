@@ -98,6 +98,7 @@ let
       "chatcode" = chat "Code Generator";
       "chatshelldesc" = chat "Shell Command Descriptor";
       "chatshellgen" = chat "Shell Command Generator";
+      "chatcommitclean" = chat "Commit Cleaner";
 
       # TODO: generate chat for each language modules
       "chatjava" = chat "Java Teacher";
