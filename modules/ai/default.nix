@@ -7,6 +7,11 @@
 let
   cfg = config.my.home.ai;
 
+  model = rec {
+    default = light;
+    light = "openrouter/google/gemma-3-27b-it:free";
+  };
+
   ollomaModels = lib.concatLists (
     map (p: if p.name == "ollama" then p.models else [ ]) cfg.providers
   );
@@ -40,6 +45,15 @@ let
       );
     in
     if builtins.length models > 0 then builtins.head models else null;
+
+  shell-gpt-openrouter = pkgs.writeShellScriptBin "sgpt" ''
+    API_BASE_URL=https://openrouter.ai/api/v1 \
+    OPENAI_API_KEY=''${OPENROUTER_API_KEY:-} \
+    ${pkgs.shell-gpt}/bin/sgpt "$@"
+  '';
+  shell-gpt-light = pkgs.writeShellScriptBin "sgpt-light" ''
+    ${shell-gpt-openrouter}/bin/sgpt --model ${model.light} "$@"
+  '';
 
   prompts = import ./prompt.nix { inherit lib; };
   roles =
@@ -82,8 +96,8 @@ let
 
   shellAliases =
     let
-      chat = role: "sgpt --no-cache --repl temp --role \"${role}\"";
-      stdin = role: "sgpt --no-cache --role \"${role}\"";
+      chat = role: "sgpt-light --no-cache --repl temp --role \"${role}\"";
+      stdin = role: "sgpt-light --no-cache --role \"${role}\"";
     in
     {
       "cmsg" = "git diff --staged | ${stdin "Commit Message Generator"}";
@@ -425,8 +439,11 @@ in
 
     # shellgpt
     home.packages = with pkgs; [
-      shell-gpt
-      gemini-cli
+      gemini-cli-static # for gemini
+      llxprt-code-static # for openrouter
+      
+      shell-gpt-openrouter
+      shell-gpt-light
     ];
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
@@ -461,15 +478,13 @@ in
               CHAT_CACHE_LENGTH = 100;
               CACHE_LENGTH = CHAT_CACHE_LENGTH;
               REQUEST_TIMEOUT = 30;
-              DEFAULT_MODEL = "${result.provider}/${result.model}"; # LiteLLM format
-              API_BASE_URL = result.url;
+              DEFAULT_MODEL = model.default; # LiteLLM format
               DEFAULT_COLOR = "magenta";
               ROLE_STORAGE_PATH = "${config.xdg.configHome}/shell_gpt/roles";
               SYSTEM_ROLES = false;
               DEFAULT_EXECUTE_SHELL_CMD = false;
               DISABLE_STREAMING = false;
               CODE_THEME = "github-dark";
-              OPENAI_API_KEY = result.apiKey;
               USE_LITELLM = true;
             }
           );
