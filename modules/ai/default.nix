@@ -242,7 +242,7 @@ in
           pkgs.nix4vscode.forVscode [
             "GitHub.copilot"
             "GitHub.copilot-chat"
-            "saoudrizwan.claude-dev"
+            "kilocode.Kilo-Code"
           ]
         ));
       userSettings =
@@ -363,8 +363,6 @@ in
     '';
     xdg.configFile =
       let
-        # result = searchModelByRole "chat";
-        result = searchModelByRole "edit"; # to avoid waiting for chat model to be ready.
         shellGptRoles = roles;
       in
       (
