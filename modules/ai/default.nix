@@ -7,18 +7,12 @@
 let
   cfg = config.my.home.ai;
 
-  model = rec {
-    default = light;
-    light = "openrouter/google/gemma-3-27b-it:free";
-  };
-
-  # Map to include provider URL and apiKey along with the model
+  # Map to include provider URL along with the model
   # expected result format:
   # [
   #   {
   #     provider = "ollama";
   #     url = "http://localhost:11434";
-  #     apiKey = "dummy-api-key";
   #     model = "gemma3:12b";
   #   }
   # ]
@@ -30,7 +24,7 @@ let
           provider:
           builtins.filter (m: builtins.elem role m.roles) (
             builtins.map (m_: {
-              inherit (provider) url apiKey;
+              inherit (provider) url;
               inherit (m_) model roles;
               provider = provider.name;
             }) provider.models
@@ -40,13 +34,9 @@ let
     in
     if builtins.length models > 0 then builtins.head models else null;
 
-  shell-gpt-openrouter = pkgs.writeShellScriptBin "sgpt" ''
-    API_BASE_URL=https://openrouter.ai/api/v1 \
-    OPENAI_API_KEY=''${OPENROUTER_API_KEY:-} \
+  shell-gpt = pkgs.writeShellScriptBin "sgpt" ''
+    API_BASE_URL=${(searchModelByRole "chat").url} \
     ${pkgs.shell-gpt}/bin/sgpt "$@"
-  '';
-  shell-gpt-light = pkgs.writeShellScriptBin "sgpt-light" ''
-    ${shell-gpt-openrouter}/bin/sgpt --model ${model.light} "$@"
   '';
 
   prompts = import ./prompt.nix { inherit lib; };
@@ -94,8 +84,8 @@ let
 
   shellAliases =
     let
-      chat = role: "sgpt-light --no-cache --repl temp --role \"${role}\"";
-      stdin = role: "sgpt-light --no-cache --role \"${role}\"";
+      chat = role: "sgpt --no-cache --repl temp --role \"${role}\"";
+      stdin = role: "sgpt --no-cache --role \"${role}\"";
     in
     {
       "cmsg" = "git diff --staged | ${stdin "Commit Message Generator"}";
@@ -134,11 +124,6 @@ in
               description = "Provider URL or model endpoint";
               type = str;
               example = "https://localhost:11434";
-            };
-            apiKey = mkOption {
-              description = "API key for the provider";
-              type = str;
-              default = "";
             };
             models = mkOption {
               description = "List of models with roles";
@@ -196,7 +181,6 @@ in
             example = {
               name = "ollama";
               url = "http://localhost:11434";
-              apiKey = "your-api-key-here";
               models = [
                 rec {
                   name = "gemma3:12b";
@@ -236,17 +220,6 @@ in
           || !cfg.localOnly;
         message = "If localOnly is enabled, at least one ollama model must be specified";
       }
-      (
-        let
-          remoteProviders = lib.filter (
-            p: !(lib.hasInfix "localhost" p.url) && !(lib.hasInfix "127.0.0.1" p.url)
-          ) cfg.providers;
-        in
-        {
-          assertion = lib.all (p: p.apiKey != null) remoteProviders;
-          message = "All remote providers must have an apiKey";
-        }
-      )
     ];
 
     programs.vscode.profiles.default = {
@@ -349,7 +322,6 @@ in
             model = m.model;
             roles = m.roles;
             apiBase = v.url;
-            apiKey = v.apiKey;
           }) v.models)
         ) cfg.providers
       );
@@ -369,8 +341,7 @@ in
       gemini-cli-static # for gemini
       llxprt-code-static # for openrouter
       
-      shell-gpt-openrouter
-      shell-gpt-light
+      shell-gpt
     ];
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
@@ -398,6 +369,7 @@ in
           "shell_gpt/.sgptrc.orig".text = lib.my.toSessionVariables (
             let
               cachePath = "${config.xdg.cacheHome}/shell_gpt";
+              chatModel = searchModelByRole "chat";
             in
             rec {
               CHAT_CACHE_PATH = "${cachePath}/cache";
@@ -405,7 +377,7 @@ in
               CHAT_CACHE_LENGTH = 100;
               CACHE_LENGTH = CHAT_CACHE_LENGTH;
               REQUEST_TIMEOUT = 30;
-              DEFAULT_MODEL = model.default; # LiteLLM format
+              DEFAULT_MODEL = chatModel.model; # LiteLLM format
               DEFAULT_COLOR = "magenta";
               ROLE_STORAGE_PATH = "${config.xdg.configHome}/shell_gpt/roles";
               SYSTEM_ROLES = false;
@@ -428,11 +400,15 @@ in
       );
 
     # Add a custom command to lazygit
-    programs.lazygit.settings.customCommands = [
+    programs.lazygit.settings.customCommands =
+      let 
+        chatModel = searchModelByRole "chat";
+        editModel = searchModelByRole "edit";
+      in [
       {
         # Smart commit
         key = "g";
-        command = pkgs.writeScript "smart-commit" (builtins.readFile ./scripts/smart-commit.sh);
+        command = ''bash -c "${pkgs.writeScript "smart-commit" (builtins.readFile ./scripts/smart-commit.sh)} --model ${chatModel.model},${editModel.model}"'';
         description = "Commit by using smart-commit";
         context = "files";
         loadingText = "Committing...";
