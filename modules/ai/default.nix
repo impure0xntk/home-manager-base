@@ -235,7 +235,7 @@ in
           pkgs.nix4vscode.forVscode [
             "GitHub.copilot"
             "GitHub.copilot-chat"
-            "CodeRabbit.coderabbit-vscode"
+            "saoudrizwan.claude-dev"
           ]
         ));
       userSettings =
