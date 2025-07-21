@@ -18,56 +18,30 @@ let
 /*     context7 = {
       command = lib.getExe pkgs.context7-mcp;
     }; */
-    fetch = {
-      command = lib.getExe pkgs.mcp-server-fetch;
-    };
-    filesystem = {
-      command = lib.getExe pkgs.mcp-server-filesystem;
-      args = [
-        config.home.homeDirectory
-      ];
-    };
     git = {
       command = lib.getExe pkgs.mcp-server-git;
-    };
-    memory = {
-      command = lib.getExe pkgs.mcp-server-memory;
-      env = {
-        "MEMORY_FILE_PATH" = "${cfg.stateDir}/memory.json";
-      };
-    };
-    sequential-thinking = {
-      command = lib.getExe pkgs.mcp-server-sequential-thinking;
     };
     nixos = {
       command = lib.getExe pkgs.mcp-server-nixos;
     };
-    # FIXME: " tool parameters array type must have items"
-    # https://github.com/microsoft/vscode/issues/248810#issuecomment-2877319893
-/*     quickchart = {
-      command = lib.getExe pkgs.mcp-server-quickchart;
-    }; */
-/*     task-master = {
-      command = lib.getExe pkgs.mcp-server-task-master;
-    }; */
     pdf-reader = {
       command = lib.getExe pkgs.mcp-server-pdf-reader;
     };
     github = {
       url = "https://api.githubcopilot.com/mcp/";
     };
-/*     doc = {
-      command = lib.getExe pkgs.mcp-server-doc;
-    }; */
+    microsoft-docs-mcp = {
+      url = "https://learn.microsoft.com/api/mcp";
+    };
 /*     atlassian-remote = {
       command = lib.getExe pkgs.mcp-server-remote;
       args = [
         "https://mcp.atlassian.com/v1/sse"
       ];
     }; */
-/*     jetbrains = {
+    jetbrains = {
       command = lib.getExe pkgs.mcp-server-jetbrains;
-    }; */
+    };
 /*     azure-devops = {
       command = lib.getExe pkgs.mcp-server-azure-devops;
     }; */
