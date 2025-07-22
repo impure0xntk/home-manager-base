@@ -239,24 +239,17 @@ in
 
     programs.vscode.profiles.default = {
       extensions =
-        pkgs.nix4vscode.forVscode [
-          "continue.continue"
-        ]
-        ++ (lib.optionals (!cfg.localOnly) (
+        lib.optionals (!cfg.localOnly) (
           pkgs.nix4vscode.forVscode [
             "GitHub.copilot"
             "GitHub.copilot-chat"
             "kilocode.Kilo-Code"
           ]
-        ));
+        );
       userSettings =
         (lib.my.flatten "_flattenIgnore" {
           # The main agent is GitHub Copilot, but it uses only remote models for completions.
           # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
-          continue = {
-            enableTabAutocomplete = true;
-            telemetryEnabled = false;
-          };
           # gitlens ai: not work
           gitlens.ai =
             let
@@ -323,32 +316,6 @@ in
       theme = "GitHub";
       preferredEditor = "vscode";
       mcpServers = cfg.mcp.servers;
-    };
-    home.file.".continue/config.yaml".source = lib.my.toYaml {
-      name = "Local Assistant";
-      version = "1.0.0";
-      schema = "v1";
-      models = lib.flatten (
-        lib.concatMap (
-          v:
-          (map (m: {
-            name = m.name;
-            provider = v.name;
-            model = m.model;
-            roles = m.roles;
-            apiBase = v.url;
-          }) v.models)
-        ) cfg.providers
-      );
-      context = [
-        { provider = "code"; }
-        { provider = "docs"; }
-        { provider = "diff"; }
-        { provider = "terminal"; }
-        { provider = "problems"; }
-        { provider = "folder"; }
-        { provider = "codebase"; }
-      ];
     };
 
     # shellgpt
