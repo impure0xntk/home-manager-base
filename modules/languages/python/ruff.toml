@@ -1,0 +1,47 @@
+line-length = 88  # Recommended line length (PEP8)
+indent-width = 4  # PEP8 recommended (4 spaces)
+
+[lint]
+select = [
+  "E",    # pycodestyle error
+  "W",    # pycodestyle warning
+  "F",    # pyflakes
+  "UP",   # pyupgrade
+  "YTT",  # flake8-2020
+  "ICN",  # import-conventions
+  "RUF",  # Ruff internal rules
+  "B",    # flake8-bugbear
+  "PIE",  # flake8-pie
+  "PLE",  # pyflakes error
+  "D",    # pydocstyle
+]
+
+ignore = [
+  "D100", # Module docstring required
+  "D104", # Package docstring required
+]
+
+unfixable = [
+  "B018", # Pointless expressions
+  "D",    # Docstring-related rules
+]
+
+[lint.per-file-ignores]
+"tests/*.py" = [
+  "S101", # Allow assert usage
+  "I001", # Allow import statement position
+  "D",    # Docstring not required for tests
+]
+"**/__init__.py" = ["F401"] # Allow unused imports
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.pydocstyle]
+convention = "pep257"
+
+[lint.isort]
+combine-as-imports = true
+order-by-type = false
+force-sort-within-sections = true
+lines-after-imports = 2
