@@ -90,6 +90,10 @@ let
         name = "Commit Cleaner";
         role = withNoThink (shell.commitCleaner);
       }
+      {
+        name = "Requirement Analyst";
+        role = withNoThink (toJapanese shell.requirementAnalyst);
+      }
     ];
 
   shellAliases =
