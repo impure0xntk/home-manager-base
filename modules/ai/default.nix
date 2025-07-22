@@ -324,6 +324,7 @@ in
       llxprt-code-static # for openrouter
       
       shell-gpt
+      forgecode-static
       openRouterFreeModels
     ];
     programs.bash.shellAliases = shellAliases;
