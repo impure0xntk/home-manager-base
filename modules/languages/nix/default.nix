@@ -8,7 +8,22 @@ let
   cfg = config.my.home.languages.nix;
 in
 {
-  options.my.home.languages.nix.enable = lib.mkEnableOption "Whether to enable nix language support.";
+  options.my.home.languages.nix = {
+    enable = lib.mkEnableOption "Whether to enable nix language support.";
+    currentConfigurations = lib.mkOption {
+      type = lib.types.attrs;
+      description = "Current configurations to handle nix language server";
+      default = {};
+      example = {
+        nixos = {
+          expr = "(builtins.getFlake \"/absolute/path/to/flake\").nixosConfigurations.<name>.options";
+        };
+        home-manager = {
+          expr = "(builtins.getFlake \"/absolute/path/to/flake\").homeConfigurations.<name>.options";
+        };
+      };
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
@@ -65,6 +80,7 @@ in
                 "formatting" = {
                   "command" = [ formatterPath ];
                 };
+                options = cfg.currentConfigurations;
               };
               _flattenIgnore = true;
             };
