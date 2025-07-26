@@ -318,15 +318,13 @@ in
       mcpServers = cfg.mcp.servers;
     };
 
-    # shellgpt
-    home.packages = with pkgs; [
-      gemini-cli-static # for gemini
-      llxprt-code-static # for openrouter
-      
+    home.packages = (with pkgs; [
       shell-gpt
-      forgecode-static
       openRouterFreeModels
-    ];
+
+      # Defined by numtide/nix-ai-tools
+      qwen-code
+    ]);
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
     home.activation."copy-sgptrc" = ''

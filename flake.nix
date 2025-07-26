@@ -17,6 +17,10 @@
         flake-utils.follows = "flake-utils";
       };
     };
+    nix-ai-tools = {
+      url = "github:numtide/nix-ai-tools";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     mcp-servers-nix = {
       url = "github:natsukium/mcp-servers-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -52,6 +56,7 @@
       home-manager,
       nix4vscode,
       vscode-server,
+      nix-ai-tools,
       mcp-servers-nix,
       sops-nix,
       nix-lib,
@@ -82,9 +87,12 @@
         docker = {...}: {imports = [./platform/docker];};
         wsl = {...}: {imports = [./platform/wsl];};
       };
-      overlays = nix-pkgs.pkgsOverlay.${system} ++ [
+      overlays = (nix-pkgs.pkgsOverlay.${system} ++ [
         nix4vscode.overlays.forVscode
         mcp-servers-nix.overlays.default
+      ]) ++ [
+        # Add 3rd-party packages as overlays because no overlays are provided.
+        (final: prev: nix-ai-tools.packages.${system})
       ];
     in
     {
