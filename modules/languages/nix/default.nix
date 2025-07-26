@@ -13,7 +13,7 @@ in
     currentConfigurations = lib.mkOption {
       type = lib.types.attrs;
       description = "Current configurations to handle nix language server";
-      default = {};
+      default = { };
       example = {
         nixos = {
           expr = "(builtins.getFlake \"/absolute/path/to/flake\").nixosConfigurations.<name>.options";
@@ -65,7 +65,8 @@ in
           "[nix]" = {
             "editor.defaultFormatter" = "jnoortheen.nix-ide";
           };
-        } // lib.my.flatten "_flattenIgnore" {
+        }
+        // lib.my.flatten "_flattenIgnore" {
           nix = rec {
             enableLanguageServer = true;
             serverPath = "${pkgs.nixd}/bin/nixd"; # nixd depends old llvm(too large)...
