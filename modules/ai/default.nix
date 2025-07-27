@@ -375,7 +375,7 @@ in
               DEFAULT_EXECUTE_SHELL_CMD = false;
               DISABLE_STREAMING = false;
               CODE_THEME = "github-dark";
-              OPENAI_API_KEY = ""; # because use litellm proxy
+              OPENAI_API_KEY = "dummy"; # because use litellm proxy
               USE_LITELLM = false; # to use self-hosted litellm proxy
             }
           );
