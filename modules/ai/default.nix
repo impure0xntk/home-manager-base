@@ -130,6 +130,7 @@ in
   imports = [
     ./mcp
     ./ollama.nix
+    ./litellm
   ];
 
   options.my.home.ai =
