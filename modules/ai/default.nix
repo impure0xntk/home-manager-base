@@ -384,7 +384,7 @@ in
               DEFAULT_EXECUTE_SHELL_CMD = false;
               DISABLE_STREAMING = false;
               CODE_THEME = "github-dark";
-              USE_LITELLM = true;
+              USE_LITELLM = false; # to use self-hosted litellm proxy
             }
           );
         }
