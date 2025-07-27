@@ -156,11 +156,6 @@ in
               description = "List of models with roles";
               type = listOf (submodule {
                 options = {
-                  name = mkOption {
-                    description = "Model name";
-                    type = str;
-                    example = "gemma";
-                  };
                   model = mkOption {
                     description = "Model identifier";
                     type = str;
@@ -190,7 +185,6 @@ in
               });
               example = [
                 {
-                  name = "gemma3";
                   model = "gemma3:12b";
                   roles = [
                     "chat"
@@ -199,7 +193,6 @@ in
                   ];
                 }
                 {
-                  name = "deepseek-coder";
                   model = "deepseek-coder-v2:16b";
                   roles = [ "autocomplete" ];
                 }
@@ -210,8 +203,7 @@ in
               url = "http://localhost:11434";
               models = [
                 rec {
-                  name = "gemma3:12b";
-                  model = name;
+                  model = "gemma3:12b";
                   roles = [
                     "chat"
                     "edit"
@@ -219,8 +211,7 @@ in
                   ];
                 }
                 rec {
-                  name = "deepseek-coder-v2:16b";
-                  model = name;
+                  model = "deepseek-coder-v2:16b";
                   roles = [ "autocomplete" ];
                 }
               ];
@@ -384,6 +375,7 @@ in
               DEFAULT_EXECUTE_SHELL_CMD = false;
               DISABLE_STREAMING = false;
               CODE_THEME = "github-dark";
+              OPENAI_API_KEY = ""; # because use litellm proxy
               USE_LITELLM = false; # to use self-hosted litellm proxy
             }
           );
