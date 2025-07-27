@@ -9,6 +9,8 @@
 let
   cfg = config.my.home.ai.litellm;
   cfgAi = config.my.home.ai;
+
+  presetModels = (import ./models {inherit lib;});
 in
 {
   options.my.home.ai.litellm = {
@@ -31,6 +33,11 @@ in
       type = lib.types.bool;
       default = true;
       description = "Whether using sops. If enabled start litellm after sops-nix.service";
+    };
+    presetModels = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      default = (import ./models {inherit lib;});
+      description = "Preset models";
     };
   };
   config = lib.mkIf cfgAi.enable {
