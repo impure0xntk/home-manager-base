@@ -39,7 +39,7 @@ in
     in
     [
       {
-        model = "openrouter/google/gemma-3n-e4b-it:fre";
+        model = "openrouter/google/gemma-3n-e4b-it:free";
         params = params // {
           weight = 10;
         };
