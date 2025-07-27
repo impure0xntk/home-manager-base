@@ -6,6 +6,12 @@
 }:
 let
   cfg = config.my.home.ai;
+  
+  qwen-code' = pkgs.writeShellScriptBin "qwen" ''
+    OPENAI_BASE_URL="https://openrouter.ai/api/v1" \
+    OPENAI_MODEL="qwen/qwen3-coder:free" \
+    ${pkgs.qwen-code}/bin/qwen "$@"
+  ''; 
 
   # Map to include provider URL along with the model
   # expected result format:
@@ -44,6 +50,11 @@ let
       | ${pkgs.jq}/bin/jq -r ".data[] | select(.id | endswith(\":free\")) | .id" \
       | fzf
   '';
+  qwen-code-openrouter = pkgs.writeShellScriptBin "qwen-openrouter" ''
+    OPENAI_BASE_URL="https://openrouter.ai/api/v1" \
+    OPENAI_MODEL="$(${openRouterFreeModels}/bin/openrouter-free-models)" \
+    ${pkgs.qwen-code}/bin/qwen "$@"
+  ''; 
 
   prompts = import ./prompt.nix { inherit lib; };
   roles =
@@ -311,10 +322,17 @@ in
 
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
-    home.file.".gemini/settings.json".text = builtins.toJSON {
-      selectedAuthType = "oauth-personal";
+    home.file.".qwen/settings.json".text = builtins.toJSON {
+      # selectedAuthType = "oauth-personal"; # only for gemini
+      selectedAuthType = "openai"; # only for gemini
       theme = "GitHub";
-      preferredEditor = "vscode";
+      preferredEditor = "nvim";
+      checkpointing = true;
+      hideTips = true;
+      hideBanner = true;
+      enableOpenAILogging = false;
+      usageStatisticsEnabled = false;
+      telemetry.enabled = false;
       mcpServers = cfg.mcp.servers;
     };
 
@@ -323,7 +341,8 @@ in
       openRouterFreeModels
 
       # Defined by numtide/nix-ai-tools
-      qwen-code
+      qwen-code'
+      qwen-code-openrouter
     ]);
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
