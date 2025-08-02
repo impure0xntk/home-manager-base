@@ -20,6 +20,9 @@ in
         model = "gemini/gemini-2.5-flash";
         params = {
           weight = 10;
+          fallbacks = [
+            "gemini-2.5-flash-lite"
+          ];
 
           # 2025/07
           tpm = 250000;
@@ -44,6 +47,9 @@ in
         model = "gemini/gemini-2.0-flash";
         params = {
           weight = 10;
+          fallbacks = [
+            "gemini-2.0-flash-lite"
+          ];
 
           # 2025/07
           tpm = 1000000;
