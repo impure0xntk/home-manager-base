@@ -42,21 +42,11 @@ let
     in
     if builtins.length models > 0 then builtins.head models else null;
 
-  shell-gpt = pkgs.writeShellScriptBin "sgpt" ''
-    API_BASE_URL=${(searchModelByRole "chat").url} \
-    ${pkgs.shell-gpt}/bin/sgpt "$@"
-  '';
-
   openRouterFreeModels = pkgs.writeShellScriptBin "openrouter-free-models" ''
     ${pkgs.curl}/bin/curl -s "https://openrouter.ai/api/v1/models" \
       | ${pkgs.jq}/bin/jq -r ".data[] | select(.id | endswith(\":free\")) | .id" \
       | fzf
   '';
-  qwen-code-openrouter = pkgs.writeShellScriptBin "qwen-openrouter" ''
-    OPENAI_BASE_URL="https://openrouter.ai/api/v1" \
-    OPENAI_MODEL="$(${openRouterFreeModels}/bin/openrouter-free-models)" \
-    ${pkgs.qwen-code}/bin/qwen "$@"
-  ''; 
 
   prompts = import ./prompt.nix { inherit lib; };
   roles =
@@ -277,16 +267,6 @@ in
               # prompts
               # Refer file to avoid redundant settings.
               # TODO: add ability to add prompts from another modules
-              codeGeneration.instructions = [
-                {
-                  "file" = "${config.xdg.configHome}/github-copilot/instructions/Code Generator.md";
-                }
-              ];
-              testGeneration.instructions = [
-                {
-                  "file" = "${config.xdg.configHome}/github-copilot/instructions/Code Generator.md";
-                }
-              ];
               reviewSelection.instructions = [
                 {
                   "file" = "${config.xdg.configHome}/github-copilot/instructions/Code Refactor.md";
@@ -336,7 +316,6 @@ in
 
       # Defined by numtide/nix-ai-tools
       qwen-code'
-      qwen-code-openrouter
     ]);
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
@@ -361,8 +340,8 @@ in
         // {
           "shell_gpt/.sgptrc.orig".text = lib.my.toSessionVariables (
             let
+              modelInfo = searchModelByRole "chat";
               cachePath = "${config.xdg.cacheHome}/shell_gpt";
-              chatModel = searchModelByRole "chat";
             in
             rec {
               CHAT_CACHE_PATH = "${cachePath}/cache";
@@ -370,13 +349,14 @@ in
               CHAT_CACHE_LENGTH = 100;
               CACHE_LENGTH = CHAT_CACHE_LENGTH;
               REQUEST_TIMEOUT = 30;
-              DEFAULT_MODEL = chatModel.model; # LiteLLM format
+              DEFAULT_MODEL = modelInfo.model;
               DEFAULT_COLOR = "magenta";
               ROLE_STORAGE_PATH = "${config.xdg.configHome}/shell_gpt/roles";
               SYSTEM_ROLES = false;
               DEFAULT_EXECUTE_SHELL_CMD = false;
               DISABLE_STREAMING = false;
               CODE_THEME = "github-dark";
+              API_BASE_URL= modelInfo.url;
               OPENAI_API_KEY = "dummy"; # because use litellm proxy
               USE_LITELLM = false; # to use self-hosted litellm proxy
             }
