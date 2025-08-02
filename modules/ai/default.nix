@@ -7,9 +7,11 @@
 let
   cfg = config.my.home.ai;
   
+  # Use litellm
   qwen-code' = pkgs.writeShellScriptBin "qwen" ''
-    OPENAI_BASE_URL="https://openrouter.ai/api/v1" \
-    OPENAI_MODEL="qwen/qwen3-coder:free" \
+    OPENAI_BASE_URL="${(searchModelByRole "edit").url}" \
+    OPENAI_API_KEY="dummy" \
+    OPENAI_MODEL="${(searchModelByRole "edit").model}" \
     ${pkgs.qwen-code}/bin/qwen "$@"
   ''; 
 
