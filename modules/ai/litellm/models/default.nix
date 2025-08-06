@@ -24,7 +24,8 @@ modelsFinal (
   // (import ./google.nix { inherit lib; })
   // (import ./mistralai.nix { inherit lib; })
   // (import ./moonshotai.nix { inherit lib; })
-  // (import ./qwen.nix { inherit lib; }) // { })
+  // (import ./qwen.nix { inherit lib; })
+  // (import ./others.nix { inherit lib; }) // { })
 
 #   modelsRaw = {
 #     qwen3 = [
