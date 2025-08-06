@@ -9,9 +9,9 @@ let
   
   # Use litellm
   qwen-code' = pkgs.writeShellScriptBin "qwen" ''
-    OPENAI_BASE_URL="${(searchModelByRole "edit").url}" \
+    OPENAI_BASE_URL="${(searchModelByRole "chat").url}" \
     OPENAI_API_KEY="dummy" \
-    OPENAI_MODEL="${(searchModelByRole "edit").model}" \
+    OPENAI_MODEL="''${1:-${(searchModelByRole "chat").model}}" \
     ${pkgs.qwen-code}/bin/qwen "$@"
   ''; 
 
