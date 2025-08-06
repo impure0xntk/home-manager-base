@@ -45,8 +45,8 @@ rec {
     }
   ];
   qwen3-big = noThink qwen3-big-think;
-  
-  qwen3-coder = [
+
+/*   qwen3-coder = [
     {
       model = "openrouter/qwen/qwen3-coder:free";
       params = {
@@ -54,5 +54,5 @@ rec {
       }
       //commonParams;
     }
-  ];
+  ]; */
 }
