@@ -55,4 +55,13 @@ rec {
       //commonParams;
     }
   ]; */
+  "qwen2.5-coder" = [
+    {
+      model = "openrouter/qwen/qwen-2.5-coder-32b-instruct:free";
+      params = {
+        weight = 10;
+      }
+      //commonParams;
+    }
+  ];
 }
