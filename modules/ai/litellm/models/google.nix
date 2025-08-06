@@ -56,6 +56,12 @@ in
           rpm = 15;
         };
       }
+      {
+        model = "openrouter/google/gemini-2.0-flash-exp:free";
+        params = {
+          weight = 10;
+        };
+      }
     ];
   "gemini-2.0-flash-lite" = [
       {
