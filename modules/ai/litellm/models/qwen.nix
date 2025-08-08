@@ -37,7 +37,7 @@ rec {
 
   qwen3-big-think = [
     {
-      model = "openrouter/qwen/qwen3-235b-a22b-2507:free";
+      model = "openrouter/qwen/qwen3-235b-a22b:free";
       params = {
         weight = 10;
       }
