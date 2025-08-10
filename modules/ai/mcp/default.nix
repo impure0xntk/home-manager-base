@@ -12,69 +12,77 @@ with lib.types;
 let
   cfg = config.my.home.ai.mcp;
 
-  # TODO: ensure under 128 tools for VS Code.
-  mcpServers = {
-    # TODO: proxy
-/*     context7 = {
-      command = lib.getExe pkgs.context7-mcp;
-    }; */
+  allServers = {
     git = {
       command = lib.getExe pkgs.mcp-server-git;
+      args = [ ];
     };
     nixos = {
       command = lib.getExe pkgs.mcp-server-nixos;
+      args = [ ];
     };
-    pdf-reader = {
+    "pdf-reader" = {
       command = lib.getExe pkgs.mcp-server-pdf-reader;
+      args = [ ];
     };
     github = {
       url = "https://api.githubcopilot.com/mcp/";
     };
-    microsoft-docs-mcp = {
+    "microsoft-docs-mcp" = {
       url = "https://learn.microsoft.com/api/mcp";
     };
-/*     atlassian-remote = {
-      command = lib.getExe pkgs.mcp-server-remote;
-      args = [
-        "https://mcp.atlassian.com/v1/sse"
-      ];
-    }; */
     jetbrains = {
       command = lib.getExe pkgs.mcp-server-jetbrains;
+      args = [ ];
     };
-/*     azure-devops = {
-      command = lib.getExe pkgs.mcp-server-azure-devops;
-    }; */
-
-    # Use project root, not global.
-/*     lsp = {
-      command = lib.getExe pkgs.mcp-server-lsp;
-    }; */
-/*     excel = { # not work on nix because create log file at Nix drv dir. src/excel_mcp/server.py:57
-      command = lib.getExe pkgs.mcp-server-excel;
-    }; */
   };
+
+  # Filter the servers that are enabled by the user (where value is true)
+  # and map them to their full configuration from `allServers`.
+  serversForJson = lib.mapAttrs' (
+    name: serverCfg:
+      if serverCfg.enable then
+        lib.nameValuePair name allServers.${name}
+      else
+        lib.nameValuePair "" null # Effectively remove disabled servers
+  ) cfg.servers;
+
   mcpServersFile = pkgs.writeText "mcp.json" (builtins.toJSON {
-    mcpServers = cfg.servers;
+    mcpServers = serversForJson;
   });
 in
 {
   options.my.home.ai.mcp = {
     servers = mkOption {
-      description = "MCP server configuration";
-      type = attrs;
+      description = "Configuration for MCP servers.";
+      type = with types; submodule {
+        options = lib.mapAttrs (
+          name: _:
+            mkOption {
+              type = submodule {
+                options = {
+                  enable = mkEnableOption "the server";
+                };
+              };
+              default = { enable = true; };
+            }
+        ) allServers;
+      };
       default = {};
     };
+
     stateDir = mkOption {
       description = "Directory where MCP state files are stored";
       type = path;
       default = "${config.xdg.stateHome}/mcp";
     };
+
     configFile = {
       source = mkOption {
         description = "Path to the MCP configuration file. Format is MCP official format. This is read-only";
         type = path;
-        default = mcpServersFile;      
+        default = mcpServersFile;
+        readOnly = true;
       };
       path = mkOption {
         description = "Path where the MCP configuration file will be placed";
@@ -83,9 +91,8 @@ in
       };
     };
   };
-  config = lib.mkIf config.my.home.ai.enable {
-    my.home.ai.mcp.servers = mcpServers;
 
+  config = lib.mkIf config.my.home.ai.enable {
     home.activation."ready-for-mcp-state-base-dir" = ''
       mkdir -p ${cfg.stateDir}
     '';
