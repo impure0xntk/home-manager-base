@@ -131,6 +131,7 @@ in
           "vspacecode.whichkey"
           "alefragnani.bookmarks"
           "mkhl.direnv"
+          "shardulm94.trailing-spaces"
 
           "donjayamanne.githistory"
           "eamodio.gitlens"
@@ -392,6 +393,10 @@ in
                   };
                 };
               };
+            };
+            trailing-spaces = {
+              deleteModifiedLinesOnly = true;
+              trimOnSave = true;
             };
             typos.path = "${pkgs.typos-lsp}/bin/typos-lsp";
             linter = {
