@@ -84,6 +84,12 @@ in {
       };
     };
 
+    preset-ai-writing = {
+      ai-tech-writing-guideline = {
+        severity = "info";
+      };
+    };
+
     "preset-jtf-style" = disableJTF;
 
     preset-ja-spacing = {
