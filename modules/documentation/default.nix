@@ -5,14 +5,14 @@
 let
   cfg = config.my.home.documentation;
 
-  rcFile = pkgs.writeText "textlintrc" (import ./textlint {
+  textlintRcFile = pkgs.writeText "textlintrc" (import ./textlint {
     inherit pkgs lib;
     gramma = cfg.gramma;
   });
 
-  cacheLocation = config.xdg.cacheHome + "/textlint";
+  textlintCacheLocation = config.xdg.cacheHome + "/textlint";
   textlint = pkgs.textlint-all.override {
-    inherit cacheLocation;
+    inherit textlintCacheLocation;
   };
 
   # makeWrapper is used for the last to add NODE_PATH.
@@ -21,9 +21,9 @@ let
     runtimeInputs = [ textlint ];
     text = ''
       textlint \
-        --config ${rcFile} \
-        --cache true \
-        --cache-location ${cacheLocation}/textlintcache \
+        --config ${textlintRcFile} \
+        --cache \
+        --cache-location ${textlintCacheLocation}/textlintcache \
         "$@"
     '';
   };
