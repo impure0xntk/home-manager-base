@@ -35,9 +35,5 @@ in
         "/\".*?\"/"
       ];
     };
-    "@textlint-rule/gramma" = {
-      api_url = "http://localhost:18181/v2/check";
-      language = "en-US";
-    };
   };
 }

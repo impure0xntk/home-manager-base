@@ -1,4 +1,4 @@
-{ pkgs, lib, additionalRc ? {},}:
+{ pkgs, lib, additionalRc ? {}, gramma ? { enable = false; }, }:
 let
   set =
     value: list:
@@ -29,6 +29,11 @@ let
       # Because install procedure is not different from standard one.
       proofdict = {
         autoUpdateInterval = 12 * 60 * 60 * 1000; # default 60 * 1000 = 60 sec
+      };
+
+      "@textlint-rule/gramma" = lib.optionalAttrs gramma.enable {
+        api_url = gramma.apiUrl;
+        language = "auto";
       };
     };
   };

@@ -5,7 +5,10 @@
 let
   cfg = config.my.home.documentation;
 
-  rcFile = pkgs.writeText "textlintrc" (import ./textlint {inherit pkgs lib;});
+  rcFile = pkgs.writeText "textlintrc" (import ./textlint {
+    inherit pkgs lib;
+    gramma = cfg.gramma;
+  });
 
   cacheLocation = config.xdg.cacheHome + "/textlint";
   textlint = pkgs.textlint-all.override {
@@ -26,7 +29,17 @@ let
   };
 
 in {
-  options.my.home.documentation.enable = lib.mkEnableOption "Whether to enable documentation tools.";
+  options.my.home.documentation = {
+    enable = lib.mkEnableOption "Whether to enable documentation tools.";
+    gramma = {
+      enable = lib.mkEnableOption "Whether to enable gramma rule.";
+      apiUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "http://localhost:18181/v2/check";
+        description = "The API URL for gramma rule.";
+      };
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     home.packages = [ textlintWrapper ];
