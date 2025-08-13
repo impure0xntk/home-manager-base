@@ -25,6 +25,5 @@ in {
       StrictHostKeyChecking no
       LogLevel QUIET
     '';
-    includes = ["%d/.ssh/secret/config"];
   };
 }
