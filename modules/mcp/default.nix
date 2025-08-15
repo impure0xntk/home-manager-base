@@ -61,6 +61,12 @@ let
         OPENAI_BASE_URL = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}";
       };
     };
+    textlint = {
+      command = "${pkgs.textlint-all}/bin/textlint";
+      args = [
+        "--mcp"
+      ];
+    };
   };
 
   # Generate a list of enabled servers for each configuration name
