@@ -15,10 +15,5 @@ in {
       enable = true;
       ides = cfg.ides;
     };
-    my.home.ai.mcp.servers = {
-      jetbrains = {
-        command = lib.getExe pkgs.mcp-server-jetbrains;
-      };
-    };
   };
 }

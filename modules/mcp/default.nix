@@ -10,7 +10,7 @@
 with lib;
 with lib.types;
 let
-  cfg = config.my.home.ai.mcp;
+  cfg = config.my.home.mcp;
 
   allServers = {
     context7 = {
@@ -38,6 +38,13 @@ let
     jetbrains = {
       command = lib.getExe pkgs.mcp-server-jetbrains;
       args = [ ];
+    };
+    atlassian = {
+      # TODO: may be able to replace to "url"
+      command = lib.getExe pkgs.mcp-server-remote;
+      args = [
+        "https://mcp.atlassian.com/v1/sse"
+      ];
     };
   };
 
@@ -88,7 +95,8 @@ let
   ) serversForJson;
 in
 {
-  options.my.home.ai.mcp = {
+  options.my.home.mcp = {
+    enable = mkEnableOption "Enable MCP features";
     servers = mkOption {
       description = "Configuration for MCP servers.";
       type = with types; attrsOf (submodule {
@@ -139,15 +147,15 @@ in
     };
   };
 
-  config = lib.mkIf config.my.home.ai.enable {
+  config = lib.mkIf config.my.home.mcp.enable {
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
     # Output JSON files for each attrset
     xdg.configFile = lib.mapAttrs' (
       configName: configFile:
-        lib.nameValuePair "mcp/${configName}.json" {
-          source = configFile;
-        }
+      lib.nameValuePair "mcp/${configName}.json" {
+        source = configFile;
+      }
     ) mcpServerFiles;
   };
 }

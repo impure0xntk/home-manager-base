@@ -120,7 +120,6 @@ let
 in
 {
   imports = [
-    ./mcp
     ./ollama.nix
     ./litellm
   ];
@@ -282,33 +281,36 @@ in
           chat = {
             agent.enabled = !cfg.localOnly;
             mcp = {
-              enabled = true;
+              enabled = config.my.home.mcp.enable;
               discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
             };
           };
         })
         // {
           mcp = {
-            servers = cfg.mcp.servers;
+            servers = lib.optionalAttrs (builtins.hasAttr "vscode" config.my.home.mcp.servers) config.my.home.mcp.servers.vscode;
           };
         };
     };
 
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
-    home.file.".qwen/settings.json".text = builtins.toJSON {
-      # selectedAuthType = "oauth-personal"; # only for gemini
-      selectedAuthType = "openai"; # only for gemini
-      theme = "GitHub";
-      preferredEditor = "nvim";
-      checkpointing = true;
-      hideTips = true;
-      hideBanner = true;
-      enableOpenAILogging = false;
-      usageStatisticsEnabled = false;
-      telemetry.enabled = false;
-      mcpServers = cfg.mcp.servers;
-    };
+    home.file.".qwen/settings.json".text = builtins.toJSON (
+      {
+        # selectedAuthType = "oauth-personal"; # only for gemini
+        selectedAuthType = "openai"; # only for gemini
+        theme = "GitHub";
+        preferredEditor = "nvim";
+        checkpointing = true;
+        hideTips = true;
+        hideBanner = true;
+        enableOpenAILogging = false;
+        usageStatisticsEnabled = false;
+        telemetry.enabled = false;
+      } // lib.optionalAttrs config.my.home.mcp.enable {
+        mcpServers = lib.optionalAttrs (builtins.hasAttr "qwen" config.my.home.mcp.servers) config.my.home.mcp.servers.qwen;
+      }
+    );
 
     home.packages = (with pkgs; [
       shell-gpt
