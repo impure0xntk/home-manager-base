@@ -54,6 +54,13 @@ let
         "!! input your organization manually !!!"
       ];
     };
+    task-master = {
+      command = "${pkgs.task-master}/bin/task-master-mcp";
+      env = {
+        # Use litellm
+        OPENAI_BASE_URL = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}";
+      };
+    };
   };
 
   # Generate a list of enabled servers for each configuration name
