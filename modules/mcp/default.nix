@@ -30,9 +30,11 @@ let
       args = [ ];
     };
     github = {
+      # TODO: pass PAT
       url = "https://api.githubcopilot.com/mcp/";
     };
     "microsoft-docs-mcp" = {
+      # FIXME: not work
       url = "https://learn.microsoft.com/api/mcp";
     };
     jetbrains = {
@@ -44,6 +46,12 @@ let
       command = lib.getExe pkgs.mcp-server-remote;
       args = [
         "https://mcp.atlassian.com/v1/sse"
+      ];
+    };
+    azure-devops = {
+      command = lib.getExe pkgs.mcp-server-azure-devops;
+      args = [
+        "!! input your organization manually !!!"
       ];
     };
   };
