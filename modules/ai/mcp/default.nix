@@ -41,26 +41,81 @@ let
     };
   };
 
-  # Filter the servers that are enabled by the user (where value is true)
-  # and map them to their full configuration from `allServers`.
-  serversForJson = lib.mapAttrs' (
-    name: serverCfg:
-      if serverCfg.enable then
-        lib.nameValuePair name allServers.${name}
-      else
-        lib.nameValuePair "" null # Effectively remove disabled servers
+  # Generate a list of enabled servers for each configuration name
+  serversForJson = lib.mapAttrs (
+    configName: configValue:
+      let
+        # Selected servers from allServers
+        selectedServers = lib.mapAttrs' (
+          name: serverCfg:
+            if serverCfg.enable then
+              lib.nameValuePair name allServers.${name}
+            else
+              lib.nameValuePair "" null # Effectively remove disabled servers
+        ) (lib.filterAttrs (n: _: n != "type" && n != "url" && n != "command" && n != "args") configValue);
+
+        # Custom server definitions
+        customServers = lib.optionalAttrs (configValue ? url && configValue.url != null) {
+          ${configName} = {
+            url = configValue.url;
+          } // (lib.optionalAttrs (configValue ? command && configValue.command != null) {
+            command = configValue.command;
+          }) // (lib.optionalAttrs (configValue ? args && configValue.args != []) {
+            args = configValue.args;
+          });
+        };
+
+        # Servers specified by type
+        typeServers = lib.optionalAttrs (configValue ? type && configValue.type != null) {
+          ${configValue.type} = allServers.${configValue.type};
+        };
+
+        # Merge all servers
+        allServersForConfig = selectedServers // customServers // typeServers;
+
+        # Filter out empty entries
+        filteredServers = lib.filterAttrs (n: v: n != "" && v != null) allServersForConfig;
+      in
+      {
+        mcpServers = filteredServers;
+      }
   ) cfg.servers;
 
-  mcpServersFile = pkgs.writeText "mcp.json" (builtins.toJSON {
-    mcpServers = serversForJson;
-  });
+  # Generate separate JSON files for each attrset
+  mcpServerFiles = lib.mapAttrs (
+    configName: configValue:
+      pkgs.writeText "${configName}.json" (builtins.toJSON configValue)
+  ) serversForJson;
 in
 {
   options.my.home.ai.mcp = {
     servers = mkOption {
       description = "Configuration for MCP servers.";
-      type = with types; submodule {
-        options = lib.mapAttrs (
+      type = with types; attrsOf (submodule {
+        options = {
+          # Type option to select from existing allServers
+          type = mkOption {
+            description = "Type of the server to enable from the predefined list.";
+            type = nullOr (enum (lib.attrNames allServers));
+            default = null;
+          };
+          # Options for custom server definitions
+          url = mkOption {
+            description = "URL of the custom MCP server.";
+            type = nullOr str;
+            default = null;
+          };
+          command = mkOption {
+            description = "Command to start the custom MCP server.";
+            type = nullOr str;
+            default = null;
+          };
+          args = mkOption {
+            description = "Arguments for the custom MCP server command.";
+            type = listOf str;
+            default = [];
+          };
+        } // lib.mapAttrs (
           name: _:
             mkOption {
               type = submodule {
@@ -68,41 +123,31 @@ in
                   enable = mkEnableOption "the server";
                 };
               };
-              default = { enable = true; };
+              default = { enable = false; };
             }
         ) allServers;
-      };
+      });
       default = {};
     };
 
-    stateDir = mkOption {
-      description = "Directory where MCP state files are stored";
-      type = path;
-      default = "${config.xdg.stateHome}/mcp";
-    };
-
     configFile = {
-      source = mkOption {
-        description = "Path to the MCP configuration file. Format is MCP official format. This is read-only";
-        type = path;
-        default = mcpServersFile;
-        readOnly = true;
-      };
       path = mkOption {
-        description = "Path where the MCP configuration file will be placed";
+        description = "Path where the MCP configuration files will be placed";
         type = path;
-        default = "${config.xdg.configHome}/mcp/mcp.json";
+        default = "${config.xdg.configHome}/mcp";
       };
     };
   };
 
   config = lib.mkIf config.my.home.ai.enable {
-    home.activation."ready-for-mcp-state-base-dir" = ''
-      mkdir -p ${cfg.stateDir}
-    '';
-
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
-    xdg.configFile."mcp/mcp.json".source = cfg.configFile.source;
+    # Output JSON files for each attrset
+    xdg.configFile = lib.mapAttrs' (
+      configName: configFile:
+        lib.nameValuePair "mcp/${configName}.json" {
+          source = configFile;
+        }
+    ) mcpServerFiles;
   };
 }
