@@ -34,9 +34,6 @@ let
         api_url = gramma.apiUrl;
         language = "auto";
       };
-      "@kmuto/kmu-termcheck" = { # Too slow: 400msec
-        severity = "info"; # too many false positive
-      };
     };
   };
   rcJa = import ./ja { inherit pkgs set; };
