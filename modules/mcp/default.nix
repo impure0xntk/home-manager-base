@@ -166,6 +166,16 @@ in
         default = "${config.xdg.configHome}/mcp";
       };
     };
+    serverJsonSourcePaths = mkOption {
+      description = "Paths to the generated JSON files for each server configuration attrset";
+      type = attrsOf path;
+      default = {};
+    };
+    serverJsonContents = mkOption {
+      description = "Contents of the generated JSON files for each server configuration attrset";
+      type = attrsOf (attrsOf anything);
+      default = {};
+    };
   };
 
   config = lib.mkIf config.my.home.mcp.enable {
@@ -178,5 +188,11 @@ in
         source = configFile;
       }
     ) mcpServerFiles;
+
+    # Set the source paths for each server configuration JSON file
+    my.home.mcp.serverJsonSourcePaths = mcpServerFiles;
+
+    # Set the contents for each server configuration JSON file
+    my.home.mcp.serverJsonContents = serversForJson;
   };
 }

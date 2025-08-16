@@ -308,7 +308,7 @@ in
         usageStatisticsEnabled = false;
         telemetry.enabled = false;
       } // lib.optionalAttrs config.my.home.mcp.enable {
-        mcpServers = lib.optionalAttrs (builtins.hasAttr "qwen" config.my.home.mcp.servers) config.my.home.mcp.servers.qwen;
+        mcpServers = lib.optionalAttrs (builtins.hasAttr "qwen" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.qwen.mcpServers;
       }
     );
 
