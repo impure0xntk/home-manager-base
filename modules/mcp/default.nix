@@ -54,6 +54,15 @@ let
         "!! input your organization manually !!!"
       ];
     };
+    searxng = {
+      command = lib.getExe pkgs.mcp-server-searxng;
+      env = {
+        # TODO: refactor. now depends on local searxng instance.
+        SEARXNG_INSTANCES = lib.concatStringsSep "," [
+          "http://localhost:16060"
+        ];
+      };
+    };
     task-master = {
       command = "${pkgs.task-master}/bin/task-master-mcp";
       env = {
