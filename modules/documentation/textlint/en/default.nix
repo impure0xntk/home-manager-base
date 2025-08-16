@@ -23,7 +23,8 @@ in
     };
     unexpanded-acronym = {
       min_acronym_len = 3;
-    } ;
+      severity = "info"; # too many false positive
+    };
     no-start-duplicated-conjunction = {
       interval = 2;
     };

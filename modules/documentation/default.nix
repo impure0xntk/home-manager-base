@@ -31,6 +31,12 @@ let
 in {
   options.my.home.documentation = {
     enable = lib.mkEnableOption "Whether to enable documentation tools.";
+    executablePath = lib.mkOption {
+      type = lib.types.pathInStore;
+      description = "The path to the textlint executable with wrapper.";
+      default = textlintWrapper;
+      readOnly = true;
+    };
     gramma = {
       enable = lib.mkEnableOption "Whether to enable gramma rule.";
       apiUrl = lib.mkOption {

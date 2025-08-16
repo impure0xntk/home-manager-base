@@ -17,7 +17,6 @@ let
       "@textlint-rule/no-invalid-control-character"
       "no-zero-width-spaces"
       "doubled-spaces"
-      "@kmuto/kmu-termcheck" # Too slow: 400msec
       "no-curly-quotes"
       "@textlint-rule/no-unmatched-pair"
 
@@ -34,6 +33,9 @@ let
       "@textlint-rule/gramma" = lib.optionalAttrs gramma.enable {
         api_url = gramma.apiUrl;
         language = "auto";
+      };
+      "@kmuto/kmu-termcheck" = { # Too slow: 400msec
+        severity = "info"; # too many false positive
       };
     };
   };

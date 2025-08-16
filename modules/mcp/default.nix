@@ -61,8 +61,8 @@ let
         OPENAI_BASE_URL = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}";
       };
     };
-    textlint = {
-      command = "${pkgs.textlint-all}/bin/textlint";
+    textlint = lib.optionalAttrs config.my.home.documentation.enable {
+      command = "${config.my.home.documentation.executablePath}/bin/textlint";
       args = [
         "--mcp"
       ];
