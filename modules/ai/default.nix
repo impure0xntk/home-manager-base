@@ -288,7 +288,7 @@ in
         })
         // {
           mcp = {
-            servers = lib.optionalAttrs (builtins.hasAttr "vscode" config.my.home.mcp.servers) config.my.home.mcp.servers.vscode;
+            servers = lib.optionalAttrs (builtins.hasAttr "vscode" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.vscode.mcpServers;
           };
         };
     };
