@@ -90,12 +90,13 @@ in {
       };
     };
 
-    "preset-jtf-style" = disableJTF;
+    "preset-jtf-style" = disableJTF // {
+      "3.3.かっこ類と隣接する文字の間のスペースの有無".requireOutsideHalfParentheses = true;
+    };
 
     preset-ja-spacing = {
       ja-space-between-half-and-full-width = {
-        space = "always";
-        exceptPunctuation = true;
+        space = ["alphabets" "numbers"];
       };
       ja-space-after-exclamation = false;
       ja-space-after-question = false;
@@ -106,7 +107,11 @@ in {
     prh = {
       rulePaths = [
         # "${prhRulesSrcRoot}/media/WEB+DB_PRESS.yml" # is included in textlint-rule-spellcheck-tech-word.
-        "${prhRulesSrcRoot}/media/techbooster.yml"
+        # "${prhRulesSrcRoot}/media/techbooster.yml" # conflict about parenthesis rules.
+        "${prhRulesSrcRoot}/languages/ja/typo.yml"
+        "${prhRulesSrcRoot}/terms/software.yml"
+        "${prhRulesSrcRoot}/terms/review.yml"
+        "${prhRulesSrcRoot}/terms/trademark.yml"
         "${prhSmartHRRuleSrc}"
       ];
     };
