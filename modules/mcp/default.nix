@@ -25,8 +25,24 @@ let
       command = lib.getExe pkgs.mcp-server-nixos;
       args = [ ];
     };
+    # FIXME: not work
+/*     excel = {
+      command = lib.getExe pkgs.mcp-server-excel;
+      args = [ ];
+    }; */
+    playwright = {
+      # Use ungoogled-chromium
+      command = lib.getExe pkgs.mcp-server-playwright;
+      args = [
+        "--executable-path" "${lib.getExe pkgs.ungoogled-chromium}"
+      ];
+    };
     "pdf-reader" = {
       command = lib.getExe pkgs.mcp-server-pdf-reader;
+      args = [ ];
+    };
+    quickchart = {
+      command = lib.getExe pkgs.mcp-server-quickchart;
       args = [ ];
     };
     github = {
