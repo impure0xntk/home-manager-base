@@ -63,6 +63,10 @@ let
         ];
       };
     };
+    fetch = {
+      command = lib.getExe pkgs.mcp-server-fetch-zcaceres;
+      args = [];
+    };
     task-master = {
       command = "${pkgs.task-master}/bin/task-master-mcp";
       env = {
