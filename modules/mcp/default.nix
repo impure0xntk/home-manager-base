@@ -26,10 +26,10 @@ let
       args = [ ];
     };
     # FIXME: not work
-/*     excel = {
+    excel = {
       command = lib.getExe pkgs.mcp-server-excel;
-      args = [ ];
-    }; */
+      args = [ "stdio" ];
+    };
     playwright = {
       # Use ungoogled-chromium
       command = lib.getExe pkgs.mcp-server-playwright;
