@@ -13,6 +13,10 @@ let
   cfg = config.my.home.mcp;
 
   allServers = {
+    arxiv = {
+      command = lib.getExe pkgs.mcp-server-arxiv;
+      args = [ ];
+    };
     context7 = {
       # https://github.com/sst/opencode/issues/1244#issuecomment-3114688653
       url = "https://mcp.context7.com/sse";
@@ -25,7 +29,6 @@ let
       command = lib.getExe pkgs.mcp-server-nixos;
       args = [ ];
     };
-    # FIXME: not work
     excel = {
       command = lib.getExe pkgs.mcp-server-excel;
       args = [ "stdio" ];
