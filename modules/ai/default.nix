@@ -311,13 +311,13 @@ in
         mcpServers = lib.optionalAttrs (builtins.hasAttr "qwen" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.qwen.mcpServers;
       }
     );
-
     home.packages = (with pkgs; [
       shell-gpt
       openRouterFreeModels
 
       # Defined by numtide/nix-ai-tools
       qwen-code'
+      opencode
     ]);
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
@@ -328,7 +328,50 @@ in
     xdg.configFile =
       let
         shellGptRoles = roles;
-      in
+        opencodeProvider = providers:
+          builtins.listToAttrs (map (p: {
+            name = p.name;
+            value = {
+              npm = "@ai-sdk/openai-compatible";
+              name = "${lib.strings.toUpper (lib.strings.substring 0 1 p.name)}${lib.strings.substring 1 (builtins.stringLength p.name - 1) p.name} (local)";
+              options.baseURL = "${p.url}/v1";
+              models = builtins.listToAttrs (map (m: {
+                name = m.model;
+                value = {
+                  name = m.model;
+                };
+              }) p.models);
+            };
+          }) providers);
+        opencodeMcp = mcpServers:
+          lib.mapAttrs (name: config:
+            let
+              isRemote = config ? "url";
+            in
+            {
+              type = if isRemote then "remote" else "local";
+              enabled = true;
+            }
+            // (lib.optionalAttrs isRemote { url = config.url; })
+            // (lib.optionalAttrs (!isRemote) {
+              command = [ config.command ] ++ (config.args or [ ]);
+            })
+            // (lib.optionalAttrs (config ? "env") { environment = config.env; })
+            // (lib.optionalAttrs (config ? "headers") { headers = config.headers; })
+          ) mcpServers;
+      in {
+        "opencode/opencode.json".text = builtins.toJSON (
+          {
+            "$schema" = "https://opencode.ai/config.json";
+            theme = "opencode";
+            model = let modelInfo = searchModelByRole "chat"; in "${modelInfo.provider}/${modelInfo.model}";
+            provider = opencodeProvider cfg.providers;
+          } // lib.optionalAttrs config.my.home.mcp.enable {
+              mcp = lib.optionalAttrs (builtins.hasAttr "opencode" config.my.home.mcp.serverJsonContents)
+                (opencodeMcp config.my.home.mcp.serverJsonContents.opencode.mcpServers);
+          }
+        );
+      } //
       (
         # shellgpt roles
         builtins.listToAttrs (
