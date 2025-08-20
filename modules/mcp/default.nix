@@ -103,6 +103,10 @@ let
       command = lib.getExe pkgs.mcp-server-yfinance;
       args = [];
     };
+    investor-agent = {
+      command = lib.getExe pkgs.mcp-server-investor-agent;
+      args = [ ];
+    };
   };
 
   # Generate a list of enabled servers for each configuration name
