@@ -60,6 +60,13 @@ let
       command = lib.getExe pkgs.mcp-server-jetbrains;
       args = [ ];
     };
+    serena = {
+      command = lib.getExe pkgs.serena;
+      args = [
+        "start-mcp-server"
+        "--enable-web-dashboard" "false"
+      ];
+    };
     atlassian = {
       # TODO: may be able to replace to "url"
       command = lib.getExe pkgs.mcp-server-remote;
