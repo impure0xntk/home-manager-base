@@ -97,6 +97,12 @@ let
       command = lib.getExe pkgs.mcp-server-fetch-zcaceres;
       args = [];
     };
+    lsp = {
+      command = lib.getExe pkgs.mcp-server-lsp;
+      args = [
+        "!! input your organization manually !!!"
+      ];
+    };
     task-master = {
       command = "${pkgs.task-master}/bin/task-master-mcp";
       env = {
