@@ -241,9 +241,15 @@ in
     ) mcpServerFiles;
 
     # Set the source paths for each server configuration JSON file
-    my.home.mcp.serverJsonSourcePaths = mcpServerFiles;
+    my.home.mcp = {
+      serverJsonSourcePaths = mcpServerFiles;
+      serverJsonContents = serversForJson;
+    };
 
-    # Set the contents for each server configuration JSON file
-    my.home.mcp.serverJsonContents = serversForJson;
+    # For CLI
+    home.packages = with pkgs; [
+      task-master
+      serena
+    ];
   };
 }
