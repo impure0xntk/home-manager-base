@@ -53,8 +53,11 @@ let
       args = [ ];
     };
     github = {
-      # TODO: pass PAT
-      url = "https://api.githubcopilot.com/mcp/";
+      command = lib.getExe pkgs.mcp-server-github-go;
+      args = [ "stdio" ];
+      env = {
+        GITHUB_PERSONAL_ACCESS_TOKEN = "<YOUR_TOKEN>";
+      };
     };
     "microsoft-docs-mcp" = {
       # FIXME: not work
