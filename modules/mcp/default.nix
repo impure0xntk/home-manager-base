@@ -106,6 +106,20 @@ let
         "!! input your organization manually !!!"
       ];
     };
+    mysql = {
+      command = lib.getExe pkgs.mcp-server-mysql;
+      args = [ ];
+      env = {
+        MYSQL_HOST = "127.0.0.1";
+        MYSQL_PORT = "3306";
+        MYSQL_USER = "root";
+        MYSQL_PASS = "your_password";
+        MYSQL_DB = "your_database";
+        ALLOW_INSERT_OPERATION = "false";
+        ALLOW_UPDATE_OPERATION = "false";
+        ALLOW_DELETE_OPERATION = "false";
+      };
+    };
     task-master = {
       command = "${pkgs.task-master}/bin/task-master-mcp";
       env = {
