@@ -113,6 +113,14 @@ let
         OPENAI_BASE_URL = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}";
       };
     };
+    cve-search-nvd = {
+      command = lib.getExe pkgs.mcp-server-cve-search-nvd;
+      args = [ ];
+    };
+    cve-search-circl = {
+      command = lib.getExe pkgs.mcp-server-cve-search-circl;
+      args = [ ];
+    };
     textlint = lib.optionalAttrs config.my.home.documentation.enable {
       command = "${config.my.home.documentation.executablePath}/bin/textlint";
       args = [
