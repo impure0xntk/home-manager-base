@@ -17,6 +17,10 @@ let
       command = lib.getExe pkgs.mcp-server-arxiv;
       args = [ ];
     };
+    desktop-commander = {
+      command = lib.getExe pkgs.mcp-server-desktop-commander;
+      args = [ ];
+    };
     context7 = {
       # https://github.com/sst/opencode/issues/1244#issuecomment-3114688653
       url = "https://mcp.context7.com/sse";
