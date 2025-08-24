@@ -124,6 +124,10 @@ let
         ALLOW_DELETE_OPERATION = "false";
       };
     };
+    wireshark = {
+      command = lib.getExe pkgs.mcp-server-wireshark;
+      args = [ ];
+    };
     task-master = {
       command = "${pkgs.task-master}/bin/task-master-mcp";
       env = {
