@@ -48,6 +48,10 @@ let
       command = lib.getExe pkgs.mcp-server-pdf-reader;
       args = [ ];
     };
+    markitdown = {
+      command = lib.getExe pkgs.mcp-server-markitdown;
+      args = [ ];
+    };
     quickchart = {
       command = lib.getExe pkgs.mcp-server-quickchart;
       args = [ ];

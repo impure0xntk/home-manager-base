@@ -48,7 +48,11 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ textlintWrapper ];
+    home.packages = [
+      textlintWrapper
+      # pkgs.markitdown.all
+      pkgs.markitdown
+    ];
     programs.vscode.profiles.default = {
       extensions = pkgs.nix4vscode.forVscode [
         "yzane.markdown-pdf"
