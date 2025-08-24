@@ -52,6 +52,10 @@ let
       command = lib.getExe pkgs.mcp-server-markitdown;
       args = [ ];
     };
+    ocr = {
+      command = lib.getExe pkgs.mcp-server-ocr;
+      args = [ ];
+    };
     quickchart = {
       command = lib.getExe pkgs.mcp-server-quickchart;
       args = [ ];
