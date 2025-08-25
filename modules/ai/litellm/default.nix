@@ -10,6 +10,12 @@ let
   cfg = config.my.home.ai.litellm;
   cfgAi = config.my.home.ai;
 
+  settingsDefault = {
+    litellm_config = {
+      num_retries = 5;
+    };
+  };
+  settingsAll = lib.recursiveUpdate settingsDefault cfg.settings;
   presetModels = (import ./models {inherit lib;});
 in
 {
@@ -70,7 +76,7 @@ in
         };
         Service = {
           WorkingDirectory = "%D/litellm";
-          ExecStart = "${pkgs.litellm}/bin/litellm --port ${builtins.toString cfg.port} --config ${lib.my.toYaml cfg.settings}";
+          ExecStart = "${pkgs.litellm}/bin/litellm --port ${builtins.toString cfg.port} --config ${lib.my.toYaml settingsAll}";
           EnvironmentFile = lib.mkIf (cfg.environmentFilePath != null) cfg.environmentFilePath;
           Environment = [
             "PRISMA_SCHEMA_ENGINE_BINARY=${pkgs.prisma-engines}/bin/schema-engine"
