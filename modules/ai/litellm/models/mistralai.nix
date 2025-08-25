@@ -16,4 +16,13 @@ in
       };
     }
   ];
+  "mistral-small-3.2" = [
+    {
+      model = "openrouter/mistralai/mistral-small-3.2-24b-instruct:free";
+      params = {
+        weight = 10;
+        # https://docs.unsloth.ai/basics/tutorials-how-to-fine-tune-and-run-llms/devstral-how-to-run-and-fine-tune?utm_source=chatgpt.com
+      };
+    }
+  ];
 }

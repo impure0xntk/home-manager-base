@@ -22,6 +22,7 @@ in
 modelsFinal (
   (import ./deepseek.nix { inherit lib; })
   // (import ./google.nix { inherit lib; })
+  // (import ./meta.nix { inherit lib; })
   // (import ./mistralai.nix { inherit lib; })
   // (import ./moonshotai.nix { inherit lib; })
   // (import ./qwen.nix { inherit lib; })
