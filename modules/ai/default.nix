@@ -364,7 +364,7 @@ in
           {
             "$schema" = "https://opencode.ai/config.json";
             theme = "opencode";
-            model = let modelInfo = searchModelByRole "chat"; in "${modelInfo.provider}/${modelInfo.model}";
+            model = let modelInfo = searchModelByRole "edit"; in "${modelInfo.provider}/${modelInfo.model}";
             provider = opencodeProvider cfg.providers;
           } // lib.optionalAttrs config.my.home.mcp.enable {
               mcp = lib.optionalAttrs (builtins.hasAttr "opencode" config.my.home.mcp.serverJsonContents)
