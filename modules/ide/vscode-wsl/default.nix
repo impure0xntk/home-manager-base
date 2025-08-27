@@ -174,13 +174,14 @@ in
             done
 
             mkdir -p $(dirname "$file")
+            chmod +w "$file"
             echo "{}" > "$file"
           fi
 
           if [ "$file_write" != "" ]; then
+            chmod +w "$file"
             userDataProfiles=$(jq ".userDataProfiles += $(echo $file_write | jq -R 'split("...") | map({ name: ., location: . })')" "$file")
             echo $userDataProfiles > "$file"
-            chmod +w "$file"
           fi
         '';
       in
