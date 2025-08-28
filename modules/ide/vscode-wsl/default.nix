@@ -47,6 +47,7 @@ let
       echo "Write json ${first} to ${target}" >&2
       # mv ${target}{,.bak.$(date "+%Y%m%d%H%M%S")}
     fi
+    chmod +w ${target} || true
     cp ${first} ${target}
     ! test -w && chmod +w ${target}
   '';
@@ -62,6 +63,7 @@ let
       mv ${target}{.tmp,}
     else
       echo "Write json ${first} to ${target}" >&2
+      chmod +w ${target} || true
       cp ${first} ${target}
     fi
     ! test -w && chmod +w ${target}
@@ -174,12 +176,12 @@ in
             done
 
             mkdir -p $(dirname "$file")
-            chmod +w "$file"
+            chmod +w "$file" || true
             echo "{}" > "$file"
           fi
 
           if [ "$file_write" != "" ]; then
-            chmod +w "$file"
+            chmod +w "$file" || true
             userDataProfiles=$(jq ".userDataProfiles += $(echo $file_write | jq -R 'split("...") | map({ name: ., location: . })')" "$file")
             echo $userDataProfiles > "$file"
           fi
