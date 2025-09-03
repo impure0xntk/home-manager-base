@@ -10,6 +10,17 @@ let
   cfg = config.my.home.ai.litellm;
   cfgAi = config.my.home.ai;
 
+  # TODO: remove after NixOS 25.11
+  litellm = pkgs.litellm.overridePythonAttrs (prev: rec {
+    version = "1.75.5";
+    src = pkgs.fetchFromGitHub {
+      owner = "BerriAI";
+      repo = "litellm";
+      tag = "v${version}-stable";
+      hash = "sha256-VedQ0cNOf9vUFF7wjT7WOsCfTesIvzhudDfGnBTXO3E=";
+    };
+  });
+
   settingsDefault = {
     litellm_config = {
       num_retries = 5;
@@ -76,7 +87,7 @@ in
         };
         Service = {
           WorkingDirectory = "%D/litellm";
-          ExecStart = "${pkgs.litellm}/bin/litellm --port ${builtins.toString cfg.port} --config ${lib.my.toYaml settingsAll}";
+          ExecStart = "${litellm}/bin/litellm --port ${builtins.toString cfg.port} --config ${lib.my.toYaml settingsAll}";
           EnvironmentFile = lib.mkIf (cfg.environmentFilePath != null) cfg.environmentFilePath;
           Environment = [
             "PRISMA_SCHEMA_ENGINE_BINARY=${pkgs.prisma-engines}/bin/schema-engine"
