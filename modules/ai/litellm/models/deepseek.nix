@@ -15,6 +15,12 @@ in
         weight = 10;
       };
     }
+    {
+      model = "openrouter/deepseek/deepseek-r1:free";
+      params = {
+        weight = 10;
+      };
+    }
   ];
   deepseek-v3 = [
     {
@@ -25,6 +31,30 @@ in
         temperature = 0.6;
         min_p = 0;
 
+        weight = 10;
+      };
+    }
+  ];
+  "deepseek-v3.1" = [
+    {
+      model = "openrouter/deepseek/deepseek-chat-v3.1:free";
+      params = {
+        weight = 10;
+      };
+    }
+  ];
+  deepseek-r1t2-chimera = [
+    {
+      model = "openrouter/tngtech/deepseek-r1t2-chimera:free";
+      params = {
+        weight = 10;
+      };
+    }
+  ];
+  deepseek-r1t-chimera = [
+    {
+      model = "openrouter/tngtech/deepseek-r1t-chimera:free";
+      params = {
         weight = 10;
       };
     }
