@@ -6,14 +6,17 @@
 }:
 let
   cfg = config.my.home.ai;
-  
-  # Use litellm
+
+  # Use pre-defined provider
   qwen-code' = pkgs.writeShellScriptBin "qwen" ''
-    OPENAI_BASE_URL="${(searchModelByRole "chat").url}" \
-    OPENAI_API_KEY="dummy" \
-    OPENAI_MODEL="''${1:-${(searchModelByRole "chat").model}}" \
+    export OPENAI_BASE_URL="${(searchModelByRole "chat").url}"
+    export OPENAI_API_KEY="dummy"
+    export OPENAI_MODEL="''${1:-${(searchModelByRole "chat").model}}"
+    if [ $# -gt 0 ]; then
+      shift
+    fi
     ${pkgs.qwen-code}/bin/qwen "$@"
-  ''; 
+  '';
 
   # Map to include provider URL along with the model
   # expected result format:
@@ -297,11 +300,14 @@ in
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
     home.file.".qwen/settings.json".text = builtins.toJSON (
       {
-        # selectedAuthType = "oauth-personal"; # only for gemini
-        selectedAuthType = "openai"; # only for gemini
-        theme = "GitHub";
         preferredEditor = "nvim";
-        checkpointing = true;
+        vimMode = true;
+        disableAutoUpdate = true;
+        disableUpdateNag = true;
+        # selectedAuthType = "oauth-personal"; # only for gemini
+        selectedAuthType = "openai"; # only for qwen-coder
+        theme = "GitHub";
+        checkpointing.enabled = true;
         hideTips = true;
         hideBanner = true;
         enableOpenAILogging = false;
