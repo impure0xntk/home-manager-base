@@ -22,12 +22,17 @@ let
   });
 
   settingsDefault = {
-    litellm_config = {
+    litellm_settings = {
       num_retries = 5;
+      cache = true;
+      cache_params = {
+        type = "local";
+        # type = "disk";
+        # disk_cache_dir = "/tmp/litellm-cache";
+      };
     };
   };
   settingsAll = lib.recursiveUpdate settingsDefault cfg.settings;
-  presetModels = (import ./models {inherit lib;});
 in
 {
   options.my.home.ai.litellm = {
