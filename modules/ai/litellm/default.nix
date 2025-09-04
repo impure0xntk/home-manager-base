@@ -100,7 +100,10 @@ in
             "PRISMA_QUERY_ENGINE_LIBRARY=${pkgs.prisma-engines}/lib/libquery_engine.node"
 
             "DISABLE_ADMIN_UI=True"
-          ];
+          ]
+          ++ (lib.optionals config.my.home.networks.proxy.enable [
+            "HTTPS_PROXY=${config.my.home.networks.proxy.default}"
+          ]);
           Restart = "on-failure";
           RestartSec = 5;
           StateDirectory = "litellm";
