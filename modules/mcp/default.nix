@@ -108,6 +108,10 @@ let
       command = lib.getExe pkgs.mcp-server-fetch-zcaceres;
       args = [];
     };
+    basic-memory = {
+      command = lib.getExe pkgs.mcp-server-basic-memory;
+      args = [ "mcp" ];
+    };
     lsp = {
       command = lib.getExe pkgs.mcp-server-lsp;
       args = [
