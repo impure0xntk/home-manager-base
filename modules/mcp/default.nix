@@ -332,6 +332,13 @@ in
     home.packages = with pkgs; [
       task-master
       serena
+
+      # MCP converter tool
+      (writeShellApplication {
+        name = "opencode-mcp-converter";
+        runtimeInputs = [ jq ];
+        text = builtins.readFile ./scripts/opencode-mcp-converter.sh;
+      })
     ];
   };
 }
