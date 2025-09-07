@@ -112,6 +112,10 @@ let
       command = lib.getExe pkgs.mcp-server-basic-memory;
       args = [ "mcp" ];
     };
+    spec-workflow = {
+      command = lib.getExe pkgs.mcp-server-spec-workflow;
+      args = [ "/path/to/your/project" "--AutoStartDashboard" ];
+    };
     lsp = {
       command = lib.getExe pkgs.mcp-server-lsp;
       args = [
