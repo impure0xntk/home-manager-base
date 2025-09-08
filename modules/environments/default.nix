@@ -45,7 +45,8 @@ in {
     PYTHONBREAKPOINT = "IPython.terminal.debugger.set_trace";
     PIP_DISABLE_PIP_VERSION_CHECK = "on";
     PIP_NO_CACHE_DIR = "off";
+  } // lib.optionalAttrs config.my.home.networks.proxy.enable {
     # NodeJS
-    NODE_USE_ENV_PROXY = lib.optionalString config.my.home.networks.proxy.enable config.my.home.networks.proxy.default; # from Node 24.3.0
+    NODE_USE_ENV_PROXY = 1; # from Node 24.3.0
   };
 }
