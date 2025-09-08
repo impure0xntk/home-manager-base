@@ -116,6 +116,10 @@ let
       command = lib.getExe pkgs.mcp-server-spec-workflow;
       args = [ "/path/to/your/project" "--AutoStartDashboard" ];
     };
+    dependency = {
+      command = lib.getExe pkgs.mcp-server-dependency;
+      args = [ ];
+    };
     lsp = {
       command = lib.getExe pkgs.mcp-server-lsp;
       args = [
