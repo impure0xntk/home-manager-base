@@ -243,57 +243,75 @@ in
             "kilocode.Kilo-Code"
           ]
         );
-      userSettings =
-        (lib.my.flatten "_flattenIgnore" {
-          # The main agent is GitHub Copilot, but it uses only remote models for completions.
-          # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
-          # gitlens ai: not work
-          gitlens.ai =
-            let
-              model = searchModelByRole "edit";
-            in
-            {
-              model = "vscode";
-              vscode.model = "${model.provider}:${model.model}";
-            };
-          github.copilot = {
-            chat = {
-              agent = {
-                thinkingTool = true;
-              };
-              localeOverride = lib.head (lib.splitString "-" config.my.home.ide.vscode.languages.chat);
-
-              editor.temporalContext.enabled = true;
-              edits.temporalContext.enabled = true;
-
-              # prompts
-              # Refer file to avoid redundant settings.
-              # TODO: add ability to add prompts from another modules
-              reviewSelection.instructions = [
-                {
-                  "file" = "${config.xdg.configHome}/github-copilot/instructions/Code Refactor.md";
-                }
-              ];
-              commitMessageGeneration.instructions = [
-                {
-                  "file" = "${config.xdg.configHome}/github-copilot/instructions/Commit Message Generator.md";
-                }
-              ];
-            };
+      userSettings = let
+        # Azure Models configuration for GitHub Copilot Chat
+        # https://parsiya.net/blog/litellm-ghc-aad/
+        azureModelsConfig = (lib.listToAttrs (lib.concatMap (provider:
+          lib.map (model:
+            lib.nameValuePair "${provider.name}-${model.model}" {
+              name = model.model;
+              url = "${provider.url}/v1/chat/completions";
+              maxInputTokens = -1;
+              maxOutputTokens = -1;
+              toolCalling = true;
+              vision = false;
+              thinking = false;
+            }
+          ) provider.models
+        ) cfg.providers)) // { _flattenIgnore = true; };
+      in (lib.my.flatten "_flattenIgnore" {
+        # The main agent is GitHub Copilot, but it uses only remote models for completions.
+        # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
+        # gitlens ai: not work
+        gitlens.ai =
+          let
+            model = searchModelByRole "edit";
+          in
+          {
+            model = "vscode";
+            vscode.model = "${model.provider}:${model.model}";
           };
+        github.copilot = {
           chat = {
-            agent.enabled = !cfg.localOnly;
-            mcp = {
-              enabled = config.my.home.mcp.enable;
-              discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
+            agent = {
+              thinkingTool = true;
             };
-          };
-        })
-        // {
-          mcp = {
-            servers = lib.optionalAttrs (builtins.hasAttr "vscode" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.vscode.mcpServers;
+            localeOverride = lib.head (lib.splitString "-" config.my.home.ide.vscode.languages.chat);
+
+            editor.temporalContext.enabled = true;
+            edits.temporalContext.enabled = true;
+
+            # Azure models configuration
+            azureModels = azureModelsConfig;
+
+            # prompts
+            # Refer file to avoid redundant settings.
+            # TODO: add ability to add prompts from another modules
+            reviewSelection.instructions = [
+              {
+                "file" = "${config.xdg.configHome}/github-copilot/instructions/Code Refactor.md";
+              }
+            ];
+            commitMessageGeneration.instructions = [
+              {
+                "file" = "${config.xdg.configHome}/github-copilot/instructions/Commit Message Generator.md";
+              }
+            ];
           };
         };
+        chat = {
+          agent.enabled = !cfg.localOnly;
+          mcp = {
+            enabled = config.my.home.mcp.enable;
+            discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
+          };
+        };
+      })
+      // {
+        mcp = {
+          servers = lib.optionalAttrs (builtins.hasAttr "vscode" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.vscode.mcpServers;
+        };
+      };
     };
 
     # For other tools
