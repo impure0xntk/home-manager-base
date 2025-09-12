@@ -120,6 +120,58 @@ let
       "chatjava" = chat "Java Teacher";
       "chatnix" = chat "Nix Teacher";
     };
+
+  # Convert existing provider configuration to claude-code-router format
+  claudeCodeRouterProviders =
+    builtins.map
+      (provider:
+        let
+          # Determine API base URL based on provider type
+          apiBaseUrl = "${provider.url}/v1/chat/completions";
+        in
+        {
+          name = provider.name;
+          api_base_url = apiBaseUrl;
+          api_key = "\${${lib.strings.toUpper provider.name}_API_KEY}"; # dummy
+          models = builtins.map (m: m.model) provider.models;
+        }
+      )
+      cfg.providers;
+
+  # Generate claude-code-router config.json content
+  claudeCodeRouterConfig = builtins.toJSON {
+    LOG = true;
+    LOG_LEVEL = "debug";
+    API_TIMEOUT_MS = 10000;
+    NON_INTERACTIVE_MODE = false;
+    Providers = claudeCodeRouterProviders;
+    Router = {
+      default = let
+        chatModel = searchModelByRole "edit";
+      in
+        if chatModel != null then
+          "${chatModel.provider},${chatModel.model}"
+        else
+          "";
+      background = let
+        ollamaModels = builtins.filter (p: p.name == "ollama") cfg.providers;
+        ollamaModel = if ollamaModels != [] then
+          builtins.head (builtins.head ollamaModels).models
+        else null;
+      in
+        if ollamaModel != null then
+          "ollama,${ollamaModel.model}"
+        else
+          "";
+      think = let
+        editModel = searchModelByRole "chat";
+      in
+        if editModel != null then
+          "${editModel.provider},${editModel.model}"
+        else
+          "";
+    };
+  };
 in
 {
   imports = [
@@ -347,6 +399,9 @@ in
       # Defined by numtide/nix-ai-tools
       qwen-code'
       opencode
+
+      claude-code
+      claude-code-router
     ]);
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
@@ -446,6 +501,8 @@ in
           }) shellGptRoles
         )
       );
+
+    home.file.".claude-code-router/config.json".text = claudeCodeRouterConfig;
 
     # Add a custom command to lazygit
     programs.lazygit.settings.customCommands =
