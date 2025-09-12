@@ -276,6 +276,7 @@ in
             agent = {
               thinkingTool = true;
             };
+            codesearch.enabled = true;
             localeOverride = lib.head (lib.splitString "-" config.my.home.ide.vscode.languages.chat);
 
             editor.temporalContext.enabled = true;
@@ -305,6 +306,10 @@ in
             enabled = config.my.home.mcp.enable;
             discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
           };
+        };
+        inlineChat = {
+          enableV2 = true;
+          hideOnRequest = true;
         };
       })
       // {
