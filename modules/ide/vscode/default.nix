@@ -481,8 +481,14 @@ in
                   command = "-editor.action.startFindReplaceAction";
                   when = "editorFocus || editorIsOpen";
                 }
+                {
+                  # For terminal editor tool: conflict with tmux
+                  key = "ctrl+w";
+                  command = "-workbench.action.terminal.killEditor";
+                  when = "terminalEditorFocus && terminalFocus && terminalHasBeenCreated || terminalEditorFocus && terminalFocus && terminalProcessSupported";
+                }
               ]
-              ++ sameWhen "editorFocus" [
+              ++ sameWhen "editorFocus || terminalEditorFocus" [ # terminalEditorFocus for Claude Code
                 {
                   key = "ctrl+w h";
                   command = "workbench.action.focusLeftGroup";
