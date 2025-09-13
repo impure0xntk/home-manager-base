@@ -65,40 +65,8 @@ let
         role = withNoThink (toJapanese shell.default);
       }
       {
-        name = "Code Generator";
-        role = withNoThink (toJapanese shell.codeGenerator);
-      }
-      {
-        name = "Code Refactor";
-        role = withNoThink (toJapanese shell.codeRefactor);
-      }
-      {
-        name = "Shell Command Descriptor";
-        role = withNoThink (toJapanese shell.shellCommandDescriptor);
-      }
-      {
-        name = "Shell Command Generator";
-        role = withNoThink (toJapanese shell.shellCommandGenerator);
-      }
-      {
-        name = "Java Teacher";
-        role = withNoThink (toLang "java" "17" shell.codeRefactor);
-      }
-      {
-        name = "Nix Teacher";
-        role = withNoThink (toLang "nix" "" shell.codeRefactor);
-      }
-      {
         name = "Commit Message Generator";
         role = withNoThink (shell.commitMessageGenerator);
-      }
-      {
-        name = "Commit Cleaner";
-        role = withNoThink (shell.commitCleaner);
-      }
-      {
-        name = "Requirement Analyst";
-        role = withNoThink (toJapanese shell.requirementAnalyst);
       }
     ];
 
@@ -111,14 +79,6 @@ let
       "cmsg" = "git diff --staged | ${stdin "Commit Message Generator"}";
 
       "chat" = chat "ShellGPT-Japanese";
-      "chatcode" = chat "Code Generator";
-      "chatshelldesc" = chat "Shell Command Descriptor";
-      "chatshellgen" = chat "Shell Command Generator";
-      "chatcommitclean" = chat "Commit Cleaner";
-
-      # TODO: generate chat for each language modules
-      "chatjava" = chat "Java Teacher";
-      "chatnix" = chat "Nix Teacher";
     };
 
 in
@@ -350,6 +310,7 @@ in
       qwen-code'
       opencode
 
+      ck-search
     ]);
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
