@@ -23,7 +23,8 @@ let
     };
     context7 = {
       # https://github.com/sst/opencode/issues/1244#issuecomment-3114688653
-      url = "https://mcp.context7.com/sse";
+      command = lib.getExe pkgs.mcp-server-remote;
+      args = [ "https://mcp.context7.com/sse" ];
     };
     git = {
       command = lib.getExe pkgs.mcp-server-git;
