@@ -185,6 +185,24 @@ in
     }) files
   );
 
+  home.activation."add-mcpServers" = let
+    mcpServers = lib.optionalAttrs (builtins.hasAttr "claude-code" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.claude-code.mcpServers;
+    json = "${configDirectory}/.claude.json";
+  in ''
+    if ! test -e ${json}; then
+      echo "{}" > ${json}
+    fi
+    cp ${json}{,.bak}
+    ${pkgs.jq}/bin/jq '.mcpServers = ${builtins.toJSON mcpServers}' ${json} > ${json}.new
+    mv ${json}{.new,}
+  '';
+
+  programs.vscode.profiles.default = {
+    extensions = pkgs.nix4vscode.forVscode [
+      "Anthropic.claude-code"
+    ];
+  };
+
   programs = {
     bash.shellAliases = shellAliases;
     fish.shellAbbrs = shellAliases;
