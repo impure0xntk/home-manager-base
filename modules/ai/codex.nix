@@ -76,7 +76,7 @@ let
       tools = {
         web_search = true;
       };
-      mcpServers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.codex.mcpServers;
+      mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.codex.mcpServers;
     };
 
   shellAliases = {
@@ -88,23 +88,19 @@ in
     codex-wrapped
   ];
 
-  xdg.configFile =
-    let
-      files = [
-        {
-          name = ".gitkeep";
-          text = "";
-        }
-      ];
-    in
-    builtins.listToAttrs (
-      builtins.map (v: {
-        name = "codex/${v.name}";
-        value.text = v.text;
-      }) files
-    );
+  xdg.configFile = {
+    "codex/.gitkeep".text = "";
+    "codex/AGENTS.md".text =
+      with prompts._snippet;
+      with prompts.function; ''
+      ${charm}
+      ${japanese.input}
+      ${japanese.output}
+    '';
+    # "codex/prompts/commit.md".text = prompts.commit.conventional;
+  };
 
-  home.activation."fix-config" =
+  home.activation."codex-fix-config" =
     let
       toml = "${configDirectory}/config.toml";
     in
