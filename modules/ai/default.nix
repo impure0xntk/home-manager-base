@@ -7,17 +7,6 @@
 let
   cfg = config.my.home.ai;
 
-  # Use pre-defined provider
-  qwen-code' = pkgs.writeShellScriptBin "qwen" ''
-    export OPENAI_BASE_URL="${(searchModelByRole "chat").url}"
-    export OPENAI_API_KEY="dummy"
-    export OPENAI_MODEL="''${1:-${(searchModelByRole "chat").model}}"
-    if [ $# -gt 0 ]; then
-      shift
-    fi
-    ${pkgs.qwen-code}/bin/qwen "$@"
-  '';
-
   # Map to include provider URL along with the model
   # expected result format:
   # [
@@ -44,12 +33,6 @@ let
       );
     in
     if builtins.length models > 0 then builtins.head models else null;
-
-  openRouterFreeModels = pkgs.writeShellScriptBin "openrouter-free-models" ''
-    ${pkgs.curl}/bin/curl -s "https://openrouter.ai/api/v1/models" \
-      | ${pkgs.jq}/bin/jq -r ".data[] | select(.id | endswith(\":free\")) | .id" \
-      | fzf
-  '';
 
   prompts = import ./prompt.nix { inherit lib; };
   roles =
@@ -86,7 +69,6 @@ in
   imports = [
     ./ollama.nix
     ./litellm
-    (import ./claude-code.nix (args // {inherit searchModelByRole prompts;}))
     (import ./codex.nix (args // {inherit searchModelByRole prompts;}))
   ];
 
@@ -284,32 +266,8 @@ in
 
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
-    home.file.".qwen/settings.json".text = builtins.toJSON (
-      {
-        preferredEditor = "nvim";
-        vimMode = true;
-        disableAutoUpdate = true;
-        disableUpdateNag = true;
-        # selectedAuthType = "oauth-personal"; # only for gemini
-        selectedAuthType = "openai"; # only for qwen-coder
-        theme = "GitHub";
-        checkpointing.enabled = true;
-        hideTips = true;
-        hideBanner = true;
-        enableOpenAILogging = false;
-        usageStatisticsEnabled = false;
-        telemetry.enabled = false;
-      } // lib.optionalAttrs config.my.home.mcp.enable {
-        mcpServers = lib.optionalAttrs (builtins.hasAttr "qwen" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.qwen.mcpServers;
-      }
-    );
     home.packages = (with pkgs; [
       shell-gpt
-      openRouterFreeModels
-
-      # Defined by numtide/nix-ai-tools
-      qwen-code'
-      opencode
 
       ck-search
     ]);
@@ -322,51 +280,7 @@ in
     xdg.configFile =
       let
         shellGptRoles = roles;
-        opencodeProvider = providers:
-          builtins.listToAttrs (map (p: {
-            name = p.name;
-            value = {
-              npm = "@ai-sdk/openai-compatible";
-              name = "${lib.strings.toUpper (lib.strings.substring 0 1 p.name)}${lib.strings.substring 1 (builtins.stringLength p.name - 1) p.name} (local)";
-              options.baseURL = "${p.url}/v1";
-              models = builtins.listToAttrs (map (m: {
-                name = m.model;
-                value = {
-                  name = m.model;
-                };
-              }) p.models);
-            };
-          }) providers);
-        opencodeMcp = mcpServers:
-          lib.mapAttrs (name: config:
-            let
-              isRemote = config ? "url";
-            in
-            {
-              type = if isRemote then "remote" else "local";
-              enabled = true;
-            }
-            // (lib.optionalAttrs isRemote { url = config.url; })
-            // (lib.optionalAttrs (!isRemote) {
-              command = [ config.command ] ++ (config.args or [ ]);
-            })
-            // (lib.optionalAttrs (config ? "env") { environment = config.env; })
-            // (lib.optionalAttrs (config ? "headers") { headers = config.headers; })
-          ) mcpServers;
-      in {
-        "opencode/opencode.json".text = builtins.toJSON (
-          {
-            "$schema" = "https://opencode.ai/config.json";
-            theme = "opencode";
-            model = let modelInfo = searchModelByRole "edit"; in "${modelInfo.provider}/${modelInfo.model}";
-            provider = opencodeProvider cfg.providers;
-          } // lib.optionalAttrs config.my.home.mcp.enable {
-              mcp = lib.optionalAttrs (builtins.hasAttr "opencode" config.my.home.mcp.serverJsonContents)
-                (opencodeMcp config.my.home.mcp.serverJsonContents.opencode.mcpServers);
-          }
-        );
-      } //
-      (
+      in (
         # shellgpt roles
         builtins.listToAttrs (
           builtins.map (r: {
@@ -415,7 +329,7 @@ in
 
     # Add a custom command to lazygit
     programs.lazygit.settings.customCommands =
-      let 
+      let
         chatModel = searchModelByRole "chat";
         editModel = searchModelByRole "edit";
       in [
