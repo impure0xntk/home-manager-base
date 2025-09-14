@@ -87,6 +87,7 @@ in
     ./ollama.nix
     ./litellm
     (import ./claude-code.nix (args // {inherit searchModelByRole prompts;}))
+    (import ./codex.nix (args // {inherit searchModelByRole prompts;}))
   ];
 
   options.my.home.ai =
