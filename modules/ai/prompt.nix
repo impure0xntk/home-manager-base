@@ -25,6 +25,10 @@ let
         Output must be Japanese only (no romaji).
       '';
     };
+
+    security = ''
+      Do not read, write and commit secrets.
+    '';
   };
 
   mk = {
@@ -41,6 +45,10 @@ let
   };
 
   code = {
+    coder = ''
+      Follow existing conventions within each configuration file type.
+      Use comments to explain complex logic or non-obvious configurations.
+    '';
     generator = ''
       Return only code in plain text.
       No markdown, no ``` blocks.

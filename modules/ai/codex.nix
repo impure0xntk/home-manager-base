@@ -93,9 +93,20 @@ in
     "codex/AGENTS.md".text =
       with prompts._snippet;
       with prompts.function; ''
+      # AGENTS.md
+
+      ## General
+
       ${charm}
+
+      ## Language
+
       ${japanese.input}
       ${japanese.output}
+
+      ## Security
+
+      ${security}
     '';
     # "codex/prompts/commit.md".text = prompts.commit.conventional;
   };
