@@ -62,9 +62,28 @@ in
     "opencode/opencode.json".text = builtins.toJSON (
       {
         "$schema" = "https://opencode.ai/config.json";
-        theme = "opencode";
+        theme = "github";
+        autoupdate = false;
+        share = "disabled";
+
         model = let modelInfo = searchModelByRole "edit"; in "${modelInfo.provider}/${modelInfo.model}";
         provider = createProviders cfg.providers;
+
+        small_model = let modelInfo = searchModelByRole "autocomplete"; in "${modelInfo.provider}/${modelInfo.model}";
+
+        lsp = {
+          nix = {
+            command = [(lib.getExe pkgs.nixd)];
+            extensions = ["nix"];
+          };
+        };
+
+        formatter = {
+          nix = {
+            command = [(lib.getExe pkgs.nixfmt-rfc-style)];
+            extensions = ["nix"];
+          };
+        };
       } // lib.optionalAttrs config.my.home.mcp.enable {
           mcp = lib.optionalAttrs (builtins.hasAttr "opencode" config.my.home.mcp.serverJsonContents)
             (createMcp config.my.home.mcp.serverJsonContents.opencode.mcpServers);
