@@ -69,7 +69,8 @@ in
   imports = [
     ./ollama.nix
     ./litellm
-    (import ./codex.nix (args // {inherit searchModelByRole prompts;}))
+    # (import ./codex.nix (args // {inherit searchModelByRole prompts;}))
+    (import ./opencode.nix (args // {inherit searchModelByRole prompts;}))
   ];
 
   options.my.home.ai =
