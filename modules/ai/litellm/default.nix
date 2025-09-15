@@ -30,6 +30,7 @@ let
         # type = "disk";
         # disk_cache_dir = "/tmp/litellm-cache";
       };
+      drop_params = true;
     };
   };
   settingsAll = lib.recursiveUpdate settingsDefault cfg.settings;

@@ -86,6 +86,9 @@ in
 {
   home.packages = [
     codex-wrapped
+
+    # Frequently use
+    pkgs.tree
   ];
 
   xdg.configFile = {
@@ -98,10 +101,6 @@ in
       ## General
 
       ${charm}
-
-      ## LLM request behavior
-
-      Retry previous or fetch next request if LLM returns 500 error or something else.
 
       ## Language
 
