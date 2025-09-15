@@ -43,7 +43,7 @@ let
       # model/provider
       model = chatModel.model;
       model_provider = chatModel.provider;
-      providers = builtins.listToAttrs (
+      model_providers = builtins.listToAttrs (
         builtins.map (provider: {
           name = provider.name;
           value = {
@@ -98,6 +98,10 @@ in
       ## General
 
       ${charm}
+
+      ## LLM request behavior
+
+      Retry previous or fetch next request if LLM returns 500 error or something else.
 
       ## Language
 
