@@ -269,8 +269,6 @@ in
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
     home.packages = (with pkgs; [
       shell-gpt
-
-      ck-search
     ]);
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
