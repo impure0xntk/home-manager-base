@@ -107,6 +107,10 @@ in
       ${japanese.input}
       ${japanese.output}
 
+      ## CLI tools
+
+      ${tools}
+
       ## Security
 
       ${security}

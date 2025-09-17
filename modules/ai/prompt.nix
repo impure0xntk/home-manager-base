@@ -9,6 +9,13 @@ let
       For maximum efficiency, whenever you need to perform multiple independent operations, invoke all relevant tools simultaneously rather than sequentially.
     '';
 
+    tools = ''
+      For efficient work, independent tool operations should be executed in parallel.
+      You can use high performance CLI tools:
+      `ripgrep` instead of `grep`,
+      `fd` instead of `find`.
+    '';
+
     noThink = ''
       /no_think
       Respond with facts only.
