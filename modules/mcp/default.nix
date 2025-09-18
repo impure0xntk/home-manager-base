@@ -42,7 +42,7 @@ let
       # Use ungoogled-chromium
       command = lib.getExe pkgs.mcp-server-playwright;
       args = [
-        "--executable-path" "${lib.getExe pkgs.chromium}"
+        "--executable-path" "${lib.getExe pkgs.ungoogled-chromium}"
       ];
     };
     "pdf-reader" = {
