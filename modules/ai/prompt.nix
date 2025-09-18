@@ -10,10 +10,9 @@ let
     '';
 
     tools = ''
-      For efficient work, independent tool operations should be executed in parallel.
       You can use high performance CLI tools:
-      `ripgrep` instead of `grep`,
-      `fd` instead of `find`.
+      - `ripgrep` instead of `grep`,
+      - `fd` instead of `find`.
     '';
 
     noThink = ''
