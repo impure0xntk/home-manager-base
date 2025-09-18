@@ -13,45 +13,17 @@ let
   };
 in
 {
-  "gpt-oss" = [
+  "claude-sonnet-3.5" = [
     {
-      model = "openrouter/openai/gpt-oss-20b:free";
-      params = {
-        weight = 10;
-
-        temperature = 0.6;
-        top_p = 1.0;
-        top_k = 0;
-      };
-    }
-  ];
-  gpt-5 = [
-    {
-      model = "github_copilot/gpt-5";
+      model = "github_copilot/claude-3.5-sonnet";
       params = {
         weight = 10;
       } // githubCopilotDummySettings;
     }
   ];
-  "gpt-4.1" = [
+  "claude-sonnet-4" = [
     {
-      model = "github_copilot/gpt-4.1";
-      params = {
-        weight = 10;
-      } // githubCopilotDummySettings;
-    }
-  ];
-  gpt-4o = [
-    {
-      model = "github_copilot/gpt-4o";
-      params = {
-        weight = 10;
-      } // githubCopilotDummySettings;
-    }
-  ];
-  o3 = [
-    {
-      model = "github_copilot/o3";
+      model = "github_copilot/claude-sonnet-4";
       params = {
         weight = 10;
       } // githubCopilotDummySettings;

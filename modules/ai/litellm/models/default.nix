@@ -20,7 +20,8 @@ let
     );
 in
 modelsFinal (
-  (import ./deepseek.nix { inherit lib; })
+  (import ./claude.nix { inherit lib; })
+  // import ./deepseek.nix { inherit lib; }
   // (import ./google.nix { inherit lib; })
   // (import ./meta.nix { inherit lib; })
   // (import ./mistralai.nix { inherit lib; })
