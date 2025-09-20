@@ -28,6 +28,7 @@ modelsFinal (
   // (import ./moonshotai.nix { inherit lib; })
   // (import ./qwen.nix { inherit lib; })
   // (import ./openai.nix { inherit lib; })
+  // (import ./x.nix { inherit lib; })
   // (import ./others.nix { inherit lib; }) // { })
 
 #   modelsRaw = {
