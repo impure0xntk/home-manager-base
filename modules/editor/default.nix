@@ -42,6 +42,11 @@ let
   };
   neovimExtraLuaConfigForAllEnvironment = ''
     --[[
+      Common settings.
+    --]]
+    -- disable editorconfig: cannot control the range of format.
+    vim.g.editorconfig = false
+    --[[
       keymap rules:
       Ctrl-Shift to Alt
     --]]
