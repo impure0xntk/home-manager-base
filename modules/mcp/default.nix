@@ -179,6 +179,14 @@ let
       args = [ ];
       feedsPath = pkgs.writeText "aggregate-target-rss" (builtins.toJSON config.my.home.mcp.settings.rss);
     };
+    wakapi = {
+      env = {
+        WAKAPI_URL = "http://localhost:3000";
+        WAKAPI_API_KEY = "your-api-key";
+      };
+      command = lib.getExe (builtins.getFlake "github:impure0xntk/mcp-wakapi/85c2ac01e4926b00d3a709538d492cfbf813e1e1").packages.x86_64-linux.default;
+      args = [];
+    };
   };
 
   # Generate a list of enabled servers for each configuration name
