@@ -138,6 +138,8 @@ in
           "codezombiech.gitignore"
           "mhutchie.git-graph"
 
+          "GitHub.vscode-pull-request-github"
+
           "redhat.vscode-yaml"
           "sumneko.lua"
           "ms-vscode.makefile-tools"
