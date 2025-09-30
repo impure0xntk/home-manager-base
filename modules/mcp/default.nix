@@ -174,11 +174,6 @@ let
       command = lib.getExe pkgs.mcp-server-investor-agent;
       args = [ ];
     };
-    rss = {
-      command = lib.getExe pkgs.mcp-server-rss;
-      args = [ ];
-      feedsPath = pkgs.writeText "aggregate-target-rss" (builtins.toJSON config.my.home.mcp.settings.rss);
-    };
     wakapi = {
       env = {
         WAKAPI_URL = "http://localhost:3000";
@@ -295,32 +290,6 @@ in
       description = "Contents of the generated JSON files for each server configuration attrset";
       type = attrsOf (attrsOf anything);
       default = {};
-    };
-    settings = {
-      rss = mkOption {
-        description = "rss feeds to aggregate.";
-        default = null;
-        type = nullOr (listOf (submodule {
-          options = {
-          title = mkOption {
-            type = str;
-            description = "The title of feed";
-          };
-          url = mkOption {
-            type = str;
-            description = "The URL of feed";
-          };
-          htmlUrl = mkOption {
-            type = str;
-            description = "The HTML URL of feed";
-          };
-          category = mkOption {
-            type = str;
-            description = "The category of feed";
-          };
-          };
-        }));
-      };
     };
   };
 
