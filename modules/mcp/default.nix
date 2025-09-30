@@ -324,6 +324,10 @@ in
     };
   };
 
+  imports = [
+    ./hub.nix
+  ];
+
   config = lib.mkIf config.my.home.mcp.enable {
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
