@@ -10,7 +10,7 @@ let
   cfg = config.my.home.ai;
   configDirectory = "${config.xdg.configHome}/codex";
 
-  dummyEnvKey = "DUMMY_API_KEY";
+  dummyEnvKey = "OPENAI_API_KEY"; # just-every/code allows only OPENAI_API_KEY
 
   # Create a wrapped version of the "codex" package.
   # This forces $CODEX_HOME to always point to $XDG_CONFIG_DIRECTORY.
@@ -21,17 +21,20 @@ let
     name = "codex";
 
     paths = [
-      pkgs.codex
+      # pkgs.codex
+      pkgs.code # just-every/code: codex alternative
     ];
 
-    buildInputs = [
-      pkgs.makeWrapper
+    nativeBuildInputs = with pkgs; [
+      makeWrapper
     ];
 
     postBuild = ''
-      wrapProgram $out/bin/codex \
+      wrapProgram $out/bin/code \
         --set CODEX_HOME ${configDirectory} \
         --set ${dummyEnvKey} dummy
+
+      ln -s $out/bin/{code,codex}
     '';
   };
 
@@ -77,6 +80,10 @@ let
         web_search = true;
       };
       mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.codex.mcpServers;
+
+      # For just-every/code only
+      tui.theme.name = "dark-zen-garden";
+      disable_response_storage = true;
     };
 
   shellAliases = {
