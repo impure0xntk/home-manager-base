@@ -35,7 +35,15 @@ let
       wrapProgram $out/bin/mcpjungle \
         --add-flags "--registry http://127.0.0.1:${builtins.toString cfg.hub.port}"
     '';
-  }; # Transform MCP server configurations into MCPJungle-compatible JSON format
+  };
+
+  mcp-serer-remote-group = pkgs.writeShellScriptBin "mcp-remote-group" ''
+    ${pkgs.mcp-server-remote}/bin/mcp-remote \
+      http://127.0.0.1:${builtins.toString cfg.hub.port}/v0/groups/''${1:-input group}/mcp \
+      --allow-http
+  '';
+
+  # Transform MCP server configurations into MCPJungle-compatible JSON format
   transformServerConfig = serverName: serverConfig:
     let
       baseConfig = {
@@ -93,6 +101,7 @@ in
     # For CLI
     home.packages = [
       mcpJungleWithRuntime
+      mcp-serer-remote-group
     ];
 
     # Generate JSON configuration files for MCPJungle
