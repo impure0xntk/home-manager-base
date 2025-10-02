@@ -79,7 +79,9 @@ let
       tools = {
         web_search = true;
       };
-      mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.serverJsonContents) config.my.home.mcp.serverJsonContents.codex.mcpServers;
+      mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.serverJsonContents) (
+        if config.my.home.mcp.hub.enable then { codex = { command = "mcp-remote-group"; args = ["codex"]; }; }
+        else config.my.home.mcp.serverJsonContents.codex.mcpServers);
 
       # For just-every/code only
       tui.theme.name = "dark-zen-garden";
