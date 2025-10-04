@@ -150,6 +150,10 @@ in
       ## Communication
 
       ${agent.autonomous}
+
+      ## Specific MCP Servers Usage
+
+      ${mcp.usage}
     '';
   };
 

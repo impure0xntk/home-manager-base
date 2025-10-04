@@ -116,6 +116,13 @@ let
       Persist data in conversation context.
     '';
   };
+
+  mcp = {
+    usage = ''
+      - WebSearch: searxngMCP to search summaries and URLs -> playwright MCP or fetch MCP to show and read the page
+      - Memory: basic-memory MCP to save context when you approach the context limit
+    '';
+  };
 in
 {
   _snippet = base;
@@ -123,6 +130,7 @@ in
   agent = agent;
   edit = code;
   commit = commit;
+  mcp = mcp;
   chat.shell = {
     default = shell.default;
     commitMessageGenerator = commit.conventional;
