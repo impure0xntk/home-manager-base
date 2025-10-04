@@ -182,6 +182,12 @@ let
       command = lib.getExe (builtins.getFlake "github:impure0xntk/mcp-wakapi/85c2ac01e4926b00d3a709538d492cfbf813e1e1").packages.x86_64-linux.default;
       args = [];
     };
+    vscode = { # see the bottom of this file
+      command = lib.getExe pkgs.mcp-server-remote;
+      args = [
+        "http://localhost:13001/mcp"
+      ];
+    };
   };
 
   # Generate a list of enabled servers for each configuration name
@@ -319,5 +325,17 @@ in
       task-master
       serena
     ];
+
+    programs.vscode.profiles.default = {
+      extensions = pkgs.nix4vscode.forVscode [
+        "juehangqin.vscode-mcp-server"
+      ];
+      userSettings = lib.my.flatten "_flattenIgnore" {
+        vscode-mcp-server = {
+          defaultEnabled = true;
+          port = 13001;
+        };
+      };
+    };
   };
 }
