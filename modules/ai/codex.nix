@@ -118,7 +118,8 @@ in
 
       ## CLI tools
 
-      ${tools}
+      ${tools.alternatives}
+      ${tools.constraints}
 
       ## Security
 

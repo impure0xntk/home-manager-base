@@ -9,6 +9,17 @@
 let
   cfg = config.my.home.ai;
 
+  opencode = pkgs.symlinkJoin {
+    name = pkgs.opencode.pname;
+    paths = [
+      pkgs.opencode
+    ]
+    # For built-in lsp, set some applications' PATH
+    ++ (lib.optionals config.my.home.languages.python.enable [
+      pkgs.pyright # for built-in python lsp
+    ]);
+  };
+
   shellAliases = {
     oc = "opencode";
   };
@@ -42,22 +53,6 @@ in
           }) p.models);
         };
       }) providers);
-    createMcp = mcpServers:
-      lib.mapAttrs (name: config:
-        let
-          isRemote = config ? "url";
-        in
-        {
-          type = if isRemote then "remote" else "local";
-          enabled = true;
-        }
-        // (lib.optionalAttrs isRemote { url = config.url; })
-        // (lib.optionalAttrs (!isRemote) {
-          command = [ config.command ] ++ (config.args or [ ]);
-        })
-        // (lib.optionalAttrs (config ? "env") { environment = config.env; })
-        // (lib.optionalAttrs (config ? "headers") { headers = config.headers; })
-      ) mcpServers;
   in {
     "opencode/opencode.json".text = builtins.toJSON (
       {
@@ -71,12 +66,48 @@ in
 
         small_model = let modelInfo = searchModelByRole "autocomplete"; in "${modelInfo.provider}/${modelInfo.model}";
 
-        lsp = {
+        permission = {
+          edit = "allow";
+          bash = {
+            "*" = "ask";
+
+            "ls" = "allow";
+            "tree" = "allow";
+            "cat" = "allow";
+            "head" = "allow";
+            "tail" = "allow";
+
+            "rg" = "allow";
+            "fd" = "allow";
+
+            "which" = "allow";
+            "ps aux" = "allow";
+
+            "git status" = "allow";
+            "git diff" = "allow";
+            "git log" = "allow";
+
+            "rm -rf" = "deny";
+            "sed" = "deny";
+            "awk" = "deny";
+          };
+          webfetch = "ask";
+        };
+
+        lsp = let
+          lang = config.my.home.languages;
+        in (lib.optionalAttrs lang.nix.enable {
           nix = {
             command = [(lib.getExe pkgs.nixd)];
             extensions = ["nix"];
           };
-        };
+        }) // (lib.optionalAttrs lang.java.enable {
+          java = {
+            command = [(lib.getExe pkgs.jdt-language-server)];
+            extensions = ["java"];
+            disabled = config.my.home.languages.java.enable;
+          };
+        });
 
         formatter = {
           nix = {
@@ -90,12 +121,12 @@ in
               type = "local"; enabled = true;
               command = [ "mcp-remote-group" "opencode"]; }; }
             else config.my.home.mcp.serverJsonContents.opencode.mcpServers);
-
       }
     );
     "opencode/AGENTS.md".text =
       with prompts._snippet;
-      with prompts.function; ''
+      with prompts.function;
+      with prompts; ''
       # AGENTS.md
 
       ## General
@@ -109,11 +140,16 @@ in
 
       ## CLI tools
 
-      ${tools}
+      ${tools.alternatives}
+      ${tools.constraints}
 
       ## Security
 
       ${security}
+
+      ## Communication
+
+      ${agent.autonomous}
     '';
   };
 

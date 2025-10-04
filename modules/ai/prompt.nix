@@ -9,11 +9,20 @@ let
       For maximum efficiency, whenever you need to perform multiple independent operations, invoke all relevant tools simultaneously rather than sequentially.
     '';
 
-    tools = ''
-      You can use high performance CLI tools:
-      - `ripgrep` instead of `grep`,
-      - `fd` instead of `find`.
-    '';
+    tools = {
+      alternatives = ''
+        You can use high performance CLI tools:
+        - `ripgrep` instead of `grep`,
+        - `fd` instead of `find`.
+      '';
+      constraints = ''
+        You must ensure the following constraints:
+        - No sudo: - escalate config changes
+        - Cross-platform: - test on macOS & Linux
+        - No secrets: - never expose keys, tokens, passwords
+        - No assumptions: - don't invent files, URLs, libraries
+      '';
+    };
 
     noThink = ''
       /no_think
@@ -47,6 +56,16 @@ let
       ${prompt}
       ${base.japanese.input}
       ${base.japanese.output}
+    '';
+  };
+
+  agent = {
+    autonomous = ''
+      - Default: Direct, minimal responses (≤2 lines)
+      - Detail Mode: Full explanations only when user requests
+      - No Fluff: Skip "I will...", "Here is...", "Based on..."
+      - Execute: Don't announce, just do
+      - Explain: Only for destructive operations (rm, git reset, config changes)
     '';
   };
 
@@ -101,6 +120,7 @@ in
 {
   _snippet = base;
   function = mk;
+  agent = agent;
   edit = code;
   commit = commit;
   chat.shell = {
