@@ -181,6 +181,10 @@ in
               { find ${config.xdg.stateHome}/mcpjungle/servers -name "*.json" -print0 \
                 | xargs -0 -P4 -I{} mcpjungle register -c {}; } || true
 
+              # Reset Tool Groups
+              { mcpjungle list groups 2>&1 | grep -E "^[0-9]+.*" | cut -d" " -f 2 \
+                | xargs -I{} mcpjungle delete group {}; } || true
+
               # Create Tool Groups based on group mapping
               group_mapping_file="${config.xdg.stateHome}/mcpjungle/group-mapping.json"
 
