@@ -1,17 +1,17 @@
 { lib, ... }:
 
 {
-/*   "horizon-beta" = [
+  "glm-4.5-air" = [
     {
-      model = "openrouter/openrouter/horizon-beta";
+      model = "openrouter/z-ai/glm-4.5-air:free";
       params = {
         weight = 10;
       };
     }
-  ]; */
-  "glm-4.5-air" = [
+  ];
+  "tongyi-deepresearch" = [
     {
-      model = "openrouter/z-ai/glm-4.5-air:free";
+      model = "openrouter/alibaba/tongyi-deepresearch-30b-a3b:free";
       params = {
         weight = 10;
       };
