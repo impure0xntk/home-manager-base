@@ -186,7 +186,7 @@ in {
 
         extensions = pkgs.nix4vscode.forVscode [
           "vscjava.vscode-java-pack"
-          "redhat.java.1.45.0"
+          "redhat.java"
           "vscjava.vscode-java-debug"
           "vscjava.vscode-java-test"
           "vscjava.vscode-maven"
