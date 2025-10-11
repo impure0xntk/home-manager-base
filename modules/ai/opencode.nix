@@ -91,7 +91,7 @@ in
             "sed" = "deny";
             "awk" = "deny";
           };
-          webfetch = "ask";
+          webfetch = "allow";
         };
 
         lsp = let
