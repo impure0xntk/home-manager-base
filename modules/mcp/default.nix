@@ -17,10 +17,6 @@ let
       command = lib.getExe pkgs.mcp-server-arxiv;
       args = [ ];
     };
-    desktop-commander = {
-      command = lib.getExe pkgs.mcp-server-desktop-commander;
-      args = [ ];
-    };
     devtools = {
       command = lib.getExe pkgs.mcp-server-devtools;
       args = [ ];
@@ -80,17 +76,6 @@ let
       command = lib.getExe pkgs.mcp-server-quickchart;
       args = [ ];
     };
-    github = {
-      command = lib.getExe pkgs.mcp-server-github-go;
-      args = [ "stdio" ];
-      env = {
-        GITHUB_PERSONAL_ACCESS_TOKEN = "<YOUR_TOKEN>";
-      };
-    };
-    "microsoft-docs-mcp" = {
-      # FIXME: not work
-      url = "https://learn.microsoft.com/api/mcp";
-    };
     jetbrains = {
       command = lib.getExe pkgs.mcp-server-jetbrains;
       args = [ ];
@@ -115,30 +100,9 @@ let
         "!! input your organization manually !!!"
       ];
     };
-    searxng = {
-      command = lib.getExe pkgs.mcp-server-searxng;
-      env = {
-        # TODO: refactor. now depends on local searxng instance.
-        SEARXNG_INSTANCES = lib.concatStringsSep "," [
-          "http://localhost:16060"
-        ];
-      };
-    };
-    fetch = {
-      command = lib.getExe pkgs.mcp-server-fetch-zcaceres;
-      args = [];
-    };
-    basic-memory = {
-      command = lib.getExe pkgs.mcp-server-basic-memory;
-      args = [ "mcp" ];
-    };
     spec-workflow = {
       command = lib.getExe pkgs.mcp-server-spec-workflow;
       args = [ "/path/to/your/project" "--AutoStartDashboard" ];
-    };
-    dependency = {
-      command = lib.getExe pkgs.mcp-server-dependency;
-      args = [ ];
     };
     lsp = {
       command = lib.getExe pkgs.mcp-server-lsp;
@@ -162,21 +126,6 @@ let
     };
     wireshark = {
       command = lib.getExe pkgs.mcp-server-wireshark;
-      args = [ ];
-    };
-    task-master = {
-      command = "${pkgs.task-master}/bin/task-master-mcp";
-      env = {
-        # Use litellm
-        OPENAI_BASE_URL = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}";
-      };
-    };
-    cve-search-nvd = {
-      command = lib.getExe pkgs.mcp-server-cve-search-nvd;
-      args = [ ];
-    };
-    cve-search-circl = {
-      command = lib.getExe pkgs.mcp-server-cve-search-circl;
       args = [ ];
     };
     textlint = lib.optionalAttrs config.my.home.documentation.enable {
@@ -341,7 +290,6 @@ in
 
     # For CLI
     home.packages = with pkgs; [
-      task-master
       serena
     ];
 
