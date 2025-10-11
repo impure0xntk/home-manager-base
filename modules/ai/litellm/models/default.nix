@@ -36,7 +36,6 @@ modelsFinal (
 #       {
 #         model = "openrouter/qwen/qwen3-32b:free";
 #         params = {
-#           weight = 10;
 #           extra_body = {
 #             reasoning.exclude = true;
 #           };
@@ -45,7 +44,6 @@ modelsFinal (
 #       {
 #         model = "cerebras/qwen-3-32b";
 #         params = {
-#           weight = 8;
 #         };
 #       }
 #     ];
@@ -54,7 +52,6 @@ modelsFinal (
 #       {
 #         model = "meta-llama/llama-3-70b";
 #         params = {
-#           weight = 9;
 #         };
 #       }
 #     ];
@@ -63,7 +60,6 @@ modelsFinal (
 # - model_name: qwen3
 #   litellm_params:
 #     model: openrouter/qwen/qwen3-32b:free
-#     weight: 10
 #     extra_body:
 #       reasoning:
 #         exclude: true
@@ -73,13 +69,11 @@ modelsFinal (
 # - model_name: qwen3
 #   litellm_params:
 #     model: cerebras/qwen-3-32b
-#     weight: 8
 #   model_info:
 #     id: cerebras-qwen-3-32b
 #
 # - model_name: llama3
 #   litellm_params:
 #     model: meta-llama/llama-3-70b
-#     weight: 9
 #   model_info:
 #     id: meta-llama-llama-3-70b

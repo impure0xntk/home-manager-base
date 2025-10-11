@@ -11,14 +11,11 @@ in
         temperature = 0.6;
         top_p = 0.95;
         min_p = 0.01;
-
-        weight = 10;
       };
     }
     {
       model = "openrouter/deepseek/deepseek-r1:free";
       params = {
-        weight = 10;
       };
     }
   ];
@@ -30,8 +27,6 @@ in
         # For coding.
         temperature = 0.6;
         min_p = 0;
-
-        weight = 10;
       };
     }
   ];
@@ -39,7 +34,6 @@ in
     {
       model = "openrouter/deepseek/deepseek-chat-v3.1:free";
       params = {
-        weight = 10;
       };
     }
   ];
@@ -47,7 +41,6 @@ in
     {
       model = "openrouter/tngtech/deepseek-r1t2-chimera:free";
       params = {
-        weight = 10;
       };
     }
   ];
@@ -55,7 +48,6 @@ in
     {
       model = "openrouter/tngtech/deepseek-r1t-chimera:free";
       params = {
-        weight = 10;
       };
     }
   ];

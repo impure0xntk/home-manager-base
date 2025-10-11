@@ -22,7 +22,6 @@ in
     {
       model = "groq/openai/gpt-oss-120b";
       params = { # additional params are unsupported
-        weight = 10;
       };
     }
   ];
@@ -30,13 +29,11 @@ in
     {
       model = "groq/openai/gpt-oss-20b"; # primary
       params = { # additional params are unsupported
-        weight = 10;
       };
     }
     {
       model = "openrouter/openai/gpt-oss-20b:free";
       params = {
-        weight = 10;
       } // gptOssParams;
     }
   ];
@@ -44,7 +41,6 @@ in
     {
       model = "github_copilot/gpt-5";
       params = {
-        weight = 10;
       } // githubCopilotDummySettings;
     }
   ];
@@ -52,7 +48,6 @@ in
     {
       model = "github_copilot/gpt-4.1";
       params = {
-        weight = 10;
       } // githubCopilotDummySettings;
     }
   ];
@@ -60,7 +55,6 @@ in
     {
       model = "github_copilot/gpt-4o";
       params = {
-        weight = 10;
       } // githubCopilotDummySettings;
     }
   ];
@@ -68,7 +62,6 @@ in
     {
       model = "github_copilot/o3";
       params = {
-        weight = 10;
       } // githubCopilotDummySettings;
     }
   ];

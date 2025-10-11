@@ -20,13 +20,11 @@ rec {
     {
       model = "groq/qwen/qwen3-32b"; # primary
       params = { # additional params are unsupported
-        weight = 10;
       };
     }
     {
       model = "openrouter/qwen/qwen3-30b-a3b:free";
       params = {
-        weight = 10;
       }
       // commonParams;
     }
@@ -37,7 +35,6 @@ rec {
     {
       model = "openrouter/qwen/qwen3-235b-a22b:free";
       params = {
-        weight = 10;
       }
       // commonParams;
     }
@@ -48,7 +45,6 @@ rec {
     {
       model = "openrouter/qwen/qwen3-coder:free";
       params = {
-        weight = 10;
       }
       //commonParams;
     }
@@ -57,7 +53,6 @@ rec {
     {
       model = "openrouter/qwen/qwen-2.5-coder-32b-instruct:free";
       params = {
-        weight = 10;
       }
       //commonParams;
     }

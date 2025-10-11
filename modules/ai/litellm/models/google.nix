@@ -7,8 +7,6 @@ in
       {
         model = "gemini/gemini-2.5-pro";
         params = {
-          weight = 10;
-
           # 2025/07
           tpm = 250000;
           rpm = 5;
@@ -19,7 +17,6 @@ in
       {
         model = "gemini/gemini-2.5-flash";
         params = {
-          weight = 10;
           fallbacks = [
             "gemini-2.5-flash-lite"
           ];
@@ -34,8 +31,6 @@ in
       {
         model = "gemini/gemini-2.5-flash-lite";
         params = {
-          weight = 10;
-
           # 2025/07
           tpm = 250000;
           rpm = 15;
@@ -46,7 +41,6 @@ in
       {
         model = "gemini/gemini-2.0-flash";
         params = {
-          weight = 10;
           fallbacks = [
             "gemini-2.0-flash-lite"
           ];
@@ -59,7 +53,6 @@ in
       {
         model = "openrouter/google/gemini-2.0-flash-exp:free";
         params = {
-          weight = 10;
         };
       }
     ];
@@ -67,8 +60,6 @@ in
       {
         model = "gemini/gemini-2.0-flash-lite";
         params = {
-          weight = 10;
-
           # 2025/07
           tpm = 1000000;
           rpm = 30;
@@ -93,8 +84,6 @@ in
       {
         model = "gemini/gemma-3-27b-it";
         params = params // {
-          weight = 10;
-
           # 2025/07
           tpm = 15000;
           rpm = 30;
@@ -103,7 +92,6 @@ in
       {
         model = "openrouter/google/gemma-3-27b-it:free";
         params = params // {
-          weight = 10;
         };
       }
     ];
@@ -124,8 +112,6 @@ in
       {
         model = "gemini/gemma-3n-e4b-it";
         params = params // {
-          weight = 10;
-
           # 2025/07
           tpm = 15000;
           rpm = 30;
@@ -134,7 +120,6 @@ in
       {
         model = "openrouter/google/gemma-3n-e4b-it:free";
         params = params // {
-          weight = 10;
         };
       }
     ];

@@ -17,7 +17,6 @@ in
     {
       model = "github_copilot/claude-3.5-sonnet";
       params = {
-        weight = 10;
       } // githubCopilotDummySettings;
     }
   ];
@@ -25,7 +24,6 @@ in
     {
       model = "github_copilot/claude-sonnet-4";
       params = {
-        weight = 10;
       } // githubCopilotDummySettings;
     }
   ];

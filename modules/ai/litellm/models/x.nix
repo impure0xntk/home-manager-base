@@ -4,7 +4,6 @@
     {
       model = "openrouter/x-ai/grok-4-fast:free";
       params = {
-        weight = 10;
       };
     }
   ];
