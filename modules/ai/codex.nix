@@ -30,11 +30,9 @@ let
     ];
 
     postBuild = ''
-      wrapProgram $out/bin/code \
+      wrapProgram $out/bin/codex \
         --set CODEX_HOME ${configDirectory} \
         --set ${dummyEnvKey} dummy
-
-      ln -s $out/bin/{code,codex}
     '';
   };
 
@@ -82,10 +80,6 @@ let
       mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.serverJsonContents) (
         if config.my.home.mcp.hub.enable then { codex = { command = "mcp-remote-group"; args = ["codex"]; }; }
         else config.my.home.mcp.serverJsonContents.codex.mcpServers);
-
-      # For just-every/code only
-      tui.theme.name = "dark-zen-garden";
-      disable_response_storage = true;
     };
 
   shellAliases = {
