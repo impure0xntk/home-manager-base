@@ -11,18 +11,33 @@ let
       "Copilot-Integration-Id" = "vscode-chat";
     };
   };
+  gptOssParams = {
+    temperature = 0.6;
+    top_p = 1.0;
+    top_k = 0;
+  };
 in
 {
-  "gpt-oss" = [
+  gpt-oss-120b = [
+    {
+      model = "groq/openai/gpt-oss-120b";
+      params = { # additional params are unsupported
+        weight = 10;
+      };
+    }
+  ];
+  gpt-oss-20b = [
+    {
+      model = "groq/openai/gpt-oss-20b"; # primary
+      params = { # additional params are unsupported
+        weight = 10;
+      };
+    }
     {
       model = "openrouter/openai/gpt-oss-20b:free";
       params = {
         weight = 10;
-
-        temperature = 0.6;
-        top_p = 1.0;
-        top_k = 0;
-      };
+      } // gptOssParams;
     }
   ];
   gpt-5 = [

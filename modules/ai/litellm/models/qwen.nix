@@ -18,20 +18,18 @@ in
 rec {
   qwen3-think = [
     {
+      model = "groq/qwen/qwen3-32b"; # primary
+      params = { # additional params are unsupported
+        weight = 10;
+      };
+    }
+    {
       model = "openrouter/qwen/qwen3-30b-a3b:free";
       params = {
         weight = 10;
       }
       // commonParams;
     }
-    /*
-      {
-         model = "cerebras/qwen-3-32b";
-         params = {
-           weight = 8;
-         } // commonParams;
-       }
-    */
   ];
   qwen3 = noThink qwen3-think;
 
