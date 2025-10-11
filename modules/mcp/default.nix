@@ -21,10 +21,29 @@ let
       command = lib.getExe pkgs.mcp-server-desktop-commander;
       args = [ ];
     };
-    context7 = {
-      # https://github.com/sst/opencode/issues/1244#issuecomment-3114688653
-      command = lib.getExe pkgs.mcp-server-remote;
-      args = [ "https://mcp.context7.com/sse" ];
+    devtools = {
+      command = lib.getExe pkgs.mcp-server-devtools;
+      args = [ ];
+      env = {
+        # TODO: refactor. now depends on local searxng instance.
+        SEARXNG_BASE_URL = lib.concatStringsSep "," [
+          "http://localhost:16060"
+        ];
+        ENABLE_ADDITIONAL_TOOLS = lib.concatStringsSep "," [
+          "sequential-thinking" # instead of think
+          "vulnerability_scan"
+          "sbom"
+        ];
+        DISABLED_FUNCTIONS = lib.concatStringsSep "," [
+          "aws_documentation"
+          "devtools_help"
+          "murican_to_english"
+          "q-developer-agent"
+          "shadcn"
+          "terraform_documentation"
+          "think"
+        ];
+      };
     };
     git = {
       command = lib.getExe pkgs.mcp-server-git;
