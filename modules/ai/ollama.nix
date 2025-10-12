@@ -87,7 +87,6 @@ in
       };
     programs.vscode.profiles.default.userSettings = (
       lib.my.flatten "_flattenIgnore" {
-        gitlens.ai.ollama.url = ollomaProvider.url;
         github.copilot.chat.byok.ollamaEndpoint = lib.optionalAttrs hasOllamaModel ollomaProvider.url;
       }
     );

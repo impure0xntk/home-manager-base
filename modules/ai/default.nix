@@ -208,15 +208,6 @@ in
       in (lib.my.flatten "_flattenIgnore" {
         # The main agent is GitHub Copilot, but it uses only remote models for completions.
         # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
-        # gitlens ai: not work
-        gitlens.ai =
-          let
-            model = searchModelByRole "edit";
-          in
-          {
-            model = "vscode";
-            vscode.model = "${model.provider}:${model.model}";
-          };
         github.copilot = {
           chat = {
             agent = {

@@ -134,21 +134,18 @@ in
           "shardulm94.trailing-spaces"
 
           "donjayamanne.githistory"
-          "eamodio.gitlens"
           "codezombiech.gitignore"
-          "mhutchie.git-graph"
+          "phil294.git-log--graph"
 
           "GitHub.vscode-pull-request-github"
 
           "redhat.vscode-yaml"
           "sumneko.lua"
-          "ms-vscode.makefile-tools"
           "tamasfe.even-better-toml"
 
           "gruntfuggly.todo-tree"
           "oderwat.indent-rainbow"
 
-          "mhutchie.git-graph"
           "wmaurer.change-case"
           "streetsidesoftware.code-spell-checker"
           "tekumara.typos-vscode"
@@ -264,6 +261,7 @@ in
               enableSmartCommit = true;
               ignoreLegacyWarning = true;
               terminalAuthentication = false;
+              blame.editorDecoration.enabled = true;
             };
 
             remote = {
@@ -341,14 +339,6 @@ in
 
             # Application specific settings
             redhat.telemetry.enabled = false; # affects all redhat extensions, e.g. java, xml, yaml...
-            gitlens = {
-              showWhatsNewAfterUpgrades = false;
-              plusFeatures.enabled = false;
-              liveshare.allowGuestAccess = false;
-              telemetry.enabled = false;
-              cloudPatches.enabled = false;
-              views.remotes.files.layout = "tree";
-            };
             lazygit-vscode = {
               lazygitPath = "${config.programs.lazygit.package}/bin/lazygit";
               autoMaximizeWindow = true;
