@@ -11,6 +11,7 @@ with lib;
 with lib.types;
 let
   cfg = config.my.home.mcp;
+  purePkgs = import <nixpkgs> {}; # to avoid build ungoogled-chromium because it uses too much RAM
 
   allServers = {
     arxiv = {
@@ -29,6 +30,7 @@ let
           "sequential-thinking" # instead of think
           "vulnerability_scan"
           "sbom"
+          "security" "security_override"
         ];
         DISABLED_FUNCTIONS = lib.concatStringsSep "," [
           "aws_documentation"
@@ -57,7 +59,7 @@ let
       # Use ungoogled-chromium
       command = lib.getExe pkgs.mcp-server-playwright;
       args = [
-        "--executable-path" "${lib.getExe pkgs.ungoogled-chromium}"
+        "--executable-path" "${lib.getExe purePkgs.ungoogled-chromium}"
       ];
     };
     "pdf-reader" = {
