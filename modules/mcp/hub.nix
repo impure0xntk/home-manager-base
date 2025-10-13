@@ -44,10 +44,9 @@ let
   '';
 
   # Original server configuration files (will be transformed at runtime)
+  # Use "cut -d, -fN" to separate name and path in shell script
   serverFiles = lib.mapAttrsToList (serverName: serverConfig:
-    lib.nameValuePair "mcpjungle/servers/${serverName}.json" {
-      source = serverConfig.configFile;
-    }
+    "${serverName},${serverConfig.configFile}"
   ) allServers;
 
   # Group to server mapping information
@@ -68,6 +67,11 @@ in
       type = number;
       default = 3001;
     };
+    useSopsNix = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether using sops. If enabled start mcpjungle after sops-nix.service";
+    };
   };
 
   config = lib.mkIf config.my.home.mcp.hub.enable {
@@ -78,16 +82,20 @@ in
     ];
 
     # Generate JSON configuration files for MCPJungle
-    xdg.stateFile = builtins.listToAttrs ([groupMappingFile] ++ serverFiles);
+    xdg.stateFile = builtins.listToAttrs [groupMappingFile];
 
     systemd.user.services = {
       "mcpjungle-ready" = {
-        Unit = {
+        Unit = rec {
           Description = "Ready for mcpjungle";
+          After = lib.optionals cfg.hub.useSopsNix [
+            "sops-nix.service"
+          ];
+          Requires = lib.optionals cfg.hub.useSopsNix After;
         };
         Service = let script = pkgs.writeShellScriptBin "ready-for-mcpjungle" ''
           ${pkgs.coreutils}/bin/mkdir -p ${config.xdg.stateHome}/mcpjungle/servers
-          rm -rf ${config.xdg.stateHome}/mcpjungle/mcpjungle.db 2>/dev/null || true
+          rm -rf ${config.xdg.stateHome}/mcpjungle/mcp*.db 2>/dev/null || true
         '';
         in {
           Type = "oneshot";
@@ -170,10 +178,10 @@ in
               wait-for-it localhost:${builtins.toString cfg.hub.port} --strict --timeout=30
 
               echo "Processing server configurations..."
-              find ${config.xdg.stateHome}/mcpjungle/servers -name "*.json" -print0 \
-                | xargs -0 -P4 -I{} bash -c '
-                  server_file="{}"
-                  server_name="$(basename "$server_file" .json)"
+              echo "${lib.concatStringsSep "\n" serverFiles}" \
+                | xargs -P4 -I{} bash -c '
+                  server_name="$(echo {} | cut -d, -f1)"
+                  server_file="$(echo {} | cut -d, -f2)"
                   echo "Processing server: $server_name"
 
                   # Transform config using jq
@@ -181,7 +189,7 @@ in
                   jq -c --arg name "$server_name" -f ${jqFilter} "$server_file" > "$temp_file"
 
                   echo "Registering transformed config: $temp_file"
-                  mcpjungle register -c "$temp_file" || echo "Failed to register $server_name"
+                  mcpjungle register -c "$temp_file" || true
                   rm -f "$temp_file"
                   '
 
