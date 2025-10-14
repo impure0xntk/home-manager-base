@@ -187,6 +187,8 @@ in
             "GitHub.copilot"
             "GitHub.copilot-chat"
             "kilocode.Kilo-Code"
+
+            "johnny-zhao.oai-compatible-copilot" # instead of BYOK
           ]
         );
       userSettings = let
@@ -205,7 +207,23 @@ in
             }
           ) provider.models
         ) cfg.providers)) // { _flattenIgnore = true; };
+        oaiCompatibleModelsConfig = lib.flatten (lib.forEach cfg.providers (provider:
+          lib.forEach provider.models (model:{
+            id = model.model;
+            owned_by = "litellm";
+            vision = false;
+            reasoning = {
+              effort = "auto";
+            };
+            _flattenIgnore = true;
+          })
+        ));
       in (lib.my.flatten "_flattenIgnore" {
+        oaicopilot = {
+          # TODO: baseurl selection
+          baseUrl = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}/v1";
+          models = oaiCompatibleModelsConfig;
+        };
         # The main agent is GitHub Copilot, but it uses only remote models for completions.
         # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
         github.copilot = {
