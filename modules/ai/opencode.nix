@@ -117,7 +117,7 @@ in
         };
       } // lib.optionalAttrs config.my.home.mcp.enable {
           mcp = lib.optionalAttrs (
-            builtins.hasAttr "opendoce" config.my.home.mcp.serverGroupFiles
+            builtins.hasAttr "opencode" config.my.home.mcp.servers
               && config.my.home.mcp.hub.enable)
             {
               opencode = {

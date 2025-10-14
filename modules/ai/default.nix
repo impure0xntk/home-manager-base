@@ -252,7 +252,7 @@ in
       // {
         mcp = {
           servers = lib.optionalAttrs (
-            builtins.hasAttr "vscode" config.my.home.mcp.serverGroupFiles
+            builtins.hasAttr "vscode" config.my.home.mcp.servers
               && config.my.home.mcp.hub.enable)
             { vscode = { command = "mcp-remote-group"; args = ["vscode"]; }; };
         };

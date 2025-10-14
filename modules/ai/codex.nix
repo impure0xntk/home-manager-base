@@ -77,7 +77,7 @@ let
       tools = {
         web_search = true;
       };
-      mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.serverJsonContents) (
+      mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.servers) (
         if config.my.home.mcp.hub.enable then { codex = { command = "mcp-remote-group"; args = ["codex"]; }; }
         else config.my.home.mcp.serverJsonContents.codex.mcpServers);
     };
