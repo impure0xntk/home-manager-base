@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.my.home.languages.sql;
+  purePkgs = import <nixpkgs> { }; # to avoid build sqlfluff because it's build is too slow
 in
 {
   options.my.home.languages.sql = {
@@ -36,9 +37,12 @@ in
         "[sql]" = {
           "editor.defaultFormatter" = "dorzey.vscode-sqlfluff";
         };
+        "github.copilot.enable" = {
+          "sql" = false; # Disable because may include sensitive info.
+        };
       } // lib.my.flatten "_flattenIgnore" {
         sqlfluff = {
-          executablePath = "${pkgs.sqlfluff}/bin/sqlfluff";
+          executablePath = "${purePkgs.sqlfluff}/bin/sqlfluff";
           dialect = "mysql"; # By default. If use another, set from workspace.
           format.enabled = false;
           linter.run = "onSave";
