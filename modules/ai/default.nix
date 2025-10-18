@@ -192,21 +192,6 @@ in
           ]
         );
       userSettings = let
-        # Azure Models configuration for GitHub Copilot Chat
-        # https://parsiya.net/blog/litellm-ghc-aad/
-        azureModelsConfig = (lib.listToAttrs (lib.concatMap (provider:
-          lib.map (model:
-            lib.nameValuePair "${provider.name}-${model.model}" {
-              name = model.model;
-              url = "${provider.url}/v1/chat/completions";
-              maxInputTokens = -1;
-              maxOutputTokens = -1;
-              toolCalling = true;
-              vision = false;
-              thinking = false;
-            }
-          ) provider.models
-        ) cfg.providers)) // { _flattenIgnore = true; };
         oaiCompatibleModelsConfig = lib.flatten (lib.forEach cfg.providers (provider:
           lib.forEach provider.models (model:{
             id = model.model;
@@ -237,9 +222,6 @@ in
             editor.temporalContext.enabled = true;
             edits.temporalContext.enabled = true;
 
-            # Azure models configuration
-            azureModels = azureModelsConfig;
-
             # prompts
             # Refer file to avoid redundant settings.
             # TODO: add ability to add prompts from another modules
@@ -257,6 +239,7 @@ in
         };
         chat = {
           agent.enabled = !cfg.localOnly;
+          agentSessionsViewLocation = "view";
           mcp = {
             enabled = config.my.home.mcp.enable;
             discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
