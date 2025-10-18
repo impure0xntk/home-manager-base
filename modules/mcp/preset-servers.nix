@@ -22,13 +22,12 @@ in
       ];
       ENABLE_ADDITIONAL_TOOLS = lib.concatStringsSep "," [
         "sequential-thinking" # instead of think
-        "vulnerability_scan"
-        "sbom"
         "security"
         "security_override"
       ];
       DISABLED_FUNCTIONS = lib.concatStringsSep "," [
         "aws_documentation"
+        "copilot-agent"
         "devtools_help"
         "murican_to_english"
         "q-developer-agent"
