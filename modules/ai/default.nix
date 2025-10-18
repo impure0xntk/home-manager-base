@@ -240,6 +240,7 @@ in
         chat = {
           agent.enabled = !cfg.localOnly;
           agentSessionsViewLocation = "view";
+          commandCenter.enabled = false; # disabled title bar icon
           mcp = {
             enabled = config.my.home.mcp.enable;
             discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
