@@ -21,6 +21,7 @@ in
         "http://localhost:16060"
       ];
       ENABLE_ADDITIONAL_TOOLS = lib.concatStringsSep "," [
+        "memory"
         "sequential-thinking" # instead of think
         "security"
         "security_override"
