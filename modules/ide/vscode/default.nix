@@ -824,5 +824,14 @@ in
           ++ shortcut;
       };
     };
+
+    # manually install shell integrations
+    programs.bash.initExtra = ''
+      [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path bash)"
+    '';
+    programs.fish.interactiveShellInit = ''
+      string match -q "$TERM_PROGRAM" "vscode"
+      and . (code --locate-shell-integration-path fish)
+    '';
   };
 }
