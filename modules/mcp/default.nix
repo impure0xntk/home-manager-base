@@ -130,23 +130,6 @@ in
     my.home.mcp = {
       inherit serverGroupFiles;
     };
-
-    # For CLI
-    home.packages = with pkgs; [
-      serena
-    ];
-
-    programs.vscode.profiles.default = {
-      extensions = pkgs.nix4vscode.forVscode [
-        "juehangqin.vscode-mcp-server"
-      ];
-      userSettings = lib.my.flatten "_flattenIgnore" {
-        vscode-mcp-server = {
-          defaultEnabled = true;
-          port = 13001;
-        };
-      };
-    };
   };
 }
 
