@@ -8,9 +8,9 @@
       };
     }
   ];
-  "tongyi-deepresearch" = [
+  "minimax-m2" = [
     {
-      model = "openrouter/alibaba/tongyi-deepresearch-30b-a3b:free";
+      model = "openrouter/minimax/minimax-m2:free";
       params = {
       };
     }
