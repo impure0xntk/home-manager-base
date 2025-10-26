@@ -2,7 +2,6 @@
   config,
   lib,
   pkgs,
-  prompts,
   searchModelByRole,
   ...
 }:
@@ -127,38 +126,7 @@ in
             };
       }
     );
-    "opencode/AGENTS.md".text =
-      with prompts._snippet;
-      with prompts.function;
-      with prompts; ''
-      # AGENTS.md
-
-      ## General
-
-      ${charm}
-
-      ## Language
-
-      ${japanese.input}
-      ${japanese.output}
-
-      ## CLI tools
-
-      ${tools.alternatives}
-      ${tools.constraints}
-
-      ## Security
-
-      ${security}
-
-      ## Communication
-
-      ${agent.autonomous}
-
-      ## Specific MCP Servers Usage
-
-      ${mcp.usage}
-    '';
+    "opencode/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
   };
 
   programs = {

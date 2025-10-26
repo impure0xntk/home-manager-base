@@ -34,24 +34,20 @@ let
     in
     if builtins.length models > 0 then builtins.head models else null;
 
-  prompts = import ./prompt.nix { inherit lib; };
-  roles =
-    with prompts.chat;
-    with prompts.function;
-    [
-      {
-        name = "ShellGPT";
-        role = shell.default;
-      }
-      {
-        name = "ShellGPT-Japanese";
-        role = withNoThink (toJapanese shell.default);
-      }
-      {
-        name = "Commit Message Generator";
-        role = withNoThink (shell.commitMessageGenerator);
-      }
-    ];
+  roles = with config.my.home.ai.prompts.snippets; [
+    {
+      name = "ShellGPT";
+      role = shell.default;
+    }
+    {
+      name = "ShellGPT-Japanese";
+      role = mk.withNoThink (mk.toJapanese shell.default);
+    }
+    {
+      name = "Commit Message Generator";
+      role = mk.withNoThink (commit.conventional);
+    }
+  ];
 
   shellAliases =
     let
@@ -67,10 +63,11 @@ let
 in
 {
   imports = [
+    ./prompt.nix
     ./ollama.nix
     ./litellm
-    # (import ./codex.nix (args // {inherit searchModelByRole prompts;}))
-    (import ./opencode.nix (args // {inherit searchModelByRole prompts;}))
+    # (import ./codex.nix (args // {inherit searchModelByRole;}))
+    (import ./opencode.nix (args // { inherit searchModelByRole; }))
   ];
 
   options.my.home.ai =
@@ -181,91 +178,107 @@ in
     ];
 
     programs.vscode.profiles.default = {
-      extensions =
-        lib.optionals (!cfg.localOnly) (
-          pkgs.nix4vscode.forVscode [
-            "GitHub.copilot"
-            "GitHub.copilot-chat"
-            "kilocode.Kilo-Code"
+      extensions = lib.optionals (!cfg.localOnly) (
+        pkgs.nix4vscode.forVscode [
+          "GitHub.copilot"
+          "GitHub.copilot-chat"
+          "kilocode.Kilo-Code"
 
-            "johnny-zhao.oai-compatible-copilot" # instead of BYOK
-          ]
-        );
-      userSettings = let
-        oaiCompatibleModelsConfig = lib.flatten (lib.forEach cfg.providers (provider:
-          lib.forEach provider.models (model:{
-            id = model.model;
-            owned_by = "litellm";
-            vision = false;
-            reasoning = {
-              effort = "auto";
+          "johnny-zhao.oai-compatible-copilot" # instead of BYOK
+        ]
+      );
+      userSettings =
+        let
+          oaiCompatibleModelsConfig = lib.flatten (
+            lib.forEach cfg.providers (
+              provider:
+              lib.forEach provider.models (model: {
+                id = model.model;
+                owned_by = "litellm";
+                vision = false;
+                reasoning = {
+                  effort = "auto";
+                };
+                _flattenIgnore = true;
+              })
+            )
+          );
+        in
+        (lib.my.flatten "_flattenIgnore" {
+          oaicopilot = {
+            # TODO: baseurl selection
+            baseUrl = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}/v1";
+            models = oaiCompatibleModelsConfig;
+          };
+          # The main agent is GitHub Copilot, but it uses only remote models for completions.
+          # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
+          github.copilot = {
+            chat = {
+              agent = {
+                thinkingTool = true;
+              };
+              codesearch.enabled = true;
+              localeOverride = lib.head (lib.splitString "-" config.my.home.ide.vscode.languages.chat);
+
+              editor.temporalContext.enabled = true;
+              edits.temporalContext.enabled = true;
+
+              # prompts
+              # Refer file to avoid redundant settings.
+              # TODO: add ability to add prompts from another modules
+              reviewSelection.instructions = [
+                {
+                  "file" = "${config.xdg.configHome}/github-copilot/instructions/Code Refactor.md";
+                }
+              ];
+              commitMessageGeneration.instructions = [
+                {
+                  "file" = "${config.xdg.configHome}/github-copilot/instructions/Commit Message Generator.md";
+                }
+              ];
             };
-            _flattenIgnore = true;
-          })
-        ));
-      in (lib.my.flatten "_flattenIgnore" {
-        oaicopilot = {
-          # TODO: baseurl selection
-          baseUrl = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}/v1";
-          models = oaiCompatibleModelsConfig;
-        };
-        # The main agent is GitHub Copilot, but it uses only remote models for completions.
-        # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
-        github.copilot = {
+          };
           chat = {
-            agent = {
-              thinkingTool = true;
+            agent.enabled = !cfg.localOnly;
+            agentSessionsViewLocation = "view";
+            commandCenter.enabled = false; # disabled title bar icon
+            mcp = {
+              enabled = config.my.home.mcp.enable;
+              discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
             };
-            codesearch.enabled = true;
-            localeOverride = lib.head (lib.splitString "-" config.my.home.ide.vscode.languages.chat);
-
-            editor.temporalContext.enabled = true;
-            edits.temporalContext.enabled = true;
-
-            # prompts
-            # Refer file to avoid redundant settings.
-            # TODO: add ability to add prompts from another modules
-            reviewSelection.instructions = [
-              {
-                "file" = "${config.xdg.configHome}/github-copilot/instructions/Code Refactor.md";
-              }
-            ];
-            commitMessageGeneration.instructions = [
-              {
-                "file" = "${config.xdg.configHome}/github-copilot/instructions/Commit Message Generator.md";
-              }
-            ];
+            promptFilesLocations = {
+              "${config.my.home.ai.prompts.baseDir}/instructions" = true;
+              _flattenIgnore = true;
+            };
           };
-        };
-        chat = {
-          agent.enabled = !cfg.localOnly;
-          agentSessionsViewLocation = "view";
-          commandCenter.enabled = false; # disabled title bar icon
+          inlineChat = {
+            enableV2 = true;
+            hideOnRequest = true;
+          };
+        })
+        // {
           mcp = {
-            enabled = config.my.home.mcp.enable;
-            discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
+            servers =
+              lib.optionalAttrs
+                (builtins.hasAttr "vscode" config.my.home.mcp.servers && config.my.home.mcp.hub.enable)
+                {
+                  vscode = {
+                    command = "mcp-remote-group";
+                    args = [ "vscode" ];
+                  };
+                };
           };
         };
-        inlineChat = {
-          enableV2 = true;
-          hideOnRequest = true;
-        };
-      })
-      // {
-        mcp = {
-          servers = lib.optionalAttrs (
-            builtins.hasAttr "vscode" config.my.home.mcp.servers
-              && config.my.home.mcp.hub.enable)
-            { vscode = { command = "mcp-remote-group"; args = ["vscode"]; }; };
-        };
-      };
     };
 
     # For other tools
     # For vscode set "github.copilot.chat.mcp.discovery.enabled" to true.
-    home.packages = (with pkgs; [
-      shell-gpt
-    ]);
+    home.packages = (
+      with pkgs;
+      [
+        shell-gpt
+      ]
+    );
     programs.bash.shellAliases = shellAliases;
     # shell-gpt needs write permission to .sgptrc .
     home.activation."copy-sgptrc" = ''
@@ -275,7 +288,8 @@ in
     xdg.configFile =
       let
         shellGptRoles = roles;
-      in (
+      in
+      (
         # shellgpt roles
         builtins.listToAttrs (
           builtins.map (r: {
@@ -304,7 +318,7 @@ in
               DEFAULT_EXECUTE_SHELL_CMD = false;
               DISABLE_STREAMING = false;
               CODE_THEME = "github-dark";
-              API_BASE_URL= modelInfo.url;
+              API_BASE_URL = modelInfo.url;
               OPENAI_API_KEY = "dummy"; # because use litellm proxy
               USE_LITELLM = false; # to use self-hosted litellm proxy
             }
@@ -321,22 +335,22 @@ in
         )
       );
 
-
     # Add a custom command to lazygit
     programs.lazygit.settings.customCommands =
       let
         chatModel = searchModelByRole "chat";
         editModel = searchModelByRole "edit";
-      in [
-      {
-        # Smart commit
-        key = "g";
-        command = ''bash -c "${pkgs.writeScript "smart-commit" (builtins.readFile ./scripts/smart-commit.sh)} --model ${chatModel.model},${editModel.model}"'';
-        description = "Commit by using smart-commit";
-        context = "files";
-        loadingText = "Committing...";
-        output = "terminal";
-      }
-    ];
+      in
+      [
+        {
+          # Smart commit
+          key = "g";
+          command = ''bash -c "${pkgs.writeScript "smart-commit" (builtins.readFile ./scripts/smart-commit.sh)} --model ${chatModel.model},${editModel.model}"'';
+          description = "Commit by using smart-commit";
+          context = "files";
+          loadingText = "Committing...";
+          output = "terminal";
+        }
+      ];
   };
 }

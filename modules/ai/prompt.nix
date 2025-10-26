@@ -1,6 +1,11 @@
 # Recommend to write text as markdown.
 
-{ ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   base = {
     charm = ''
@@ -119,20 +124,144 @@ let
 
   mcp = {
     usage = ''
-      - WebSearch: searxngMCP to search summaries and URLs -> playwright MCP or fetch MCP to show and read the page
-      - Memory: basic-memory MCP to save context when you approach the context limit
+      - WebSearch: devtools MCP to search summaries and URLs -> playwright MCP or devtools MCP to fetch and read the page
+      - GitHub repository Search: devtools MCP to search repos and issues -> devtools MCP or github MCP to fetch details
     '';
+  };
+
+  # To set AGENTS.md content to default and pin it.
+  # If remove this to default or config, this cannot be refer in other modules.
+  presets = {
+    snippets = {
+      inherit
+        base
+        mk
+        agent
+        mcp
+        code
+        commit
+        shell
+        ;
+    };
+
+    instructions = {
+      "AGENTS.md".text = ''
+        # AGENTS.md
+
+        ## General
+
+        ${base.charm}
+
+        ## Language
+
+        ${base.japanese.input}
+        ${base.japanese.output}
+
+        ## CLI tools
+
+        ${base.tools.alternatives}
+        ${base.tools.constraints}
+
+        ## Security
+
+        ${base.security}
+
+        ## Communication
+
+        ${agent.autonomous}
+
+        ## Specific MCP Servers Usage
+
+        ${mcp.usage}
+      '';
+    };
+    prompts = { };
   };
 in
 {
-  _snippet = base;
-  function = mk;
-  agent = agent;
-  edit = code;
-  commit = commit;
-  mcp = mcp;
-  chat.shell = {
-    default = shell.default;
-    commitMessageGenerator = commit.conventional;
+  options.my.home.ai.prompts = {
+    instructions = lib.mkOption {
+      type =
+        with lib.types;
+        attrsOf (
+          submodule (
+            { name, ... }:
+            {
+              options = {
+                text = lib.mkOption {
+                  type = lib.types.str;
+                  description = "The instruction content as text.";
+                };
+                source = lib.mkOption {
+                  type = lib.types.path;
+                  description = "Path to a file containing the instruction content.";
+                  default = "${config.xdg.configHome}/ai/instructions/${name}";
+                  readOnly = true;
+                };
+              };
+            }
+          )
+        );
+      default = presets.instructions;
+      description = "Abstract instruction prompts for AI assistants, with VS Code as base.";
+    };
+
+    prompts = lib.mkOption {
+      type =
+        with lib.types;
+        attrsOf (
+          submodule (
+            { name, ... }:
+            {
+              options = {
+                text = lib.mkOption {
+                  type = lib.types.str;
+                  description = "The prompt content as text.";
+                };
+                source = lib.mkOption {
+                  type = lib.types.path;
+                  description = "Path to a file containing the prompt content.";
+                  default = "${config.xdg.configHome}/ai/prompts/${name}";
+                  readOnly = true;
+                };
+              };
+            }
+          )
+        );
+      default = presets.prompts;
+      description = "Specific prompts for AI assistants, with VS Code as base.";
+    };
+
+    baseDir = lib.mkOption {
+      type = lib.types.path;
+      description = "Base directory for prompt files.";
+      default = "${config.xdg.configHome}/ai";
+      readOnly = true;
+    };
+
+    snippets = lib.mkOption {
+      type = with lib.types; attrsOf unspecified;
+      default = { };
+      description = "Legacy snippets option. Use 'instructions' and 'prompts' instead.";
+    };
+  };
+  config = lib.mkIf (config.my.home.ai.enable) {
+    xdg.configFile = lib.mkMerge [
+      (lib.mapAttrs' (name: prompt: {
+        name = "ai/instructions/${name}";
+        value = {
+          text = prompt.text;
+        };
+      }) config.my.home.ai.prompts.instructions)
+
+      (lib.mapAttrs' (name: prompt: {
+        name = "ai/prompts/${name}";
+        value = {
+          text = prompt.text;
+        };
+      }) config.my.home.ai.prompts.prompts)
+    ];
+
+    my.home.ai.prompts = presets;
   };
 }
