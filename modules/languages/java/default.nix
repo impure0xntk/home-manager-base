@@ -167,7 +167,7 @@ in {
             };
             disableTelemetry = true;
             # To suppress "SonarQube for VS Code failed to analyze JSON/yaml code: Node.js runtime version 18.17.0 or later is required."
-            analysisExcludesStandalone = "**/*.json,**/*.jsonc,**/*.yaml,**/*.yml";
+            analysisExcludesStandalone = "**/*.json,**/*.jsonc,**/*.yaml,**/*.yml,**/*.xml";
           };
 
           xml = {
