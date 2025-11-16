@@ -114,7 +114,7 @@ in
             extensions = ["nix"];
           };
         };
-      } // lib.optionalAttrs config.my.home.mcp.enable {
+      } // {
         mcp = lib.optionalAttrs config.my.home.mcp.hub.client.enable {
           opencode = {
             type = "local"; enabled = true;
