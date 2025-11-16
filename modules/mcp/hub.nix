@@ -39,7 +39,7 @@ let
 
   mcp-serer-remote-group = pkgs.writeShellScriptBin "mcp-remote-group" ''
     ${pkgs.mcp-server-remote}/bin/mcp-remote \
-      http://127.0.0.1:${builtins.toString cfg.hub.port}/v0/groups/''${1:-input group}/mcp \
+      http://${cfg.hub.client.host}:${builtins.toString cfg.hub.client.port}/v0/groups/''${1:-input group}/mcp \
       --allow-http
   '';
 
@@ -72,12 +72,26 @@ in
       default = true;
       description = "Whether using sops. If enabled start mcpjungle after sops-nix.service";
     };
+    client = {
+      enable = mkEnableOption "Enable MCP client for MCP Hub";
+      host = mkOption {
+        description = "Host of MCP hub";
+        type = str;
+        default = "127.0.0.1";
+      };
+      port = mkOption {
+        description = "Port number of MCP hub client";
+        type = number;
+        default = 3001;
+      };
+    };
   };
 
   config = lib.mkIf config.my.home.mcp.hub.enable {
     # For CLI
     home.packages = [
       mcpJungleWithRuntime
+    ] ++ lib.optionals cfg.hub.client.enable [
       mcp-serer-remote-group
     ];
 

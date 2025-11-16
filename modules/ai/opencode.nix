@@ -115,15 +115,12 @@ in
           };
         };
       } // lib.optionalAttrs config.my.home.mcp.enable {
-          mcp = lib.optionalAttrs (
-            builtins.hasAttr "opencode" config.my.home.mcp.servers
-              && config.my.home.mcp.hub.enable)
-            {
-              opencode = {
-                type = "local"; enabled = true;
-                command = [ "mcp-remote-group" "opencode"];
-              };
-            };
+        mcp = lib.optionalAttrs config.my.home.mcp.hub.client.enable {
+          opencode = {
+            type = "local"; enabled = true;
+            command = [ "mcp-remote-group" "opencode"];
+          };
+        };
       }
     );
     "opencode/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
