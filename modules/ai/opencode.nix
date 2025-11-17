@@ -118,7 +118,7 @@ in
         mcp = lib.optionalAttrs config.my.home.mcp.hub.client.enable {
           opencode = {
             type = "local"; enabled = true;
-            command = [ "mcp-remote-group" "opencode"];
+            command = [ "mcp-remote-group-primary" "opencode"];
           };
         };
       }

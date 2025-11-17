@@ -260,7 +260,7 @@ in
           mcp = {
             servers = lib.optionalAttrs config.my.home.mcp.hub.client.enable {
               vscode = {
-                command = "mcp-remote-group";
+                command = "mcp-remote-group-primary";
                 args = [ "vscode" ];
               };
             };
