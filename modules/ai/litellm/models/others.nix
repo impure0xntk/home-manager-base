@@ -8,9 +8,9 @@
       };
     }
   ];
-  "minimax-m2" = [
+  "kat-coder-pro" = [
     {
-      model = "openrouter/minimax/minimax-m2:free";
+      model = "openrouter/kwaipilot/kat-coder-pro:free";
       params = {
       };
     }
