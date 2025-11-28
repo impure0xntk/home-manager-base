@@ -51,7 +51,7 @@ in {
     home.packages = [
       textlintWrapper
       # pkgs.markitdown.all
-      pkgs.markitdown
+      pkgs.python3Packages.markitdown
     ];
     programs.vscode.profiles.default = {
       extensions = pkgs.nix4vscode.forVscode [

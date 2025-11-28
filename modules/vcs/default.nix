@@ -84,10 +84,10 @@ in {
     enable = true;
     settings = {
       git = {
-        paging = {
+        pagers = [{
           colorArg = "always";
           pager = "${pkgs.delta}/bin/delta --dark --paging=never";
-        };
+        }];
         allBranchesLogCmds = [ gitGraphLogOneline ];
         branchLogCmd = gitGraphLogShort;
       };

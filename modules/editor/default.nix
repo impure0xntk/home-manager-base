@@ -410,7 +410,7 @@ in
       fidget-nvim # plugin loader notice
       hop-nvim # easymotion
       hlchunk-nvim # indent-blankline alternative
-      (vimPluginFromGitHubRev "063fa2ba05f5eee5a1ab3da76ecb19770b7725cf" "m-demare/hlargs.nvim")
+      hlargs-nvim
       (vimPluginFromGitHubRevWithDeps "1729faca1c6ae34520a6e531983a3737d3654ee1"
         "SUSTech-data/wildfire.nvim"
         [ nvim-treesitter ]

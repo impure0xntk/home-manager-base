@@ -118,11 +118,7 @@ in {
   home.packages = with pkgs; [
     babelfish  # translate bash and fish
     fishPlugins.foreign-env  # translate bash and fish
-    oil # defined by overlay/default.nix
-
-    (lib.my.removeAllDesktopIcons {
-      package = config.programs.fish.package;
-    })
+    oils-for-unix # defined by overlay/default.nix
   ];
   programs.bash = {
     enable = true;

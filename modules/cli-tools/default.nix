@@ -79,7 +79,7 @@ in {
     rsync       # file transfer
     # cli tools
     delta       # alt diff. required by batdiff
-    du-dust     # alt du
+    dust        # alt du
     duf         # alt df
     trash-cli   # remove file management
     curlie      # alt curl
