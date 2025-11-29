@@ -6,7 +6,7 @@
 }:
 let
   cfg = config.my.home.languages.sql;
-  purePkgs = import <nixpkgs> { }; # to avoid build sqlfluff because it's build is too slow
+  purePkgs = pkgs.pure; # to avoid build sqlfluff because it's build is too slow
 in
 {
   options.my.home.languages.sql = {
