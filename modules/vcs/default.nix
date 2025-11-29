@@ -44,8 +44,7 @@ in {
   # user/email in home-manager/profiles/*.nix
   programs.git = {
     enable = true;
-    delta.enable = true;
-    extraConfig = rec {
+    settings = rec {
       http.proxy = lib.optionalString cfgProxy.enable cfgProxy.default;
       https.proxy = http.proxy;
       # merge settings
@@ -78,6 +77,11 @@ in {
         root = "~/ghq";
       };
     };
+  };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
   };
 
   programs.lazygit = {

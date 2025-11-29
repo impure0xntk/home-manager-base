@@ -28,7 +28,7 @@ in {
       browser = "";
     };
   };
-  programs.git.extraConfig.credential = {
+  programs.git.settings.credential = {
     credentialStore = gitCredentialStore;
     helper = "${gitCredentialManager}/bin/git-credential-manager";
   };
