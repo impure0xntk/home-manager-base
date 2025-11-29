@@ -155,7 +155,6 @@ in
         pkgs.nix4vscode.forVscode [
           "GitHub.copilot"
           "GitHub.copilot-chat"
-          "kilocode.Kilo-Code"
 
           "johnny-zhao.oai-compatible-copilot" # instead of BYOK
         ]

@@ -117,8 +117,6 @@ in
           "ms-vscode-remote.remote-ssh"
           "ms-vscode-remote.remote-ssh-edit"
           "ms-vscode-remote.remote-containers"
-          "visualstudioexptteam.vscodeintellicode"
-          "visualstudioexptteam.intellicode-api-usage-examples"
           "ms-vscode.vscode-speech"
           "ms-vscode.vscode-speech-language-pack-${config.my.home.ide.vscode.languages.voice}"
 
