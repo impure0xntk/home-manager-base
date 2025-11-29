@@ -85,6 +85,10 @@ let
     require("spider").setup {
       subwordMovement = false,
     }
+    -- treesj
+    require('treesj').setup({
+      use_default_keymaps = tree
+    })
     map({ "n", "o", "x" }, "w", "<cmd>lua require('spider').motion('w')<CR>")
     map({ "n", "o", "x" }, "e", "<cmd>lua require('spider').motion('e')<CR>")
     map({ "n", "o", "x" }, "b", "<cmd>lua require('spider').motion('b')<CR>")
@@ -420,6 +424,7 @@ in
       nvim-spider # w/b moving
       which-key-nvim
       todo-comments-nvim
+      treesj # splitting/joining blocks
       vim-wakatime
       (vimPluginFromGitHubRev "30433d7513f0d14665c1cfcea501c90f8a63e003" "stevearc/profile.nvim") # profiler. Use NVIM_PROFILER=1 to enable.
 
