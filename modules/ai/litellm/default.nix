@@ -91,7 +91,11 @@ in
             "PRISMA_QUERY_ENGINE_BINARY=${pkgs.prisma-engines}/bin/query-engine"
             "PRISMA_QUERY_ENGINE_LIBRARY=${pkgs.prisma-engines}/lib/libquery_engine.node"
 
+            "ANONYMIZED_TELEMETRYFalse"
+            "DO_NOT_TRACK=True"
+            "SCARF_NO_ANALYTICS=True"
             "DISABLE_ADMIN_UI=True"
+            "NO_DOCS=True"
           ]
           ++ (lib.optionals config.my.home.networks.proxy.enable [
             "HTTPS_PROXY=${config.my.home.networks.proxy.default}"
