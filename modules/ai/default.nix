@@ -38,7 +38,6 @@ in
   imports = [
     ./prompt.nix
     ./ollama.nix
-    ./litellm
     # (import ./codex.nix (args // {inherit searchModelByRole;}))
     (import ./opencode.nix (args // { inherit searchModelByRole; }))
   ];
@@ -161,6 +160,7 @@ in
       );
       userSettings =
         let
+          oaiCompatibleFirstProvider = builtins.head config.my.home.ai.providers;
           oaiCompatibleModelsConfig = lib.flatten (
             lib.forEach cfg.providers (
               provider:
@@ -179,7 +179,7 @@ in
         (lib.my.flatten "_flattenIgnore" {
           oaicopilot = {
             # TODO: baseurl selection
-            baseUrl = "http://localhost:${builtins.toString config.my.home.ai.litellm.port}/v1";
+            baseUrl = "${oaiCompatibleFirstProvider.url}/v1";
             models = oaiCompatibleModelsConfig;
           };
           # The main agent is GitHub Copilot, but it uses only remote models for completions.
@@ -239,5 +239,5 @@ in
           };
         };
     };
-   };
+  };
 }
