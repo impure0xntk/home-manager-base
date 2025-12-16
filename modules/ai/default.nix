@@ -40,6 +40,7 @@ in
     ./ollama.nix
     # (import ./codex.nix (args // {inherit searchModelByRole;}))
     (import ./opencode.nix (args // { inherit searchModelByRole; }))
+    # (import ./goose-cli.nix (args // { inherit searchModelByRole; }))
   ];
 
   options.my.home.ai =
