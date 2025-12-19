@@ -9,6 +9,18 @@
 let
   cfg = config.my.home.ai;
 
+  goose-cli-wrapped = let
+    exportEnvVarStrs = lib.mapAttrsToList (name: value: "export ${name}=${value}") config.my.home.ai.goose.environmentVariables;
+    exportEnv = lib.concatStringsSep "\n" exportEnvVarStrs;
+  in pkgs.writeShellApplication {
+    name = pkgs.goose-cli.meta.mainProgram;
+    runtimeInputs = [ pkgs.goose-cli ];
+    text = ''
+      ${exportEnv}
+      exec ${lib.getExe pkgs.goose-cli} "$@"
+    '';
+  };
+
   gooseConfig = {
     GOOSE_PROVIDER =
       let
@@ -68,33 +80,48 @@ let
   };
 in
 {
-  home.packages = with pkgs; [
-    goose-cli
-  ];
-  xdg.configFile = {
-    "goose/config.yaml".source = lib.my.toYaml gooseConfig;
-    "goose/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
-  } // lib.optionalAttrs (cfg.providers != null) (
-    builtins.listToAttrs (
-      map (p: {
-        name = "goose/custom_providers/${p.name}.yaml";
-        value = {
-          source = lib.my.toYaml {
-            name = p.name;
-            engine = "openai";
-            display_name = p.name;
-            description = "Custom ${p.name} provider";
-            api_key_env = "${lib.strings.toUpper p.name}_API_KEY";
-            base_url = "${p.url}/v1/chat/completions";
-            models = map (m: {
-              name = m.model;
-              # context_limit = m.context_limit or 4096;
-            }) p.models;
-            headers = p.headers or { };
-            supports_streaming = p.supports_streaming or true;
+  options.my.home.ai.goose = {
+    enable = lib.mkEnableOption "Enable Goose CLI configuration.";
+    environmentVariables = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      description = "Additional environment variables to set for goose-cli.";
+    };
+  };
+  config = lib.mkIf cfg.goose.enable {
+    home.packages = with pkgs; [
+      goose-cli-wrapped
+    ];
+    xdg.configFile = {
+      "goose/config.yaml".source = lib.my.toYaml gooseConfig;
+      "goose/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
+    } // lib.optionalAttrs (cfg.providers != null) (
+      builtins.listToAttrs (
+        map (p: {
+          name = "goose/custom_providers/custom_${p.name}.json";
+          value = {
+            source = lib.my.toYaml {
+              name = p.name;
+              engine = "openai";
+              display_name = p.name;
+              description = "Custom ${p.name} provider";
+              api_key_env = "${lib.strings.toUpper p.name}_API_KEY";
+              base_url = "${p.url}/v1/chat/completions";
+              models = map (m: {
+                name = m.model;
+                # context_limit = m.context_limit or 4096;
+              }) p.models;
+              headers = p.headers or { };
+              supports_streaming = p.supports_streaming or true;
+            };
           };
-        };
-      }) cfg.providers
-    )
-  );
+        }) cfg.providers
+      )
+    );
+    programs.fish.interactiveShellInit = ''
+      ${lib.getExe goose-cli-wrapped} term init fish \
+        | ${lib.getExe pkgs.gnused} -e 's@${lib.getExe pkgs.goose-cli}@${lib.getExe goose-cli-wrapped}@g' \
+        | source
+    '';
+  };
 }
