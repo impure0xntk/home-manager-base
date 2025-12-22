@@ -32,6 +32,8 @@ let
     "git-graph" = gitGraphLogOneline
       + "| bat --paging=always --color=always --style=plain";
     "gg" = shellAliases.git-graph;
+
+    "gtr" = "git gtr";
   };
 
 in {
@@ -40,6 +42,8 @@ in {
     git-crypt
     commitizen
     git-graph
+
+    git-gtr # git worktree runner
   ];
   # user/email in home-manager/profiles/*.nix
   programs.git = {
@@ -108,10 +112,9 @@ in {
     };
   };
 
-  programs.git-worktree-switcher = {
-    enable = true;
-    enableFishIntegration = true;
-  };
-
   programs.bash.shellAliases = shellAliases;
+
+  programs.fish.interactiveShellInit = ''
+    cat ${pkgs.git-gtr}/share/git-gtr/completions/gtr.fish | source
+  '';
 }
