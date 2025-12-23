@@ -123,5 +123,13 @@ in
         | ${lib.getExe pkgs.gnused} -e 's@${lib.getExe pkgs.goose-cli}@${lib.getExe goose-cli-wrapped}@g' \
         | source
     '';
+    programs.vscode.profiles.default = {
+      extensions = pkgs.nix4vscode.forVscode [
+        "block.vscode-goose"
+      ];
+      userSettings = {
+        "goose.binaryPath" = lib.getExe goose-cli-wrapped;
+      };
+    };
   };
 }
