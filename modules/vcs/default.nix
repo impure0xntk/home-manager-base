@@ -70,6 +70,7 @@ in {
       };
       merge.conflictstyle = "diff3";
       diff = {
+        context = 1;
         indentHeuristic = true;
         colorMoved = "default";
       };
