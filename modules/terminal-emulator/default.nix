@@ -205,6 +205,8 @@ index e240d8c..d8b3eec 100755
       set -g mouse on
       ## expand scroll buffer
       set -g history-limit 50000
+      ## scrollbars
+      set -g pane-scrollbars on
       ## for vscode
       set -ga update-environment ' VSCODE_GIT_ASKPASS_NODE VSCODE_GIT_ASKPASS_MAIN VSCODE_IPC_HOOK_CLI PATH GIT_ASKPASS'
 
