@@ -157,7 +157,6 @@ in
           "eriklynd.json-tools"
           "richie5um2.vscode-sort-json"
           "tyriar.sort-lines"
-          "fnando.linter" # TODO: remove after replacing textlint extension.
           "sleistner.vscode-fileutils"
           "rioj7.command-variable"
           "augustocdias.tasks-shell-input"
