@@ -2,7 +2,6 @@
   config,
   lib,
   pkgs,
-  prompts,
   searchModelByRole,
   ...
 }:
@@ -21,14 +20,15 @@ let
     name = "codex";
 
     paths = [
-      # pkgs.codex
-      pkgs.code # just-every/code: codex alternative
+      pkgs.codex
+      # pkgs.code # just-every/code: codex alternative
     ];
 
     nativeBuildInputs = with pkgs; [
       makeWrapper
     ];
 
+      # makeWrapper $out/bin/code $out/bin/codex \
     postBuild = ''
       wrapProgram $out/bin/codex \
         --set CODEX_HOME ${configDirectory} \
@@ -77,9 +77,7 @@ let
       tools = {
         web_search = true;
       };
-      mcp_servers = lib.optionalAttrs (builtins.hasAttr "codex" config.my.home.mcp.servers) (
-        if config.my.home.mcp.hub.enable then { codex = { command = "mcp-remote-group"; args = ["codex"]; }; }
-        else config.my.home.mcp.serverJsonContents.codex.mcpServers);
+      mcp_servers = { codex = { command = "mcp-remote-group"; args = ["codex"]; }; };
     };
 
   shellAliases = {
@@ -96,29 +94,7 @@ in
 
   xdg.configFile = {
     "codex/.gitkeep".text = "";
-    "codex/AGENTS.md".text =
-      with prompts._snippet;
-      with prompts.function; ''
-      # AGENTS.md
-
-      ## General
-
-      ${charm}
-
-      ## Language
-
-      ${japanese.input}
-      ${japanese.output}
-
-      ## CLI tools
-
-      ${tools.alternatives}
-      ${tools.constraints}
-
-      ## Security
-
-      ${security}
-    '';
+    "codex/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
     # "codex/prompts/commit.md".text = prompts.commit.conventional;
   };
 
