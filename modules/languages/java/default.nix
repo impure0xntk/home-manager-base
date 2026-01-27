@@ -129,8 +129,9 @@ in {
 
             compile.nullAnalysis = {
               mode = "automatic";
-              nonnull = [ "jakarta.annotation.Nonnull" ];
-              nullable = [ "jakarta.annotation.Nullable" ];
+              nonnull = [ "jakarta.annotation.Nonnull" "org.jspecify.annotations.NonNull" ];
+              nullable = [ "jakarta.annotation.Nullable" "org.jspecify.annotations.Nullable" ];
+              nonnullbydefault = [ "org.jspecify.annotations.NullMarked" ];
             };
             debug.settings = {
               showHex = true;
