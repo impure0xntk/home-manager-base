@@ -281,6 +281,7 @@ in
                 };
               };
             };
+            scm.defaultViewMode = "tree";
             search.searchView.keywordSuggestions = true;
             settingsSync.ignoredExtensions = extensionListName;
 
