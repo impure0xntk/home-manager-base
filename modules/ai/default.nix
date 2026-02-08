@@ -6,41 +6,14 @@
 }@args:
 let
   cfg = config.my.home.ai;
-
-  # Map to include provider URL along with the model
-  # expected result format:
-  # [
-  #   {
-  #     provider = "ollama";
-  #     url = "http://localhost:11434";
-  #     model = "gemma3:12b";
-  #   }
-  # ]
-  searchModelByRole =
-    role:
-    let
-      models = builtins.concatLists (
-        builtins.map (
-          provider:
-          builtins.filter (m: builtins.elem role m.roles) (
-            builtins.map (m_: {
-              inherit (provider) url;
-              inherit (m_) model roles;
-              provider = provider.name;
-            }) provider.models
-          )
-        ) cfg.providers
-      );
-    in
-    if builtins.length models > 0 then builtins.head models else null;
 in
 {
   imports = [
     ./prompt.nix
     ./ollama.nix
-    (import ./codex.nix (args // {inherit searchModelByRole;}))
-    # (import ./opencode.nix (args // { inherit searchModelByRole; }))
-    (import ./goose-cli.nix (args // { inherit searchModelByRole; }))
+
+    # CLI agents module
+    ./agents
   ];
 
   options.my.home.ai =
@@ -187,9 +160,6 @@ in
           # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
           github.copilot = {
             chat = {
-              agent = {
-                thinkingTool = true;
-              };
               codesearch.enabled = true;
               localeOverride = lib.head (lib.splitString "-" config.my.home.ide.vscode.languages.chat);
 
@@ -213,11 +183,18 @@ in
           };
           chat = {
             agent.enabled = !cfg.localOnly;
-            agentSessionsViewLocation = "view";
+            useAgentSkills = true;
+            customAgentInSubagent.enabled = true;
             commandCenter.enabled = false; # disabled title bar icon
-            mcp = {
-              enabled = config.my.home.mcp.hub.client.enable;
-              discovery.enabled = false; # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
+            mcp = lib.optionalAttrs config.my.home.mcp.hub.client.enable {
+              access = "all";
+              discovery.enabled = { # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
+                "claude-desktop" = false;
+                "windsurf" = false;
+                "cursor-global" = false;
+                "cursor-workspace" = false;
+                _flattenIgnore = true;
+              };
             };
             promptFilesLocations = {
               "${config.my.home.ai.prompts.baseDir}/instructions" = true;
