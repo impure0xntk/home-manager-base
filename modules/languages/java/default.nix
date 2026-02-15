@@ -197,8 +197,6 @@ in {
           "shengchen.vscode-checkstyle"
           "chuckjonas.apex-pmd"
           "redhat.vscode-xml"
-          "ferib.proguard-language"
-          "CucumberOpen.cucumber-official" # TODO: move to work
         ];
       };
     };
