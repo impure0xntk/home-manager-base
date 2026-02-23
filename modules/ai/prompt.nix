@@ -244,6 +244,12 @@ in
       default = { };
       description = "Legacy snippets option. Use 'instructions' and 'prompts' instead.";
     };
+
+    presets = lib.mkOption {
+      type = lib.types.attrs;
+      default = presets;
+      description = "Presets of ai prompts. Read-only";
+    };
   };
   config = lib.mkIf (config.my.home.ai.enable) {
     xdg.configFile = lib.mkMerge [
