@@ -48,6 +48,12 @@ in
         { repo = [ "./local-skills/dev-skill" ]; global = false; universal = true; }
       ];
     };
+
+    agentsMdPath = lib.mkOption {
+      type = lib.types.str;
+      default = "${config.xdg.configHome}/ai/AGENTS-Skills.md";
+      description = "Path to sync OpenSkills AGENTS.md file for documentation.";
+    };
   };
 
   config = lib.mkIf cfg.openskills.enable {
@@ -94,7 +100,14 @@ in
 
       # Sync AGENTS.md to ensure it's up-to-date
       echo "Syncing AGENTS.md with OpenSkills..."
-      openskills sync -y || echo "Warning: Failed to sync AGENTS.md"
+      openskills sync -y --output "${cfg.openskills.agentsMdPath}" || echo "Warning: Failed to sync AGENTS.md"
     '';
+
+    # TODO: don't use lib.mkForce
+    my.home.ai.prompts.instructions."AGENTS.md".text = lib.mkForce (config.my.home.ai.prompts.presets.instructions."AGENTS.md".text + ''
+    ## Skills
+
+    - See ${cfg.openskills.agentsMdPath} for details.
+    ''); # sync with prompts module
   };
 }
