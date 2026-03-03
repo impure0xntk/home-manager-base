@@ -2,6 +2,19 @@
 { pkgs, lib, config, ... }:
 let
   scripts = rec {
+    # Example:jdebug java -jar myapp.jar
+    jdebug = pkgs.writeShellApplication {
+      name = "jdebug";
+      text = ''
+        PORT="5005"
+        COMMAND="$1"
+        shift
+
+        export _JAVA_OPTIONS="''${_JAVA_OPTIONS:-} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$PORT"
+        exec "$COMMAND" "$@"
+      '';
+    };
+
     mvnLocalRepositoryPath = pkgs.writeShellApplication {
       name = "mvn-localrepopath";
       text = ''
