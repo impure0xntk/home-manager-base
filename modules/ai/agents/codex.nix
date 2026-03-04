@@ -76,7 +76,7 @@ let
       tools = {
         web_search = true;
       };
-      mcp_servers = { codex = { command = "mcp-remote-group"; args = ["codex"]; }; };
+      mcp_servers = { codex = { command = "mcp-remote-group-primary"; args = ["codex"]; }; };
     };
 
   shellAliases = {
