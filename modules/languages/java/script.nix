@@ -10,7 +10,7 @@ let
         COMMAND="$1"
         shift
 
-        export _JAVA_OPTIONS="''${_JAVA_OPTIONS:-} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$PORT"
+        export _JAVA_OPTIONS="''${_JAVA_OPTIONS:-} -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$PORT"
         exec "$COMMAND" "$@"
       '';
     };
