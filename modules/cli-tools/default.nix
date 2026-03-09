@@ -69,6 +69,21 @@ let
     };
   };
 
+  nnnPackage = (pkgs.pure-unstable.nnn.overrideAttrs (old: {
+    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
+    installTargets = lib.remove "install-desktop" old.installTargets;
+    postInstall = (old.postInstall or "") + ''
+      substituteInPlace $out/share/plugins/nuke \
+        --replace-fail '"$EDITOR" ' 'eval "$EDITOR" ' # For EDITOR with options like 'code --wait'
+      wrapProgram $out/bin/nnn \
+        --set NNN_TRASH 1 \
+        --set NNN_OPTS aABcdEix \
+        --set NNN_OPENER $out/share/plugins/nuke
+    '';
+  })).override {
+    withEmojis = true;
+    extraMakeFlags = [ "O_GITSTATUS=1" "O_NAMEFIRST=1" ];
+  };
 in {
   home.packages = with pkgs; [
     # basic
@@ -158,23 +173,7 @@ in {
 
     translate-shell.enable = true;
 
-    nnn = let
-      nnnPackage = (pkgs.nnn.overrideAttrs (old: {
-        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
-        installTargets = lib.remove "install-desktop" old.installTargets;
-        postInstall = (old.postInstall or "") + ''
-          substituteInPlace $out/share/plugins/nuke \
-            --replace-fail '"$EDITOR" ' 'eval "$EDITOR" ' # For EDITOR with options like 'code --wait'
-          wrapProgram $out/bin/nnn \
-            --set NNN_TRASH 1 \
-            --set NNN_OPTS aABcdEix \
-            --set NNN_OPENER $out/share/plugins/nuke
-        '';
-      })).override {
-        withEmojis = true;
-        extraMakeFlags = [ "O_GITSTATUS=1" "O_NAMEFIRST=1" ];
-      };
-    in {
+    nnn = {
       enable = true;
       package = nnnPackage;
       bookmarks = {
@@ -188,7 +187,7 @@ in {
   };
 
   programs.fish.interactiveShellInit = ''
-    source ${pkgs.nnn}/share/quitcd/quitcd.fish
+    source ${nnnPackage}/share/quitcd/quitcd.fish
     procs --gen-completion-out fish | source
   '';
   programs.bash.shellAliases = shellAliases;
