@@ -72,10 +72,6 @@ let
           sandbox_mode = "read-only";
         };
       };
-
-      tools = {
-        web_search = true;
-      };
       mcp_servers = { codex = { command = "mcp-remote-group-primary"; args = ["codex"]; }; };
     };
 
