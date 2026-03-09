@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  lib,
   searchModelByRole,
   ...
 }:
@@ -18,9 +19,10 @@ let
   codex-wrapped = pkgs.symlinkJoin {
     name = "codex";
 
-    paths = [
+    paths = if cfg.codex.enableJustEveryCode then [
+      pkgs.code # just-every/code: codex alternative
+    ] else [
       pkgs.codex
-      # pkgs.code # just-every/code: codex alternative
     ];
 
     nativeBuildInputs = with pkgs; [
@@ -28,31 +30,18 @@ let
     ];
 
       # makeWrapper $out/bin/code $out/bin/codex \
-    postBuild = ''
+      # wrapProgram $out/bin/codex \
+    postBuild = (if cfg.codex.enableJustEveryCode then ''
+      makeWrapper $out/bin/code $out/bin/codex \
+    '' else ''
       wrapProgram $out/bin/codex \
-        --set CODEX_HOME ${configDirectory} \
-        --set ${dummyEnvKey} dummy
+    '') + ''
+        --set CODEX_HOME ${configDirectory} --set ${dummyEnvKey} dummy
     '';
   };
 
   settings =
-    let
-      chatModel = searchModelByRole "chat";
-    in
     {
-      # model/provider
-      model = chatModel.model;
-      model_provider = chatModel.provider;
-      model_providers = builtins.listToAttrs (
-        builtins.map (provider: {
-          name = provider.name;
-          value = {
-            name = provider.name;
-            base_url = "${provider.url}";
-            env_key = dummyEnvKey;
-          };
-        }) cfg.providers
-      );
       model_reasoning_effort = "high";
       hide_agent_reasoning = true;
 
@@ -73,43 +62,71 @@ let
         };
       };
       mcp_servers = { codex = { command = "mcp-remote-group-primary"; args = ["codex"]; }; };
-    };
+    } // (let
+      chatModel = searchModelByRole "chat";
+    in lib.optionalAttrs cfg.codex.enableCustomProvider {
+      # model/provider
+      model = chatModel.model;
+      model_provider = chatModel.provider;
+      model_providers = builtins.listToAttrs (
+        builtins.map (provider: {
+          name = provider.name;
+          value = {
+            name = provider.name;
+            base_url = "${provider.url}";
+            env_key = dummyEnvKey;
+          };
+        }) cfg.providers
+      );
+    }) // (lib.optionalAttrs cfg.codex.enableJustEveryCode {
+      tui = {
+        theme.name = "dark-zen-garden";
+        spinner.name = "brailleDotsClassic";
+      };
+    });
 
   shellAliases = {
     cx = "codex";
   };
 in
 {
-  home.packages = [
-    codex-wrapped
-
-    # Frequently use
-    pkgs.tree
-  ];
-
-  xdg.configFile = {
-    "codex/.gitkeep".text = "";
-    "codex/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
-    # "codex/prompts/commit.md".text = prompts.commit.conventional;
+  options.my.home.ai.codex = {
+    enable = lib.mkEnableOption "Enable Codex agent";
+    enableJustEveryCode = lib.mkEnableOption "Enable just-every/code as codex provider";
+    enableCustomProvider = lib.mkEnableOption "Enable custom provider configuration";
   };
+  config = lib.mkIf cfg.codex.enable {
+    home.packages = [
+      codex-wrapped
 
-  home.activation."codex-fix-config" =
-    let
-      toml = "${configDirectory}/config.toml";
-    in
-    ''
-      if ! test -e ${toml}; then
-        touch ${toml}
-      fi
-      cp ${toml}{,.bak}
-      ${pkgs.dasel}/bin/dasel -r toml -w json -f ${toml} \
-        | ${pkgs.jq}/bin/jq '. * ${builtins.toJSON settings}' \
-        | ${pkgs.dasel}/bin/dasel -r json -w toml > ${toml}.new
-      mv ${toml}{.new,}
-    '';
+      # Frequently use
+      pkgs.tree
+    ];
 
-  programs = {
-    bash.shellAliases = shellAliases;
-    fish.shellAbbrs = shellAliases;
+    xdg.configFile = {
+      "codex/.gitkeep".text = "";
+      "codex/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
+      # "codex/prompts/commit.md".text = prompts.commit.conventional;
+    };
+
+    home.activation."codex-fix-config" =
+      let
+        toml = "${configDirectory}/config.toml";
+      in
+      ''
+        if ! test -e ${toml}; then
+          touch ${toml}
+        fi
+        cp ${toml}{,.bak}
+        ${pkgs.dasel}/bin/dasel -r toml -w json -f ${toml} \
+          | ${pkgs.jq}/bin/jq '. * ${builtins.toJSON settings}' \
+          | ${pkgs.dasel}/bin/dasel -r json -w toml > ${toml}.new
+        mv ${toml}{.new,}
+      '';
+
+    programs = {
+      bash.shellAliases = shellAliases;
+      fish.shellAbbrs = shellAliases;
+    };
   };
 }
