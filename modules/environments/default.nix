@@ -7,6 +7,8 @@ in {
     "$XDG_BIN_HOME"
   ];
   xdg.enable = true; # XDG_CACHE_HOME XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME
+  home.preferXdgDirectories = true;
+
   home.sessionVariables = {
     # EDITOR: default is nvim. If vscode terminal, uses code.
     EDITOR = "$(if [ -n \"$VSCODE_IPC_HOOK_CLI\" ] ; then echo \"code --wait\"; else echo \"nvim\";fi)";
