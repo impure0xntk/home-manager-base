@@ -42,18 +42,13 @@ in
             type = types.port;
             default = 3001;
           };
-          groups = mkOption {
-            description = "List of group names to connect";
-            type = types.listOf types.str;
-          };
         };
       });
-      example = [
+      default = [
         {
           name = "default";
           host = "127.0.0.1";
           port = 3001;
-          groups = [ "default" ];
         }
       ];
     };
@@ -62,23 +57,5 @@ in
   config = lib.mkIf config.my.home.mcp.hub.client.enable {
     # For CLI
     home.packages = mcp-remote-group-scripts;
-
-    programs.mcp = {
-      enable = true;
-      servers = lib.listToAttrs (lib.concatLists (map (server:
-        map (group:
-          {
-            name = "remote-${server.name}-${group}";
-            value = {
-              command = "${pkgs.mcp-server-remote}/bin/mcp-remote";
-              args = [
-                "http://${server.host}:${builtins.toString server.port}/v0/groups/${group}/mcp"
-                "--allow-http"
-              ];
-            };
-          }
-        ) server.groups
-      ) cfg.hub.client.servers));
-    };
   };
 }
