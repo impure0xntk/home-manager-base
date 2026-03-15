@@ -7,7 +7,6 @@
 }:
 let
   cfg = config.my.home.ai;
-  configDirectory = "${config.xdg.configHome}/codex";
 
   dummyEnvKey = "OPENAI_API_KEY"; # just-every/code allows only OPENAI_API_KEY
 
@@ -18,6 +17,7 @@ let
   # And integrate to litellm.
   codex-wrapped = pkgs.symlinkJoin {
     name = "codex";
+    version = pkgs.codex.version;
 
     paths = if cfg.codex.enableJustEveryCode then [
       pkgs.code # just-every/code: codex alternative
@@ -29,14 +29,12 @@ let
       makeWrapper
     ];
 
-      # makeWrapper $out/bin/code $out/bin/codex \
-      # wrapProgram $out/bin/codex \
     postBuild = (if cfg.codex.enableJustEveryCode then ''
       makeWrapper $out/bin/code $out/bin/codex \
     '' else ''
       wrapProgram $out/bin/codex \
     '') + ''
-        --set CODEX_HOME ${configDirectory} --set ${dummyEnvKey} dummy
+        --set ${dummyEnvKey} dummy
     '';
   };
 
@@ -48,8 +46,6 @@ let
       # policy: strict
       approval_policy = "untrusted";
       sandbox_mode = "read-only";
-
-      preferred_auth_method = "apikey";
 
       profiles = {
         full_auto = {
@@ -65,6 +61,7 @@ let
     } // (let
       chatModel = searchModelByRole "chat";
     in lib.optionalAttrs cfg.codex.enableCustomProvider {
+      preferred_auth_method = "apikey";
       # model/provider
       model = chatModel.model;
       model_provider = chatModel.provider;
@@ -96,33 +93,12 @@ in
     enableCustomProvider = lib.mkEnableOption "Enable custom provider configuration";
   };
   config = lib.mkIf cfg.codex.enable {
-    home.packages = [
-      codex-wrapped
-
-      # Frequently use
-      pkgs.tree
-    ];
-
-    xdg.configFile = {
-      "codex/.gitkeep".text = "";
-      "codex/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
-      # "codex/prompts/commit.md".text = prompts.commit.conventional;
+    programs.codex = {
+      enable = true;
+      package = codex-wrapped;
+      custom-instructions = config.my.home.ai.prompts.instructions."AGENTS.md".text;
+      inherit settings;
     };
-
-    home.activation."codex-fix-config" =
-      let
-        toml = "${configDirectory}/config.toml";
-      in
-      ''
-        if ! test -e ${toml}; then
-          touch ${toml}
-        fi
-        cp ${toml}{,.bak}
-        ${pkgs.dasel}/bin/dasel -r toml -w json -f ${toml} \
-          | ${pkgs.jq}/bin/jq '. * ${builtins.toJSON settings}' \
-          | ${pkgs.dasel}/bin/dasel -r json -w toml > ${toml}.new
-        mv ${toml}{.new,}
-      '';
 
     programs = {
       bash.shellAliases = shellAliases;
