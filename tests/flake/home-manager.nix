@@ -15,6 +15,8 @@
       # my.home.languages.java.enable = true; # zulu: x86_64-linux only
       my.home.languages.shell.enable = true;
     }
+    (import ./../modules/test-option.nix)
+    (import ./../modules/test-option-check.nix)
     # (import ./../modules/ide/jetbrains-remote.nix args)
     # (import ./../modules/languages/java.nix args)
   ];
