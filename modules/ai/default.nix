@@ -15,6 +15,8 @@ in
 
     # CLI agents module
     ./agents
+
+    ./orchestration.nix
   ];
 
   options.my.home.ai =
