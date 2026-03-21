@@ -174,18 +174,6 @@ in
               # after lib.mkAfter: 1500
               lib.mapAttrsToList (k: v: k) settings
             );
-            # Settings that cannot use flatten
-            "github.copilot.enable" = {
-              "*" = true;
-              "plaintext" = false;
-              "markdown" = false;
-              "scminput" = false;
-              # secret files
-              "xml" = false;
-              "json" = false;
-              "yaml" = false;
-              "toml" = false;
-            };
           }
           // (lib.my.flatten "_flattenIgnore" rec {
             telemetry.telemetryLevel = "off";
