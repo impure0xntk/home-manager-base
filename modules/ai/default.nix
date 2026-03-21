@@ -6,6 +6,8 @@
 }@args:
 let
   cfg = config.my.home.ai;
+
+  useContinueDev = lib.any (p: p.isLocal) cfg.providers;
 in
 {
   imports = [
@@ -23,7 +25,6 @@ in
     with lib.types;
     {
       enable = mkEnableOption "Enable AI features";
-      localOnly = mkEnableOption "Local AI only, not use remote providers";
       providers = mkOption {
         description = "AI provider and model configuration";
         type = listOf (submodule {
@@ -37,6 +38,7 @@ in
               type = str;
               example = "https://localhost:11434";
             };
+            isLocal = mkEnableOption "Whether the model is hosted locally (e.g., Ollama or Litellm proxy) or remotely. Local models may have different performance and capabilities.";
             models = mkOption {
               description = "List of models with roles";
               type = listOf (submodule {
@@ -45,15 +47,6 @@ in
                     description = "Model identifier";
                     type = str;
                     example = "gemma3:12b";
-                  };
-                  modelfileText = mkOption {
-                    description = "Model file text content.";
-                    type = nullOr str;
-                    default = null;
-                    example = ''
-                      FROM gemma3:12b
-                      PARAMETER num_ctx 32768
-                    '';
                   };
                   roles = mkOption {
                     description = "Roles for the AI model.";
@@ -86,6 +79,7 @@ in
             example = {
               name = "ollama";
               url = "http://localhost:11434";
+              isLocal = true;
               models = [
                 rec {
                   model = "gemma3:12b";
@@ -111,29 +105,17 @@ in
         assertion = cfg.providers != [ ];
         message = "At least one provider must be specified";
       }
-      {
-        assertion =
-          (
-            cfg.localOnly
-            &&
-              (lib.concatLists (
-                map (p: if p.name == "ollama" then map (m: m.model) p.models else [ ]) cfg.providers
-              )) != [ ]
-          )
-          || !cfg.localOnly;
-        message = "If localOnly is enabled, at least one ollama model must be specified";
-      }
     ];
 
     programs.vscode.profiles.default = {
-      extensions = lib.optionals (!cfg.localOnly) (
-        pkgs.nix4vscode.forVscode [
-          "GitHub.copilot"
-          "GitHub.copilot-chat"
+      extensions = (pkgs.nix4vscode.forVscode [
+        "GitHub.copilot"
+        "GitHub.copilot-chat"
 
-          "johnny-zhao.oai-compatible-copilot" # instead of BYOK
-        ]
-      );
+        "johnny-zhao.oai-compatible-copilot" # instead of BYOK
+      ]) ++ lib.optionals useContinueDev (pkgs.nix4vscode.forVscode [
+        "continue.continue"
+      ]);
       userSettings =
         let
           oaiCompatibleFirstProvider = builtins.head config.my.home.ai.providers;
@@ -151,8 +133,28 @@ in
               })
             )
           );
-        in
-        (lib.my.flatten "_flattenIgnore" {
+        in {
+            # This section is to avoid infinite recursion of programs.vscode.userSettings.
+            # If possible, edit settings into lib.my.flatten to ensure nix attrset.
+
+            # Settings that cannot use flatten
+            "github.copilot.enable" = {
+              "*" = !useContinueDev;
+              "plaintext" = false;
+              "markdown" = false;
+              "scminput" = false;
+              # secret files
+              "xml" = false;
+              "json" = false;
+              "yaml" = false;
+              "toml" = false;
+            };
+        }
+        // (lib.my.flatten "_flattenIgnore" {
+          continue = lib.optionalAttrs useContinueDev {
+            enableTabAutocomplete = true;
+            telemetryEnabled = false;
+          };
           oaicopilot = {
             # TODO: baseurl selection
             baseUrl = "${oaiCompatibleFirstProvider.url}/v1";
@@ -184,7 +186,7 @@ in
             };
           };
           chat = {
-            agent.enabled = !cfg.localOnly;
+            agent.enabled = true;
             useAgentSkills = true;
             customAgentInSubagent.enabled = true;
             commandCenter.enabled = false; # disabled title bar icon
@@ -219,5 +221,32 @@ in
           };
         };
     };
+
+    home.file.".continue/config.yaml".source = lib.mkIf useContinueDev (lib.my.toYaml {
+      name = "Local Assistant";
+      version = "1.0.0";
+      schema = "v1";
+      models = lib.flatten (
+        lib.concatMap (
+          v:
+          (map (m: {
+            name = m.name or m.model;
+            provider = v.name;
+            model = m.model;
+            roles = m.roles;
+            apiBase = v.url;
+          }) v.models)
+        ) cfg.providers
+      );
+      context = [
+        { provider = "code"; }
+        { provider = "docs"; }
+        { provider = "diff"; }
+        { provider = "terminal"; }
+        { provider = "problems"; }
+        { provider = "folder"; }
+        { provider = "codebase"; }
+      ];
+    });
   };
 }
