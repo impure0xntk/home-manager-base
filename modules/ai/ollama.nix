@@ -17,6 +17,7 @@ in
   config = lib.mkIf (cfg.enable && hasOllamaModel) {
     services.ollama = {
       enable = true;
+      package = pkgs.pure-unstable.ollama-cuda;
       acceleration = "cuda";
       environmentVariables =
         {
@@ -36,13 +37,13 @@ in
           if lib.any (m: lib.hasInfix "gemma3" m.model) ollomaModels then
             {
               # For gemma3
-              OLLAMA_FLUSH_ATTENTION = "0";
+              OLLAMA_FLASH_ATTENTION = "0";
               OLLAMA_KV_CACHE_TYPE = "f16";
             }
           else
             {
               # General
-              OLLAMA_FLUSH_ATTENTION = "1";
+              OLLAMA_FLASH_ATTENTION = "1";
               OLLAMA_KV_CACHE_TYPE = "q8_0";
             }
         );
