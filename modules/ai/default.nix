@@ -10,7 +10,6 @@ in
 {
   imports = [
     ./prompt.nix
-    ./ollama.nix
     ./skills.nix
 
     # CLI agents module
