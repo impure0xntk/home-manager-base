@@ -38,6 +38,13 @@ let
     '';
   };
 
+  codex-acp = pkgs.writeShellScriptBin "codex-acp" (
+    if cfg.codex.enableJustEveryCode then
+    "exec ${lib.getExe config.programs.codex.package} mcp-server"
+    else
+    "exec ${lib.getExe pkgs.codex-acp}"
+  );
+
   settings = lib.my.deepMerge ({
       model_reasoning_effort = "high";
       hide_agent_reasoning = true;
@@ -102,6 +109,8 @@ in
       custom-instructions = config.my.home.ai.prompts.instructions."AGENTS.md".text;
       inherit settings;
     };
+
+    home.packages = [ codex-acp ];
 
     programs = {
       bash.shellAliases = shellAliases;
