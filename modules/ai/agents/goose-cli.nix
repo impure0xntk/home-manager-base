@@ -21,7 +21,7 @@ let
     '';
   };
 
-  gooseConfig = {
+  gooseConfig = lib.my.deepMerge {
     GOOSE_PROVIDER =
       let
         modelInfo = searchModelByRole "edit";
@@ -69,16 +69,8 @@ let
         timeout = 300;
         type = "builtin";
       };
-      custom = {
-        enabled = true;
-        name = "custom";
-        timeout = 300;
-        type = "stdio";
-        cmd = "mcp-remote-group-primary";
-        args = ["goose"];
-      };
     };
-  };
+  } cfg.goose.extraSettings;
 in
 {
   options.my.home.ai.goose = {
@@ -87,6 +79,11 @@ in
       type = lib.types.attrsOf lib.types.str;
       default = {};
       description = "Additional environment variables to set for goose-cli.";
+    };
+    extraSettings = lib.mkOption {
+      type = lib.types.attrs;
+      default = {};
+      description = "Additional settings for goose-cli.";
     };
   };
   config = lib.mkIf cfg.goose.enable {

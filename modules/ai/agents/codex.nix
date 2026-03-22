@@ -38,8 +38,7 @@ let
     '';
   };
 
-  settings =
-    {
+  settings = lib.my.deepMerge ({
       model_reasoning_effort = "high";
       hide_agent_reasoning = true;
 
@@ -57,7 +56,6 @@ let
           sandbox_mode = "read-only";
         };
       };
-      mcp_servers = { codex = { command = "mcp-remote-group-primary"; args = ["codex"]; }; };
     } // (let
       chatModel = searchModelByRole "chat";
     in lib.optionalAttrs cfg.codex.enableCustomProvider {
@@ -80,7 +78,7 @@ let
         theme.name = "dark-zen-garden";
         spinner.name = "brailleDotsClassic";
       };
-    });
+    })) cfg.codex.extraSettings;
 
   shellAliases = {
     cx = "codex";
@@ -91,6 +89,11 @@ in
     enable = lib.mkEnableOption "Enable Codex agent";
     enableJustEveryCode = lib.mkEnableOption "Enable just-every/code as codex provider";
     enableCustomProvider = lib.mkEnableOption "Enable custom provider configuration";
+    extraSettings = lib.mkOption {
+      type = lib.types.attrs;
+      default = {};
+      description = "Codex agent settings";
+    };
   };
   config = lib.mkIf cfg.codex.enable {
     programs.codex = {
