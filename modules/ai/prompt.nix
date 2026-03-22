@@ -12,6 +12,7 @@ let
       Don't hold back. Give it your all.
       Always think in English.
       For maximum efficiency, whenever you need to perform multiple independent operations, invoke all relevant tools simultaneously rather than sequentially.
+      Avoid emoji for output.
     '';
 
     tools = {
@@ -49,6 +50,7 @@ let
     security = ''
       Do not read, write and commit secrets.
     '';
+
   };
 
   mk = {
