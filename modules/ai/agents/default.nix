@@ -39,4 +39,16 @@ in
     # (import ./agent-deck.nix (args // { inherit searchModelByRole; }))
     # (import ./other-agent.nix (args // { inherit searchModelByRole; }))
   ];
+
+  programs.vscode.profiles.default = {
+    extensions = (pkgs.nix4vscode.forVscode [
+      "formulahendry.acp-client"
+    ]);
+    userSettings."acp.agents" = {
+      "Goose CLI" = lib.optionalAttrs cfg.goose.enable {
+        command = "goose";
+        args = [ "acp" ] ;
+      };
+    };
+  };
 }
