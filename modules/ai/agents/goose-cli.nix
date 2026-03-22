@@ -89,7 +89,7 @@ in
       goose-cli-wrapped
     ];
     xdg.configFile = {
-      "goose/config.yaml".source = lib.my.toYaml gooseConfig;
+      "goose/config.yaml.orig".source = lib.my.toYaml gooseConfig;
       "goose/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
     } // lib.optionalAttrs (cfg.providers != null) (
       builtins.listToAttrs (
@@ -114,5 +114,9 @@ in
         }) cfg.providers
       )
     );
+    # Goose cannot maybe recognize config as symlink.
+    home.activation."copy-goose-config" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      install -m 644 -D ${config.xdg.configHome}/goose/config.yaml{.orig,}
+    '';
   };
 }
