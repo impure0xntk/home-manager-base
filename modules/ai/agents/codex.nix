@@ -104,5 +104,25 @@ in
       bash.shellAliases = shellAliases;
       fish.shellAbbrs = shellAliases;
     };
+
+    xdg.configFile = let
+      multiModels = {
+        plan = searchModelByRole "chat";
+        worker = searchModelByRole "edit";
+      };
+    in lib.optionalAttrs (cfg.codex.enableCustomProvider && cfg.providers != null) {
+      "codex/agents/planner.toml".source = lib.my.toToml {
+        description = "Planner agent";
+        model = multiModels.plan.model;
+        model_reasoning_effort = "high";
+        developer_instructions = "You are the plan agent. You analyze the task, create detailed plans, and assign work to workers.";
+      };
+      "codex/agents/worker.toml".source = lib.my.toToml {
+        description = "Worker agent";
+        model = multiModels.worker.model;
+        model_reasoning_effort = "low";
+        developer_instructions = "You are the worker agent. You execute the plan from the plan agent, write code, and verify results.";
+      };
+    };
   };
 }
