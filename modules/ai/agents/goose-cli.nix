@@ -44,12 +44,9 @@ let
       "${modelInfo.provider}";
     GOOSE_MODE = "auto";
     GOOSE_MAX_TURNS = 1000;
-    GOOSE_TOOLSHIM = false;
     GOOSE_CLI_MIN_PRIORITY = 0.0;
     GOOSE_CLI_THEME = "dark";
-    GOOSE_CLI_LIGHT_THEME = "GitHub";
-    GOOSE_CLI_DARK_THEME = "GitHub";
-    GOOSE_CLI_SHOW_THINKING = true;
+    GOOSE_CLI_SHOW_THINKING = 1;
     GOOSE_RANDOM_THINKING_MESSAGES = false;
     GOOSE_CLI_SHOW_COST = false;
     GOOSE_AUTO_COMPACT_THRESHOLD = 0.8;
