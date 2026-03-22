@@ -9,6 +9,18 @@
 let
   cfg = config.my.home.ai;
 
+  modelInfo = rec {
+    worker = {
+      model = (searchModelByRole "edit").model;
+      provider = (searchModelByRole "edit").provider;
+    };
+    leader = {
+      model = (searchModelByRole "chat").model;
+      provider = (searchModelByRole "chat").provider;
+    };
+    planner = leader;
+  };
+
   goose-cli-wrapped = let
     exportEnvVarStrs = lib.mapAttrsToList (name: value: "export ${name}=${value}") config.my.home.ai.goose.environmentVariables;
     exportEnv = lib.concatStringsSep "\n" exportEnvVarStrs;
@@ -22,26 +34,12 @@ let
   };
 
   gooseConfig = lib.my.deepMerge {
-    GOOSE_PROVIDER =
-      let
-        modelInfo = searchModelByRole "edit";
-      in
-      "${modelInfo.provider}";
-    GOOSE_MODEL =
-      let
-        modelInfo = searchModelByRole "edit";
-      in
-      "${modelInfo.model}";
-    GOOSE_LEAD_MODEL =
-      let
-        modelInfo = searchModelByRole "chat";
-      in
-      "${modelInfo.model}";
-    GOOSE_LEAD_PROVIDER =
-      let
-        modelInfo = searchModelByRole "chat";
-      in
-      "${modelInfo.provider}";
+    GOOSE_PROVIDER = modelInfo.worker.provider;
+    GOOSE_MODEL = modelInfo.worker.model;
+    GOOSE_LEAD_PROVIDER = modelInfo.leader.provider;
+    GOOSE_LEAD_MODEL = modelInfo.leader.model;
+    GOOSE_PLANNER_PROVIDER = modelInfo.planner.provider;
+    GOOSE_PLANNER_MODEL = modelInfo.planner.model;
     GOOSE_MODE = "auto";
     GOOSE_MAX_TURNS = 1000;
     GOOSE_CLI_MIN_PRIORITY = 0.0;
