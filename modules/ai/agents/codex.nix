@@ -110,7 +110,7 @@ in
       inherit settings;
     };
 
-    home.packages = [ codex-acp ];
+    # home.packages = [ codex-acp ]; # TODO: enable after fixed build error
 
     programs = {
       bash.shellAliases = shellAliases;
