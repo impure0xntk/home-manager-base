@@ -45,10 +45,10 @@ in
       "formulahendry.acp-client"
     ]);
     userSettings."acp.agents" = {
-      "Codex CLI" = lib.optionalAttrs cfg.codex.enable { # TODO: fix
-        command = "codex-acp"; # For details, see codex.nix
-        args = [ ];
-      };
+      # "Codex CLI" = lib.optionalAttrs cfg.codex.enable { # TODO: fix
+      #   command = "codex-acp"; # For details, see codex.nix
+      #   args = [ ];
+      # };
       "Goose CLI" = lib.optionalAttrs cfg.goose.enable {
         command = "goose";
         args = [ "acp" ] ;
