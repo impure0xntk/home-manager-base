@@ -222,31 +222,33 @@ in
         };
     };
 
-    home.file.".continue/config.yaml".source = lib.mkIf useContinueDev (lib.my.toYaml {
-      name = "Local Assistant";
-      version = "1.0.0";
-      schema = "v1";
-      models = lib.flatten (
-        lib.concatMap (
-          v:
-          (map (m: {
-            name = m.name or m.model;
-            provider = v.name;
-            model = m.model;
-            roles = m.roles;
-            apiBase = v.url;
-          }) v.models)
-        ) cfg.providers
-      );
-      context = [
-        { provider = "code"; }
-        { provider = "docs"; }
-        { provider = "diff"; }
-        { provider = "terminal"; }
-        { provider = "problems"; }
-        { provider = "folder"; }
-        { provider = "codebase"; }
-      ];
-    });
+    home.file = lib.optionalAttrs useContinueDev {
+      ".continue/config.yaml".source = lib.my.toYaml {
+        name = "Local Assistant";
+        version = "1.0.0";
+        schema = "v1";
+        models = lib.flatten (
+          lib.concatMap (
+            v:
+            (map (m: {
+              name = m.name or m.model;
+              provider = v.name;
+              model = m.model;
+              roles = m.roles;
+              apiBase = v.url;
+            }) v.models)
+          ) cfg.providers
+        );
+        context = [
+          { provider = "code"; }
+          { provider = "docs"; }
+          { provider = "diff"; }
+          { provider = "terminal"; }
+          { provider = "problems"; }
+          { provider = "folder"; }
+          { provider = "codebase"; }
+        ];
+      };
+    };
   };
 }
