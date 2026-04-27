@@ -69,10 +69,10 @@ let
       preferred_auth_method = "apikey";
       # model/provider
       model = chatModel.model;
-      model_provider = chatModel.provider;
+      model_provider = "custom-${chatModel.provider}";
       model_providers = builtins.listToAttrs (
         builtins.map (provider: {
-          name = provider.name;
+          name = "custom-${provider.name}";
           value = {
             name = provider.name;
             base_url = "${provider.url}";
