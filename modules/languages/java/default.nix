@@ -175,10 +175,12 @@ in {
             java.home = "${pkgs.jdk}";
             format.enabled = false; # if enabled format on save.
             codeLens.enabled = true;
-            server = rec {
+            server = {
               workDir = "${config.xdg.cacheHome}/.lemminx";
-              binary.path = lib.getExe pkgs.lemminx;
-              binary.trustedHashes = ["${builtins.hashFile "sha256" binary.path}"]; # For lemminx(unnecessary). "xml.server.binary.trustedHashes" works only User settings.
+              binary = let lemminxBin = lib.getExe pkgs.lemminx; in {
+                path = lemminxBin;
+                trustedHashes = ["${builtins.hashFile "sha256" lemminxBin}"]; # For lemminx(unnecessary). "xml.server.binary.trustedHashes" works only User settings.
+              };
               preferBinary = true;
               vmargs = toolsVscodeVmargs;
             };
