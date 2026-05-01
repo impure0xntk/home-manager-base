@@ -8,6 +8,26 @@ let
   cfg = config.my.home.ai;
 
   useContinueDev = lib.any (p: p.isLocal) cfg.providers;
+
+  # Search for a model by role across all providers
+  # Returns: { provider, url, model, roles }
+  searchModelByRole =
+    role:
+    let
+      models = builtins.concatLists (
+        builtins.map (
+          provider:
+          builtins.filter (m: builtins.elem role m.roles) (
+            builtins.map (m_: {
+              inherit (provider) url;
+              inherit (m_) model roles;
+              provider = provider.name;
+            }) provider.models
+          )
+        ) cfg.providers
+      );
+    in
+    if builtins.length models > 0 then builtins.head models else null;
 in
 {
   imports = [
@@ -15,7 +35,7 @@ in
     ./skills.nix
 
     # CLI agents module
-    ./agents
+    (import ./agents (args // { inherit searchModelByRole; }))
 
     ./orchestration.nix
   ];
@@ -249,6 +269,22 @@ in
           { provider = "codebase"; }
         ];
       };
+    };
+
+    xdg.configFile = let modelInfo = searchModelByRole "autocomplete"; in {
+      "fish-ai.ini".text = ''
+        [fish-ai]
+        configuration = custom
+        history_size = 5
+
+        keymap_1 = 'ctrl-o'
+        keymap_2 = 'ctrl-_'
+
+        [custom]
+        provider = self-hosted
+        model = ${modelInfo.model}
+        server = ${modelInfo.url}/v1
+      '';
     };
   };
 }

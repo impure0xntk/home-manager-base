@@ -2,32 +2,12 @@
   config,
   pkgs,
   lib,
+  searchModelByRole,
   ...
 }@args:
 
 let
   cfg = config.my.home.ai;
-
-  # Search for a model by role across all providers
-  # Returns: { provider, url, model, roles }
-  searchModelByRole =
-    role:
-    let
-      models = builtins.concatLists (
-        builtins.map (
-          provider:
-          builtins.filter (m: builtins.elem role m.roles) (
-            builtins.map (m_: {
-              inherit (provider) url;
-              inherit (m_) model roles;
-              provider = provider.name;
-            }) provider.models
-          )
-        ) cfg.providers
-      );
-    in
-    if builtins.length models > 0 then builtins.head models else null;
-
 in
 {
   imports = [
