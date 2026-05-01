@@ -22,10 +22,6 @@
       url = "github:numtide/nix-ai-tools";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    mcp-servers-nix = {
-      url = "github:natsukium/mcp-servers-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -59,7 +55,6 @@
       nix4vscode,
       vscode-server,
       nix-ai-tools,
-      mcp-servers-nix,
       sops-nix,
       nix-lib,
       nix-pkgs,
@@ -91,7 +86,6 @@
       };
       overlays = (nix-pkgs.pkgsOverlay.${system} ++ [
         nix4vscode.overlays.forVscode
-        mcp-servers-nix.overlays.default
       ]) ++ [
         # Add 3rd-party packages as overlays because no overlays are provided.
         (final: prev: nix-ai-tools.packages.${system})
