@@ -271,20 +271,20 @@ in
       };
     };
 
-    xdg.configFile = let modelInfo = searchModelByRole "autocomplete"; in {
-      "fish-ai.ini".text = ''
-        [fish-ai]
-        configuration = custom
-        history_size = 5
+    # xdg.configFile = let modelInfo = searchModelByRole "autocomplete"; in {
+    #   "fish-ai.ini".text = ''
+    #     [fish-ai]
+    #     configuration = custom
+    #     history_size = 5
 
-        keymap_1 = 'ctrl-o'
-        keymap_2 = 'ctrl-_'
+    #     keymap_1 = 'ctrl-o'
+    #     keymap_2 = 'ctrl-_'
 
-        [custom]
-        provider = self-hosted
-        model = ${modelInfo.model}
-        server = ${modelInfo.url}/v1
-      '';
-    };
+    #     [custom]
+    #     provider = self-hosted
+    #     model = ${modelInfo.model}
+    #     server = ${modelInfo.url}/v1
+    #   '';
+    # };
   };
 }

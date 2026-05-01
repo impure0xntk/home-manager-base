@@ -104,10 +104,10 @@ let
         name = "wakatime-fish";
         src = pkgs.fishPlugins.wakatime-fish;
       }
-      {
-        name = "fish-ai";
-        src = pkgs.fish-ai;
-      }
+      # {
+      #   name = "fish-ai";
+      #   src = pkgs.fish-ai;
+      # }
       # does not work...
       # { name = "autopair.fish"; src = pkgs.fishPlugins.autopair; }
       # { name = "puffer-fish"; src = pkgs.fishPlugins.puffer; }
@@ -265,5 +265,5 @@ in {
   programs.fish.plugins = fishConfig.plugins;
 
   # For fish-ai
-  xdg.dataFile."fish-ai".source = pkgs.fish-ai.pluginDir;
+  # xdg.dataFile."fish-ai".source = pkgs.fish-ai.pluginDir;
 }
