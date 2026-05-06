@@ -106,7 +106,7 @@ let
       }
       # {
       #   name = "fish-ai";
-      #   src = pkgs.fish-ai;
+      #   src = pkgs.my.fish-ai;
       # }
       # does not work...
       # { name = "autopair.fish"; src = pkgs.fishPlugins.autopair; }
@@ -265,5 +265,5 @@ in {
   programs.fish.plugins = fishConfig.plugins;
 
   # For fish-ai
-  # xdg.dataFile."fish-ai".source = pkgs.fish-ai.pluginDir;
+  # xdg.dataFile."fish-ai".source = pkgs.my.fish-ai.pluginDir;
 }

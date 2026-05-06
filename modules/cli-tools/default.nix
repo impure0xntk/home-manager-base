@@ -69,7 +69,7 @@ let
     };
   };
 
-  nnnPackage = (pkgs.pure-unstable.nnn.overrideAttrs (old: {
+  nnnPackage = (pkgs.unstable.nnn.overrideAttrs (old: {
     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
     installTargets = lib.remove "install-desktop" old.installTargets;
     postInstall = (old.postInstall or "") + ''

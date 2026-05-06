@@ -155,12 +155,12 @@ in {
       wsl-open # is faster than wslview on wslu
       wslu
 
-      wslsudo
+      my.wslsudo
     ]) ++ lib.attrValues scripts;
     programs.bash.shellAliases = shellAliases;
 
     # gpg-agent pinentry
-    services.gpg-agent.pinentry.package = lib.mkForce pkgs.pinentry-wsl-ps1;
+    services.gpg-agent.pinentry.package = lib.mkForce pkgs.my.pinentry-wsl-ps1;
 
     home.file = {
       # for gh(requires xdg-open in PATH)

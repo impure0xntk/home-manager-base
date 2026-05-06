@@ -6,12 +6,14 @@ let
   cfg = config.my.home.languages.java;
   cfgNetworks = config.my.home.networks;
 
-  maven = pkgs.maven-customized.override { # customized for compiler and opts.
+  maven = pkgs.my.maven-customized.override { # customized for compiler and opts.
     compileJdk = config.programs.java.package; };
+  mvnd = pkgs.my.mvnd;
+  pmd = pkgs.my.pmd;
 
   # Vmargs for VS code tools.
   # It includes tuned java args, and proxy if needed.
-  toolsVscodeVmargs = (lib.concatStringsSep " " pkgs.tunedJavaArgs)
+  toolsVscodeVmargs = (lib.concatStringsSep " " pkgs.my.tunedJavaArgs)
     + (lib.optionalString cfgNetworks.proxy.enable (" " + cfgNetworks.proxy.snippet.javaOpts)); # consider proxy
 
   scripts = import ./script.nix { inherit pkgs lib config; };
@@ -19,8 +21,7 @@ in {
   options.my.home.languages.java.enable = lib.mkEnableOption "Java development environment";
 
   config = lib.mkIf cfg.enable {
-    home.packages =
-      with pkgs; (
+    home.packages = (
         [ maven mvnd pmd ] # Development
         # ++ [netbeans] # Swing GUI development
         # ++ [jvm-tools azul-mission-control] # Analysis
@@ -36,7 +37,7 @@ in {
       # For default details, see https://github.com/apache/maven-mvnd/blob/master/dist/src/main/distro/conf/mvnd.properties
       ".m2/mvnd.properties".text = ''
         # mvnd.jvmArgs =
-        mvnd.home=${pkgs.mvnd}
+        mvnd.home=${mvnd}
       '';
 
       ".m2/toolchians.xml".text = ''
@@ -72,7 +73,7 @@ in {
 
     programs.java = {
       enable = true;
-      package = lib.mkDefault pkgs.zulu17;
+      package = lib.mkDefault pkgs.jdk;
     };
 
     # For java application "/run/user/$UID/doc operation not permitted." workaround.;
@@ -104,7 +105,7 @@ in {
           java = {
             jdt.ls = {
               java.home = "${pkgs.jdk}"; # config.programs.java.package;
-              vmargs = lib.concatStringsSep " " pkgs.tunedJavaArgs;
+              vmargs = lib.concatStringsSep " " pkgs.my.tunedJavaArgs;
             };
             configuration = {
               detectJdksAtStart = false;
@@ -154,7 +155,7 @@ in {
             commandBufferSize = 100;
             enableCache = true;
             jrePath = "${pkgs.jdk}";
-            pmdBinPath = "${pkgs.pmd}"; # directory, not bin path.
+            pmdBinPath = "${pmd}"; # directory, not bin path.
             runOnFileChange = true;
             onFileChangeDebounce = 3000;
           };

@@ -6,7 +6,6 @@
 }:
 let
   cfg = config.my.home.languages.sql;
-  purePkgs = pkgs.pure; # to avoid build sqlfluff because it's build is too slow
 in
 {
   options.my.home.languages.sql = {
@@ -42,7 +41,7 @@ in
         };
       } // lib.my.flatten "_flattenIgnore" {
         sqlfluff = {
-          executablePath = "${purePkgs.sqlfluff}/bin/sqlfluff";
+          executablePath = "${pkgs.sqlfluff}/bin/sqlfluff";
           dialect = "mysql"; # By default. If use another, set from workspace.
           format.enabled = false;
           linter.run = "onSave";

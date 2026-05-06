@@ -68,7 +68,7 @@ let
     };
     mvnClassDiagram = pkgs.writeShellApplication {
       name = "mvn-classdiagram";
-      runtimeInputs = with pkgs; [jdk UMLDoclet fd]
+      runtimeInputs = with pkgs; [config.programs.java.package my.UMLDoclet fd]
         ++ [mvnClassPath mvnLocalRepositoryPath mvnDelombok];
       text = ''
         #######################################
@@ -109,7 +109,7 @@ let
           -classpath "$CLASSPATH" \
           --module-path "$CLASSPATH" \
           -d "$tmpdir/reports" \
-          -docletpath ${pkgs.UMLDoclet}/share/umldoclet.jar -doclet nl.talsmasoftware.umldoclet.UMLDoclet \
+          -docletpath ${pkgs.my.UMLDoclet}/share/umldoclet.jar -doclet nl.talsmasoftware.umldoclet.UMLDoclet \
           -sourcepath "$tmpdir/generated-sources" \
           -subpackages "$subpackages" \
           "$@"

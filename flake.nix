@@ -84,7 +84,7 @@
         docker = {...}: {imports = [./platform/docker];};
         wsl = {...}: {imports = [./platform/wsl];};
       };
-      overlays = (nix-pkgs.pkgsOverlay.${system} ++ [
+      overlays = (nix-pkgs.overlays.${system} ++ [
         nix4vscode.overlays.forVscode
       ]) ++ [
         # Add 3rd-party packages as overlays because no overlays are provided.

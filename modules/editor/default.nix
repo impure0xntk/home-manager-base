@@ -5,11 +5,10 @@
   ...
 }:
 let
-  pkgsUnstable = pkgs.pure-unstable;
   # https://gist.github.com/nat-418/d76586da7a5d113ab90578ed56069509
   vimPluginFromGitHubRef =
     repo: ref:
-    pkgsUnstable.vimUtils.buildVimPlugin {
+    pkgs.unstable.vimUtils.buildVimPlugin {
       pname = "${lib.strings.sanitizeDerivationName repo}";
       version = ref;
       src = builtins.fetchGit {
@@ -19,7 +18,7 @@ let
     };
   vimPluginFromGitHubRevWithDeps =
     repo: rev: deps:
-    pkgsUnstable.vimUtils.buildVimPlugin {
+    pkgs.unstable.vimUtils.buildVimPlugin {
       pname = "${lib.strings.sanitizeDerivationName repo}";
       version = rev;
       dependencies = deps;
@@ -30,7 +29,7 @@ let
     };
   vimPluginFromGitHubRev = repo: rev: vimPluginFromGitHubRevWithDeps repo rev [ ];
 
-  vimTemp = pkgsUnstable.writeShellApplication {
+  vimTemp = pkgs.unstable.writeShellApplication {
     name = "vt";
     text = ''
       tmpfile="$(mktemp)"
@@ -41,9 +40,9 @@ let
       vim "$tmpfile" -c "set filetype=''${1:-markdown}"
     '';
   };
-  tree-sitter-parsers = pkgsUnstable.symlinkJoin {
+  tree-sitter-parsers = pkgs.unstable.symlinkJoin {
     name = "neovim-treesitter-grammars";
-    paths = [ (pkgsUnstable.tree-sitter.withPlugins (_: pkgsUnstable.tree-sitter.allGrammars)) ];
+    paths = with pkgs.unstable; [ (tree-sitter.withPlugins (_: tree-sitter.allGrammars)) ];
     postBuild = ''
       # neovim expects the parsers in a specific directory "parser"
       mkdir -p $out/parser
@@ -295,7 +294,7 @@ in
       description = ''Neovim LSP configuration'';
       example = config.my.home.editors.lspConfigPreset // {
         typos_lsp = {
-          cmd = [ "${lib.getExe pkgsUnstable.typos-lsp}" ];
+          cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
           cmd_env = { RUST_LOG = "typos_lsp=error"; };
           init_options = {
             diagnosticSeverity = "Warning";
@@ -307,7 +306,7 @@ in
       type = lib.types.attrs;
       default = {
         typos_lsp = {
-          cmd = [ "${lib.getExe pkgsUnstable.typos-lsp}" ];
+          cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
           cmd_env = { RUST_LOG = "typos_lsp=error"; };
           init_options = {
             diagnosticSeverity = "Warning";
@@ -319,7 +318,7 @@ in
 
   };
   config = {
-    home.packages = with pkgsUnstable; [
+    home.packages = with pkgs.unstable; [
       # custom command
       vimTemp
 
@@ -330,7 +329,7 @@ in
     programs.neovim = {
       enable = true;
       # For vscode-neovim. requires at least later than 0.10.0
-      package = pkgsUnstable.neovim-unwrapped;
+      package = pkgs.unstable.neovim-unwrapped;
       withRuby = false;
       withPython3 = false;
       withNodeJs = false;
@@ -338,7 +337,7 @@ in
       # defaultEditor = true;  machine defines editor
 
       # under SCUDO, when using plugins sometimes crush. https://github.com/luvit/luv/issues/701
-      plugins = with pkgsUnstable.vimPlugins; [
+      plugins = with pkgs.unstable.vimPlugins; [
         # Look-and-feel
         github-nvim-theme
         transparent-nvim

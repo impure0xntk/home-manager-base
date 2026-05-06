@@ -43,7 +43,7 @@ in {
     commitizen
     git-graph
 
-    git-gtr # git worktree runner
+    my.git-gtr # git worktree runner
   ];
   # user/email in home-manager/profiles/*.nix
   programs.git = {
@@ -116,6 +116,6 @@ in {
   programs.bash.shellAliases = shellAliases;
 
   programs.fish.interactiveShellInit = ''
-    cat ${pkgs.git-gtr}/share/git-gtr/completions/gtr.fish | source
+    cat ${pkgs.my.git-gtr}/share/git-gtr/completions/gtr.fish | source
   '';
 }

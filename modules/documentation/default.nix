@@ -11,7 +11,7 @@ let
   });
 
   textlintCacheLocation = config.xdg.cacheHome + "/textlint";
-  textlint = pkgs.textlint-all.override {
+  textlint = pkgs.my.textlint-all.override {
     inherit textlintCacheLocation;
   };
 
