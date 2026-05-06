@@ -365,7 +365,7 @@ in
         vim-wakatime
         blink-cmp
         friendly-snippets  # blink-cmp snippets source
-        (vimPluginFromGitHubRef "mvllow/modes.nvim" "v0.3.0")
+        (vimPluginFromGitHubRev "mvllow/modes.nvim" "fc7bc0141500d9cf7c14f46fca846f728545a781")
       ];
       extraConfig = ''
         """""""""""""""""""""""""""""""""""""""
