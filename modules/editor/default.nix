@@ -40,14 +40,17 @@ let
       vim "$tmpfile" -c "set filetype=''${1:-markdown}"
     '';
   };
-  tree-sitter-parsers = pkgs.unstable.symlinkJoin {
-    name = "neovim-treesitter-grammars";
-    paths = with pkgs.unstable; [ (tree-sitter.withPlugins (_: tree-sitter.allGrammars)) ];
+  neovim-treesitter-parsers-and-queries =
+  let
+    parsers = with pkgs.unstable; [ (tree-sitter.withPlugins (_: tree-sitter.allGrammars)) ];
+    queries = pkgs.unstable.vimPlugins.nvim-treesitter.withAllGrammars.dependencies;
+  in pkgs.unstable.symlinkJoin {
+    name = "neovim-treesitter-parsers-and-queries";
+    paths = [ parsers ] ++ queries;
     postBuild = ''
-      # neovim expects the parsers in a specific directory "parser"
       mkdir -p $out/parser
       for f in $out/*.so; do
-        # Exclude built-in grammers: ["vim" "lua" "help"]
+        # Exclude built-in grammers: ["vim" "lua" "c" "help"]
         # to avoid conflict with tiny-cmdline
         BUILTIN_GRAMMARS="vim lua c help"
         LIBRARY_NAME=''${f##*/}
@@ -109,7 +112,6 @@ let
       Treesitter related config
       https://zeta.ws/nvim/#4-nvim-treesitter-%E3%82%B7%E3%83%B3%E3%82%BF%E3%83%83%E3%82%AF%E3%82%B9%E3%83%8F%E3%82%A4%E3%83%A9%E3%82%A4%E3%83%88
     --]]
-    vim.opt.runtimepath:prepend("${tree-sitter-parsers}")
     vim.api.nvim_create_autocmd("FileType", {
       callback = function(args)
         local lang = vim.treesitter.language.get_lang(args.match)
@@ -365,6 +367,9 @@ in
         blink-cmp
         friendly-snippets  # blink-cmp snippets source
         (vimPluginFromGitHubRev "mvllow/modes.nvim" "fc7bc0141500d9cf7c14f46fca846f728545a781")
+
+        # Syntax
+        neovim-treesitter-parsers-and-queries # self-maid
       ];
       extraConfig = ''
         """""""""""""""""""""""""""""""""""""""
