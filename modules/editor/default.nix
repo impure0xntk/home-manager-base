@@ -183,6 +183,8 @@ let
       sign = { enabled = false, },
     })
 
+    require('treesitter-context').setup()
+
     --[[
       The plugins that uses another window/pane/tab/tmux only enable on native only
     --]]
@@ -245,25 +247,21 @@ let
     vim.api.nvim_create_autocmd('LspAttach', {
       callback = function(ev)
         local client = vim.lsp.get_client_by_id(ev.data.client_id)
-        if client and client:supports_method('textDocument/completion') then
-          vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
+        if client then
+          if client:supports_method('textDocument/completion') then
+            vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
+          end
+          if client:supports_method("textDocument/codeLens") then
+            vim.lsp.codelens.enable(true, { bufnr = ev.buf })
+          end
         end
+        vim.diagnostic.config({ virtual_text = false, virtual_lines = { current_line = true }, })
       end,
     })
-
     local lsp_mappings = {
       { 'gD', vim.lsp.buf.declaration },
       { 'gd', vim.lsp.buf.definition },
-      { 'gi', vim.lsp.buf.implementation },
-      { 'gr', vim.lsp.buf.references },
-      { '[d', vim.diagnostic.goto_prev },
-      { ']d', vim.diagnostic.goto_next },
-      { ' ' , vim.lsp.buf.hover },
-      { ' s', vim.lsp.buf.signature_help },
-      { ' d', vim.diagnostic.open_float },
-      { ' q', vim.diagnostic.setloclist },
-      { '\\r', vim.lsp.buf.rename },
-      { '\\a', vim.lsp.buf.code_action },
+      { '<C-k>', vim.lsp.buf.signature_help },
     }
     for i, mapping in pairs(lsp_mappings) do
       map('n', mapping[1], function() mapping[2]() end)
@@ -313,6 +311,9 @@ in
           init_options = {
             diagnosticSeverity = "Warning";
           };
+        };
+        codebook_lsp = {
+          cmd = [ "${lib.getExe pkgs.unstable.codebook}" "serve" ];
         };
       };
       description = ''Neovim LSP configuration preset. DO NOT EDIT'';
@@ -367,6 +368,7 @@ in
         blink-cmp
         friendly-snippets  # blink-cmp snippets source
         (vimPluginFromGitHubRev "mvllow/modes.nvim" "fc7bc0141500d9cf7c14f46fca846f728545a781")
+        nvim-treesitter-context
 
         # Syntax
         neovim-treesitter-parsers-and-queries # self-maid
