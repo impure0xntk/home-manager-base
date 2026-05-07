@@ -248,6 +248,7 @@ in
               wordWrap = "off";
             };
             git = {
+              addAICoAuthor = "off"; # https://github.com/microsoft/vscode/issues/314311
               autofetch = true;
               confirmSync = false;
               enableSmartCommit = true;
