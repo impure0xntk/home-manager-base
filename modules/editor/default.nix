@@ -154,8 +154,6 @@ let
         visual = 0.4,
       },
     })
-    -- alpha-nvim
-    require('alpha').setup(require('alpha.themes.startify').config)
     require('mini.cursorword').setup()
 
     -- UI improvement
@@ -349,7 +347,6 @@ in
         mini-cursorword
         incline-nvim
         gitsigns-nvim
-        alpha-nvim # startup page
         faster-nvim # feature switcher for big files.
         render-markdown-nvim
 
