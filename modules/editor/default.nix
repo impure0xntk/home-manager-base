@@ -302,7 +302,11 @@ in
     };
     lspConfigPreset = lib.mkOption {
       type = lib.types.attrs;
-      default = {
+      default = let textFiletypes = [ "markdown" "text" "tex" "typst" ]; in {
+        "*" = {
+          capabilities = { textDocument = { semanticTokens = { multilineTokenSupport = true; }; }; };
+          root_markers = [ ".git" ];
+        };
         typos_lsp = {
           cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
           cmd_env = { RUST_LOG = "typos_lsp=error"; };
@@ -312,6 +316,11 @@ in
         };
         codebook_lsp = {
           cmd = [ "${lib.getExe pkgs.unstable.codebook}" "serve" ];
+          filetypes = textFiletypes;
+        };
+        harper_ls = {
+          cmd = [ "${lib.getExe pkgs.unstable.harper}" "--stdio" ];
+          filetypes = textFiletypes;
         };
       };
       description = ''Neovim LSP configuration preset. DO NOT EDIT'';
