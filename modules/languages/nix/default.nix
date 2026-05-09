@@ -6,6 +6,8 @@
 }:
 let
   cfg = config.my.home.languages.nix;
+
+  statix = pkgs.unstable.statix;
 in
 {
   options.my.home.languages.nix = {
@@ -26,8 +28,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    my.home.editors.lspConfig = {
-      nixd.cmd = [ "${lib.getExe pkgs.unstable.nixd}" ];
+    my.home.editors = {
+      lspConfig = {
+        nixd.cmd = [ "${lib.getExe pkgs.unstable.nixd}" ];
+      };
+      lspIntegrationConfig = lib.forEach [
+        ''code_actions.statix.with({ command = "${lib.getExe statix}" })''
+        ''diagnostics.statix.with({ command = "${lib.getExe statix}" })''
+      ] (source: "null_ls.builtins.${source}");
     };
 
     home.packages = with pkgs; [

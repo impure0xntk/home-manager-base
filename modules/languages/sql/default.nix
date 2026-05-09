@@ -26,30 +26,31 @@ in
     };
   };
   config = lib.mkIf cfg.enable {
-    my.home.editors.lspConfig = {
-      sqls.cmd = [ "${lib.getExe pkgs.unstable.sqls}" ];
+    my.home.editors = {
+      lspConfig = {
+        sqls.cmd = [ "${lib.getExe pkgs.unstable.sqls}" ];
+      };
+      lspIntegrationConfig = lib.forEach [
+        ''diagnostics.sqruff.with({ command = "${lib.getExe pkgs.unstable.sqruff}" })''
+        ''formatting.sqruff.with({ command = "${lib.getExe pkgs.unstable.sqruff}" })''
+      ] (source: "null_ls.builtins.${source}");
     };
 
     home.packages = with pkgs; [ lazysql ];
 
     programs.vscode.profiles.default = {
       extensions = pkgs.nix4vscode.forVscode [
-        "dorzey.vscode-sqlfluff"
+        "quary.sqruff"
       ];
       userSettings = {
         "[sql]" = {
-          "editor.defaultFormatter" = "dorzey.vscode-sqlfluff";
+          "editor.defaultFormatter" = "quary.sqruff";
         };
         "github.copilot.enable" = {
           "sql" = false; # Disable because may include sensitive info.
         };
       } // lib.my.flatten "_flattenIgnore" {
-        sqlfluff = {
-          executablePath = "${pkgs.sqlfluff}/bin/sqlfluff";
-          dialect = "mysql"; # By default. If use another, set from workspace.
-          format.enabled = false;
-          linter.run = "onSave";
-        };
+        sqruff.executablePath = lib.getExe pkgs.unstable.sqruff;
       };
     };
   };

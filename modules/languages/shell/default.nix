@@ -9,20 +9,26 @@ let
 
   bashIdeConfig = {
     globPattern = "*@(.sh|.inc|.bash|.command)";
-    shellcheckPath = "${pkgs.shellcheck-minimal}/bin/shellcheck";
+    shellcheckPath = lib.getExe pkgs.unstable.shellcheck-minimal;
     backgroundAnalysisMaxFiles = 1; # otherwise hangs by OOM on search because shellcheck runs all results.
-    shfmt.path = "${pkgs.shfmt}/bin/shfmt";
+    shfmt.path = lib.getExe pkgs.unstable.shfmt;
   };
 in
 {
   options.my.home.languages.shell.enable =
     lib.mkEnableOption "Whether to enable shell language support.";
   config = lib.mkIf cfg.enable {
-    my.home.editors.lspConfig = {
-      bashls = {
-        cmd = [ "${lib.getExe pkgs.unstable.bash-language-server}" "start" ];
-        settings.bashIde = bashIdeConfig;
+    my.home.editors = {
+      lspConfig = {
+        bashls = {
+          cmd = [ "${lib.getExe pkgs.unstable.bash-language-server}" "start" ];
+          settings.bashIde = bashIdeConfig;
+        };
       };
+      lspIntegrationConfig = lib.forEach [
+        ''formatting.shellharden.with({ command = "${lib.getExe pkgs.unstable.shellharden}" })''
+        ''formatting.shfmt.with({ command = "${lib.getExe pkgs.unstable.shfmt}" })''
+      ] (source: "null_ls.builtins.${source}");
     };
 
     programs.vscode.profiles.default = {

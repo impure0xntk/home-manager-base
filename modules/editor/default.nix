@@ -139,6 +139,10 @@ let
     require('github-theme').setup({}) -- github scheme has transparent option, but cannot use because unfocused window cannot be transparent.
     -- transparent-nvim
     require("transparent").setup({})
+    -- glance-nvim. Keybindings are the below: near lsp settings
+    require("glance").setup({
+      border = { enable = true }
+    })
     -- statusline
     require('incline').setup()
     vim.opt.laststatus = 0 -- For no statusline
@@ -265,11 +269,18 @@ let
       end,
     })
     local lsp_mappings = {
-      { 'gD', vim.lsp.buf.declaration },
-      { 'gd', vim.lsp.buf.definition },
-      { '<C-k>', vim.lsp.buf.signature_help },
+      { 'gD', '<CMD>Glance definitions<CR>' },
+      { 'gR', '<CMD>Glance references<CR>' },
+      { 'gY', '<CMD>Glance type_definitions<CR>' },
+      { 'gM', '<CMD>Glance implementations<CR>' },
     }
     for i, mapping in pairs(lsp_mappings) do
+      map('n', mapping[1], mapping[2])
+    end
+    local lsp_mappings_func = {
+      { '<C-k>', vim.lsp.buf.signature_help },
+    }
+    for i, mapping in pairs(lsp_mappings_func) do
       map('n', mapping[1], function() mapping[2]() end)
     end
     map('x', '\\a', function() vim.lsp.buf.code_action() end)
@@ -280,6 +291,11 @@ let
       vim.lsp.config(name, cfg)
       vim.lsp.enable(name)
     end
+
+    local null_ls = require("null-ls")
+    null_ls.setup({
+      sources = ${lib.generators.toLua {} config.my.home.editors.lspIntegrationConfig},
+    })
 
     --[[
       The plugins that overlaps with IDE like shortcut-key and the other features only enable on native only
@@ -308,29 +324,48 @@ in
         };
       };
     };
+    lspIntegrationConfig = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = ''Neovim LSP Integration configuration: Also can be customized by adding your own LSP server configuration with none-ls. Use "null_ls.foo" to refer null-ls built-in sources.'';
+      example = [
+        "null_ls.builtins.formatting.prettier"
+      ];
+    };
   };
   config = {
-    my.home.editors.lspConfig = {
-      # General
-      typos_lsp = {
-        cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
-        cmd_env = { RUST_LOG = "typos_lsp=error"; };
-        init_options = {
-          diagnosticSeverity = "Warning";
+    my.home.editors = {
+      lspConfig = {
+        # General
+        typos_lsp = {
+          cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
+          cmd_env = { RUST_LOG = "typos_lsp=error"; };
+          init_options = {
+            diagnosticSeverity = "Warning";
+          };
         };
-      };
-      codebook.cmd = [ "${lib.getExe pkgs.unstable.codebook}" "serve" ];
-      harper_ls.cmd = [ "${lib.getExe pkgs.unstable.harper}" "--stdio" ];
+        codebook.cmd = [ "${lib.getExe pkgs.unstable.codebook}" "serve" ];
+        harper_ls.cmd = [ "${lib.getExe pkgs.unstable.harper}" "--stdio" ];
 
-      jsonls.cmd = ["${lib.getExe pkgs.unstable.vscode-json-languageserver}" ];
-      yamlls.cmd = ["${lib.getExe pkgs.unstable.yaml-language-server}" "--stdio" ];
-      lemminx.cmd = ["${lib.getExe (pkgs.unstable.lemminx.override {
-        jre_minimal = pkgs.jre_minimal;
-        jdk_headless = pkgs.jdk_headless;
-      })}" ];
-      # Toml
-      taplo.cmd = ["${lib.getExe pkgs.unstable.taplo}" "lsp" "stdio" ];
-      tombi.cmd = ["${lib.getExe pkgs.unstable.tombi}" "lsp" ];
+        jsonls.cmd = ["${lib.getExe pkgs.unstable.vscode-json-languageserver}" ];
+        yamlls.cmd = ["${lib.getExe pkgs.unstable.yaml-language-server}" "--stdio" ];
+        lemminx.cmd = ["${lib.getExe (pkgs.unstable.lemminx.override {
+          jre_minimal = pkgs.jre_minimal;
+          jdk_headless = pkgs.jdk_headless;
+        })}" ];
+        # Toml
+        taplo.cmd = ["${lib.getExe pkgs.unstable.taplo}" "lsp" "stdio" ];
+        tombi.cmd = ["${lib.getExe pkgs.unstable.tombi}" "lsp" ];
+      };
+      lspIntegrationConfig = lib.forEach [
+        "code_actions.refactoring"
+        ''diagnostics.codespell.with({ command = "${lib.getExe pkgs.unstable.codespell}" })''
+        ''formatting.codespell.with({ command = "${lib.getExe pkgs.unstable.codespell}" })''
+        ''diagnostics.actionlint.with({ command = "${lib.getExe pkgs.unstable.actionlint}" })''
+        ''diagnostics.dotenv_linter.with({ command = "${lib.getExe pkgs.unstable.dotenv-linter}" })''
+        ''diagnostics.gitleaks.with({ command = "${lib.getExe pkgs.unstable.gitleaks}" })''
+        ''diagnostics.semgrep.with({ command = "${lib.getExe pkgs.unstable.semgrep}" })''
+      ] (source: "null_ls.builtins.${source}");
     };
 
     home.packages = with pkgs.unstable; [
@@ -363,6 +398,7 @@ in
         gitsigns-nvim
         faster-nvim # feature switcher for big files.
         (vimPluginFromGitHubRev "OXY2DEV/markview.nvim" "dbf74b6db11c1468d5128a38b26b6d99dc7316e9") # 2026-05-04
+        glance-nvim
 
         # Tools
         fzf-lua
@@ -384,6 +420,7 @@ in
         # Syntax
         neovim-treesitter-parsers-and-queries # self-maid
         nvim-lspconfig
+        none-ls-nvim
       ];
       extraConfig = ''
         """""""""""""""""""""""""""""""""""""""

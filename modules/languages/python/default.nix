@@ -1,3 +1,8 @@
+# Strategy:
+# * Base LSP: pyrefly
+# * Strict LSP
+#   * editor: zuban (performance)
+#   * ide: pyright (usability)
 {
   config,
   lib,
@@ -16,14 +21,17 @@ in
   };
 
   config = mkIf cfg.enable {
-    my.home.editors.lspConfig = {
-      pyright.cmd = [ "${pkgs.unstable.pyright}/bin/pyright-langserver" "--stdio" ];
-      pyrefly.cmd = [ "${lib.getExe pkgs.unstable.pyrefly}" "lsp" ];
-      ruff = {
-        cmd = [ "${lib.getExe pkgs.unstable.ruff}" "server" ];
-        init_options.settings.configuration = ./ruff.toml;
+    my.home.editors = {
+      lspConfig = {
+        # pyright.cmd = [ "${pkgs.unstable.pyright}/bin/pyright-langserver" "--stdio" ];
+        pyrefly.cmd = [ "${lib.getExe pkgs.unstable.pyrefly}" "lsp" ];
+        zuban.cmd = [ "${lib.getExe pkgs.unstable.zuban}" "server" ];
+
+        ruff = {
+          cmd = [ "${lib.getExe pkgs.unstable.ruff}" "server" ];
+          init_options.settings.configuration = ./ruff.toml;
+        };
       };
-      zuban.cmd = [ "${lib.getExe pkgs.unstable.zuban}" "server" ];
     };
 
     home.packages = with pkgs; [
@@ -46,8 +54,11 @@ in
         "ms-python.python"
         "ms-python.debugpy"
         "njpwerner.autodocstring"
+
         "ms-pyright.pyright"
         "meta.pyrefly"
+        # "zuban.zubanls"
+
         "charliermarsh.ruff"
       ];
       userSettings =
