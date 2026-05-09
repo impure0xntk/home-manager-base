@@ -121,13 +121,9 @@ in
           "ms-vscode.vscode-speech-language-pack-${config.my.home.ide.vscode.languages.voice}"
 
           "christian-kohler.path-intellisense" # maybe exists in both.
-          "zainchen.json"
-
           # found
           "usernamehw.errorlens"
           "asvetliakov.vscode-neovim"
-          "vspacecode.whichkey"
-          "alefragnani.bookmarks"
           "mkhl.direnv"
           "shardulm94.trailing-spaces"
 
@@ -137,8 +133,6 @@ in
 
           "GitHub.vscode-pull-request-github"
 
-          "sumneko.lua"
-          "tamasfe.even-better-toml"
 
           "gruntfuggly.todo-tree"
           "oderwat.indent-rainbow"
@@ -152,7 +146,6 @@ in
           "elijah-potter.harper"
 
           "wakatime.vscode-wakatime"
-          "funkyremi.vscode-google-translate"
 
           "github.github-vscode-theme"
 
@@ -387,8 +380,8 @@ in
               deleteModifiedLinesOnly = true;
               trimOnSave = true;
             };
-            typos.path = "${pkgs.unstable.typos-lsp}/bin/typos-lsp";
-            harper.path = "${pkgs.unstable.harper}";
+            typos.path = lib.getExe pkgs.unstable.typos-lsp;
+            harper.path = lib.getExe pkgs.unstable.harper;
 
             xml.server = {
               workDir = "${config.xdg.cacheHome}/.lemminx";
@@ -405,13 +398,6 @@ in
               preferBinary = true;
             };
             tombi.path = lib.getExe pkgs.unstable.tombi;
-
-            linter = {
-              enabled = true;
-              cache = true;
-              runOnTextChange = false;
-            };
-            vscodeGoogleTranslate.preferredLanguage = "English";
           })
           // proxySettings;
 
@@ -753,15 +739,6 @@ in
                 }
               ])
             ];
-
-            shortcut = [
-              # Which Key extension integration
-              {
-                key = "ctrl+shift+oem_2"; # oem_2 = slash
-                command = "whichkey.show";
-                when = "editorTextFocus";
-              }
-            ];
           in
           [
             # Note
@@ -828,8 +805,7 @@ in
           ++ terminal
           ++ problems
           ++ search
-          ++ breadcrumbs
-          ++ shortcut;
+          ++ breadcrumbs;
       };
     };
 
