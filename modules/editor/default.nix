@@ -125,6 +125,9 @@ let
         vim.treesitter.start(args.buf, lang)
       end,
     })
+
+    -- Disable options that is enabled automatically
+    require("markview").setup({ preview = { enable = false } })
   '';
 
   neovimExtraLuaConfigForNativeOnly = ''
@@ -177,9 +180,14 @@ let
       },
     })
 
-    require('render-markdown').setup({
-      sign = { enabled = false, },
-    })
+    local markview_settings_base = {
+      preview = {
+        enable = true,
+      }
+    }
+    require("markview").setup(
+      vim.tbl_deep_extend('force', markview_settings_base,
+        require("markview.presets").no_nerd_fonts))
 
     require('treesitter-context').setup()
 
@@ -357,7 +365,7 @@ in
         incline-nvim
         gitsigns-nvim
         faster-nvim # feature switcher for big files.
-        render-markdown-nvim
+        (vimPluginFromGitHubRev "OXY2DEV/markview.nvim" "dbf74b6db11c1468d5128a38b26b6d99dc7316e9") # 2026-05-04
 
         # Tools
         fzf-lua
