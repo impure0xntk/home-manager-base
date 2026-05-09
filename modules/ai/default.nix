@@ -133,6 +133,7 @@ in
         "GitHub.copilot-chat"
 
         "johnny-zhao.oai-compatible-copilot" # instead of BYOK
+        "ozzafar.debugmcpextension"
       ]) ++ lib.optionals useContinueDev (pkgs.nix4vscode.forVscode [
         "continue.continue"
       ]);
@@ -153,6 +154,7 @@ in
               })
             )
           );
+          debugmcpServerPort = "23001";
         in {
             # This section is to avoid infinite recursion of programs.vscode.userSettings.
             # If possible, edit settings into lib.my.flatten to ensure nix attrset.
@@ -180,6 +182,7 @@ in
             baseUrl = "${oaiCompatibleFirstProvider.url}/v1";
             models = oaiCompatibleModelsConfig;
           };
+          debugmcp.serverPort = debugmcpServerPort;
           # The main agent is GitHub Copilot, but it uses only remote models for completions.
           # Thus, use Continue.dev for completion only, and use GitHub Copilot for others.
           github.copilot = {
@@ -235,6 +238,10 @@ in
             servers = lib.optionalAttrs config.my.home.mcp.hub.client.enable {
               vscode = {
                 command = "mcp-remote-group-primary";
+                args = [ "vscode" ];
+              };
+              vscode-local = {
+                command = "mcp-remote-group-secondary";
                 args = [ "vscode" ];
               };
             };
