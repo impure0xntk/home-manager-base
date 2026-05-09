@@ -39,14 +39,6 @@ in {
     LC_COLLATE=searchCLocale; # LC_COLLATE="C.UTF-8" is better for some languages to sort faster. https://qiita.com/methane/items/dac75ef5019b311a0f10
 
     # Laungae specific
-    # Python: https://www.lifewithpython.com/2021/05/python-docker-env-vars.html
-    PYTHONDONTWRITEBYTECODE = 1;
-    PYTHONUNBUFFERED = 1;
-    PYTHONUTF8 = 1;
-    PYTHONIOENCODING = "UTF-8";
-    PYTHONBREAKPOINT = "IPython.terminal.debugger.set_trace";
-    PIP_DISABLE_PIP_VERSION_CHECK = "on";
-    PIP_NO_CACHE_DIR = "off";
   } // lib.optionalAttrs config.my.home.networks.proxy.enable {
     # NodeJS
     NODE_USE_ENV_PROXY = 1; # from Node 24.3.0
