@@ -154,7 +154,7 @@ in
               })
             )
           );
-          debugmcpServerPort = "23001";
+          debugmcpServerPort = 23001;
         in {
             # This section is to avoid infinite recursion of programs.vscode.userSettings.
             # If possible, edit settings into lib.my.flatten to ensure nix attrset.
