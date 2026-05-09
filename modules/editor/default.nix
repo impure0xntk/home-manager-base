@@ -296,8 +296,8 @@ in
   options.my.home.editors = {
     lspConfig = lib.mkOption {
       type = lib.types.attrs;
-      default = config.my.home.editors.lspConfigPreset;
-      description = ''Neovim LSP configuration'';
+      default = {};
+      description = ''Neovim LSP configuration: Also can be customized by adding your own LSP server configuration with nvim-lspconfig.'';
       example = config.my.home.editors.lspConfigPreset // {
         typos_lsp = {
           cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
@@ -308,34 +308,31 @@ in
         };
       };
     };
-    lspConfigPreset = lib.mkOption {
-      type = lib.types.attrs;
-      default = let textFiletypes = [ "markdown" "text" "tex" "typst" ]; in {
-        "*" = {
-          capabilities = { textDocument = { semanticTokens = { multilineTokenSupport = true; }; }; };
-          root_markers = [ ".git" ];
-        };
-        typos_lsp = {
-          cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
-          cmd_env = { RUST_LOG = "typos_lsp=error"; };
-          init_options = {
-            diagnosticSeverity = "Warning";
-          };
-        };
-        codebook_lsp = {
-          cmd = [ "${lib.getExe pkgs.unstable.codebook}" "serve" ];
-          filetypes = textFiletypes;
-        };
-        harper_ls = {
-          cmd = [ "${lib.getExe pkgs.unstable.harper}" "--stdio" ];
-          filetypes = textFiletypes;
-        };
-      };
-      description = ''Neovim LSP configuration preset. DO NOT EDIT'';
-    };
-
   };
   config = {
+    my.home.editors.lspConfig = {
+      # General
+      typos_lsp = {
+        cmd = [ "${lib.getExe pkgs.unstable.typos-lsp}" ];
+        cmd_env = { RUST_LOG = "typos_lsp=error"; };
+        init_options = {
+          diagnosticSeverity = "Warning";
+        };
+      };
+      codebook.cmd = [ "${lib.getExe pkgs.unstable.codebook}" "serve" ];
+      harper_ls.cmd = [ "${lib.getExe pkgs.unstable.harper}" "--stdio" ];
+
+      jsonls.cmd = ["${lib.getExe pkgs.unstable.vscode-json-languageserver}" ];
+      yamlls.cmd = ["${lib.getExe pkgs.unstable.yaml-language-server}" "--stdio" ];
+      lemminx.cmd = ["${lib.getExe (pkgs.unstable.lemminx.override {
+        jre_minimal = pkgs.jre_minimal;
+        jdk_headless = pkgs.jdk_headless;
+      })}" ];
+      # Toml
+      taplo.cmd = ["${lib.getExe pkgs.unstable.taplo}" "lsp" "stdio" ];
+      tombi.cmd = ["${lib.getExe pkgs.unstable.tombi}" "lsp" ];
+    };
+
     home.packages = with pkgs.unstable; [
       # custom command
       vimTemp
@@ -386,6 +383,7 @@ in
 
         # Syntax
         neovim-treesitter-parsers-and-queries # self-maid
+        nvim-lspconfig
       ];
       extraConfig = ''
         """""""""""""""""""""""""""""""""""""""

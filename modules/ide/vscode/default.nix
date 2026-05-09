@@ -137,7 +137,6 @@ in
 
           "GitHub.vscode-pull-request-github"
 
-          "redhat.vscode-yaml"
           "sumneko.lua"
           "tamasfe.even-better-toml"
 
@@ -147,6 +146,10 @@ in
           "wmaurer.change-case"
           "streetsidesoftware.code-spell-checker"
           "tekumara.typos-vscode"
+          "redhat.vscode-xml"
+          "redhat.vscode-yaml"
+          "tombi-toml.tombi"
+          "elijah-potter.harper"
 
           "wakatime.vscode-wakatime"
           "funkyremi.vscode-google-translate"
@@ -384,7 +387,25 @@ in
               deleteModifiedLinesOnly = true;
               trimOnSave = true;
             };
-            typos.path = "${pkgs.typos-lsp}/bin/typos-lsp";
+            typos.path = "${pkgs.unstable.typos-lsp}/bin/typos-lsp";
+            harper.path = "${pkgs.unstable.harper}";
+
+            xml.server = {
+              workDir = "${config.xdg.cacheHome}/.lemminx";
+              binary =
+                let
+                  lemminxBin = lib.getExe (pkgs.unstable.lemminx.override {
+                    jre_minimal = pkgs.jre_minimal;
+                    jdk_headless = pkgs.jdk_headless;
+                  });
+                in {
+                  path = lemminxBin;
+                  trustedHashes = ["${builtins.hashFile "sha256" lemminxBin}"]; # For lemminx(unnecessary). "xml.server.binary.trustedHashes" works only User settings.
+                };
+              preferBinary = true;
+            };
+            tombi.path = lib.getExe pkgs.unstable.tombi;
+
             linter = {
               enabled = true;
               cache = true;

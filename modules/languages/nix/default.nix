@@ -26,6 +26,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    my.home.editors.lspConfig = {
+      nixd.cmd = [ "${lib.getExe pkgs.unstable.nixd}" ];
+    };
+
     home.packages = with pkgs; [
       nixfmt-rfc-style
       nix-tree

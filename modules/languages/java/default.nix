@@ -176,15 +176,7 @@ in {
             java.home = "${pkgs.jdk}";
             format.enabled = false; # if enabled format on save.
             codeLens.enabled = true;
-            server = {
-              workDir = "${config.xdg.cacheHome}/.lemminx";
-              binary = let lemminxBin = lib.getExe pkgs.lemminx; in {
-                path = lemminxBin;
-                trustedHashes = ["${builtins.hashFile "sha256" lemminxBin}"]; # For lemminx(unnecessary). "xml.server.binary.trustedHashes" works only User settings.
-              };
-              preferBinary = true;
-              vmargs = toolsVscodeVmargs;
-            };
+            # xml.server is defined by modules/ide/vscode/default.nix
           };
         };
 
@@ -199,7 +191,6 @@ in {
           "sonarsource.sonarlint-vscode"
           "shengchen.vscode-checkstyle"
           "chuckjonas.apex-pmd"
-          "redhat.vscode-xml"
         ];
       };
     };

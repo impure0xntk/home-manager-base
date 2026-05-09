@@ -6,6 +6,8 @@
 }:
 let
   cfg = config.my.home.languages.markdown;
+
+  rumdlConfigPath = lib.my.toToml cfg.lint.config;
 in
 {
   options.my.home.languages.markdown = {
@@ -22,29 +24,45 @@ in
     };
   };
   config = lib.mkIf cfg.enable {
+    my.home.editors.lspConfig = {
+      marksman.cmd = [ "${lib.getExe pkgs.unstable.marksman}" "server" ];
+      markdown_oxide.cmd = [ "${lib.getExe pkgs.unstable.markdown-oxide}" "server" ];
+      panache.cmd = [ "${lib.getExe pkgs.unstable.panache}" "lsp" ];
+      rumdl.cmd = [ "${lib.getExe pkgs.unstable.rumdl}" "server"
+        "--config" rumdlConfigPath ];
+
+      # Previewer
+      mpls.cmd = [ "${lib.getExe pkgs.unstable.mpls}" "--theme" "dark" "--enable-emoji" "--enable-footnotes" "--no-auto" ];
+    };
     programs.vscode.profiles.default = {
       extensions = pkgs.nix4vscode.forVscode [
         "shd101wyy.markdown-preview-enhanced"
-        "davidanson.vscode-markdownlint"
+        "rvben.rumdl"
         "arr.marksman"
+        "jolars.panache"
       ];
       userSettings = {
         "[markdown]" = {
-          "editor.defaultFormatter" = "DavidAnson.vscode-markdownlint";
+          "editor.defaultFormatter" = "rvben.rumdl";
         };
+        "rumdl.configPath" = rumdlConfigPath; # workaround of infinite recursion
       } // lib.my.flatten "_flattenIgnore" {
-        markdownlint = {
-          config = cfg.lint.config;
-          run = "onSave";
+        rumdl = {
+          server.path = "${lib.getExe pkgs.unstable.rumdl}";
+          fixOnSave = true;
         };
         markdown-preview-enhanced = {
           enableExtendedTableSyntax = true;
           previewTheme = "github-light.css";
         };
-
         marksman = {
-          customCommand = "${pkgs.marksman}/bin/marksman";
+          customCommand = "${pkgs.unstable.marksman}/bin/marksman";
           trace.server = "messages";
+        };
+        panache = {
+          commandPath = lib.getExe pkgs.unstable.panache;
+          downloadBinary = false;
+          experimental.incrementalParsing = true;
         };
       };
     };

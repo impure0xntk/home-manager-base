@@ -6,11 +6,25 @@
 }:
 let
   cfg = config.my.home.languages.shell;
+
+  bashIdeConfig = {
+    globPattern = "*@(.sh|.inc|.bash|.command)";
+    shellcheckPath = "${pkgs.shellcheck-minimal}/bin/shellcheck";
+    backgroundAnalysisMaxFiles = 1; # otherwise hangs by OOM on search because shellcheck runs all results.
+    shfmt.path = "${pkgs.shfmt}/bin/shfmt";
+  };
 in
 {
   options.my.home.languages.shell.enable =
     lib.mkEnableOption "Whether to enable shell language support.";
   config = lib.mkIf cfg.enable {
+    my.home.editors.lspConfig = {
+      bashls = {
+        cmd = [ "${lib.getExe pkgs.unstable.bash-language-server}" "start" ];
+        settings.bashIde = bashIdeConfig;
+      };
+    };
+
     programs.vscode.profiles.default = {
       extensions = pkgs.nix4vscode.forVscode [
         "mads-hartmann.bash-ide-vscode"
@@ -26,11 +40,7 @@ in
           "editor.formatOnSave" = false; # if true, sometimes hangs
         };
       } // lib.my.flatten "_flattenIgnore" rec {
-        bashIde = {
-          shellcheckPath = "${pkgs.shellcheck-minimal}/bin/shellcheck";
-          backgroundAnalysisMaxFiles = 1; # otherwise hangs by OOM on search because shellcheck runs all results.
-          shfmt.path = "${pkgs.shfmt}/bin/shfmt";
-        };
+        bashIde = bashIdeConfig;
         shellcheck = {
           enable = false;
           executablePath = bashIde.shellcheckPath;

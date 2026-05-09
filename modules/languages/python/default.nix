@@ -16,20 +16,38 @@ in
   };
 
   config = mkIf cfg.enable {
+    my.home.editors.lspConfig = {
+      pyright.cmd = [ "${pkgs.unstable.pyright}/bin/pyright-langserver" "--stdio" ];
+      pyrefly.cmd = [ "${lib.getExe pkgs.unstable.pyrefly}" "lsp" ];
+      ruff = {
+        cmd = [ "${lib.getExe pkgs.unstable.ruff}" "server" ];
+        init_options.settings.configuration = ./ruff.toml;
+      };
+      zuban.cmd = [ "${lib.getExe pkgs.unstable.zuban}" "server" ];
+    };
+
     home.packages = with pkgs; [
       python3
-      uv
-      ruff
     ];
 
     home.sessionVariables = {
       PYTHONPATH = "${config.home.homeDirectory}/.local/lib/python${pkgs.python3.pythonVersion}/site-packages";
+      # https://www.lifewithpython.com/2021/05/python-docker-env-vars.html
+      PYTHONPYCACHEPREFIX = "${config.xdg.cacheHome}/python";
+      PYTHONUNBUFFERED = 1;
+      PYTHONUTF8 = 1;
+      PYTHONIOENCODING = "UTF-8";
+      PYTHONBREAKPOINT = "IPython.terminal.debugger.set_trace";
+      PIP_DISABLE_PIP_VERSION_CHECK = "on";
+      PIP_NO_CACHE_DIR = "off";
     };
     programs.vscode.profiles.default = {
       extensions = pkgs.nix4vscode.forVscode [
         "ms-python.python"
         "ms-python.debugpy"
         "njpwerner.autodocstring"
+        "ms-pyright.pyright"
+        "meta.pyrefly"
         "charliermarsh.ruff"
       ];
       userSettings =
@@ -39,6 +57,9 @@ in
           };
         }
         // (lib.my.flatten "_flattenIgnore" {
+          pyrefly.lspPath = lib.getExe pkgs.unstable.pyrefly;
+          python.pyrefly.syncNotebooks = false;
+
           ruff = {
             enable = true;
             nativeServer = "on";

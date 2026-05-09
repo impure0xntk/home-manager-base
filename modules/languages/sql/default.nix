@@ -26,6 +26,10 @@ in
     };
   };
   config = lib.mkIf cfg.enable {
+    my.home.editors.lspConfig = {
+      sqls.cmd = [ "${lib.getExe pkgs.unstable.sqls}" ];
+    };
+
     home.packages = with pkgs; [ lazysql ];
 
     programs.vscode.profiles.default = {
