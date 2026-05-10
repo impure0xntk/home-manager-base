@@ -292,7 +292,9 @@ let
 
     local null_ls = require("null-ls")
     null_ls.setup({
-      sources = ${lib.generators.toLua {} config.my.home.editors.lspIntegrationConfig},
+      sources = {
+        ${lib.concatStringsSep ",\n" config.my.home.editors.lspIntegrationConfig}
+      }
     })
 
     require("which-key").setup({
@@ -361,8 +363,11 @@ in
         taplo.cmd = ["${lib.getExe pkgs.unstable.taplo}" "lsp" "stdio" ];
         tombi.cmd = ["${lib.getExe pkgs.unstable.tombi}" "lsp" ];
       };
+      # TODO: Idea
+      #   * cbfmt: provide formatter options for codeblock, and set cbfmt config
       lspIntegrationConfig = lib.forEach [
         "code_actions.refactoring"
+        "code_actions.ts_node_action"
         ''diagnostics.codespell.with({ command = "${lib.getExe pkgs.unstable.codespell}" })''
         ''formatting.codespell.with({ command = "${lib.getExe pkgs.unstable.codespell}" })''
         ''diagnostics.actionlint.with({ command = "${lib.getExe pkgs.unstable.actionlint}" })''
