@@ -42,6 +42,7 @@ in {
     git-crypt
     commitizen
     git-graph
+    gh-dash
 
     my.git-gtr # git worktree runner
   ];
