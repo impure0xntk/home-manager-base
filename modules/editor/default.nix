@@ -295,6 +295,12 @@ let
       sources = ${lib.generators.toLua {} config.my.home.editors.lspIntegrationConfig},
     })
 
+    require("which-key").setup({
+      plugins = {
+        presets = { operators = false },
+      },
+    })
+
     --[[
       The plugins that overlaps with IDE like shortcut-key and the other features only enable on native only
 
@@ -407,6 +413,7 @@ in
         mini-indentscope
         hlargs-nvim
         nvim-spider # w/b moving
+        which-key-nvim
         mini-hipatterns
         vim-wakatime
         blink-cmp
