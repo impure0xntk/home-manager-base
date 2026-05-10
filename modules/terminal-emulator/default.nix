@@ -227,6 +227,18 @@ index e240d8c..d8b3eec 100755
       if-shell 'test -n "$VSCODE_IPC_HOOK_CLI"' \
         'set -sg escape-time 80' \
         'set -sg escape-time 0'
+
+      # functions
+      ## Prefix + e to edit markdown in nvim and paste to tmux.
+      bind e display-popup -E -w 80% -h 80% "bash -c ' \
+        tmpfile=$(mktemp /tmp/tmux_ai.XXXXXX); \
+        nvim -c \"set ft=markdown\" -c \"startinsert\" \$tmpfile; \
+        if [ -s \$tmpfile ]; then \
+          tmux load-buffer \$tmpfile; \
+          tmux paste-buffer -p; \
+        fi; \
+        rm \$tmpfile \
+      '"
     '';
   };
   programs.bash = {
