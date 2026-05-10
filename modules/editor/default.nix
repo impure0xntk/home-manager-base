@@ -100,6 +100,14 @@ let
     vim.keymap.set("x", "<BS>", function()
       vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("in", true, false, true), "x", false)
     end, { desc = "Decremental selection" })
+    --   ... except quickfix
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = "qf",
+      callback = function()
+        -- jump and close
+        vim.keymap.set("n", "<CR>", "<CR>:cclose<CR>", { buffer = true, silent = true })
+      end,
+    })
     -- nvim-spider for smartword
     require("spider").setup {
       subwordMovement = false,
@@ -112,15 +120,16 @@ let
       Treesitter related config
       https://zeta.ws/nvim/#4-nvim-treesitter-%E3%82%B7%E3%83%B3%E3%82%BF%E3%83%83%E3%82%AF%E3%82%B9%E3%83%8F%E3%82%A4%E3%83%A9%E3%82%A4%E3%83%88
     --]]
+    local treesitter_exclude_filetypes = { cmd = true, Comment = true, help = true }
     vim.api.nvim_create_autocmd("FileType", {
       callback = function(args)
+        if treesitter_exclude_filetypes[args.match] then return end
+
         local lang = vim.treesitter.language.get_lang(args.match)
-        if not lang or lang == "cmd" then return end
+        if not lang then return end
 
         local parser = vim.treesitter.get_parser(args.buf, lang)
-        if not parser then
-          return
-        end
+        if not parser then return end
 
         vim.treesitter.start(args.buf, lang)
       end,
@@ -139,10 +148,6 @@ let
     require('github-theme').setup({}) -- github scheme has transparent option, but cannot use because unfocused window cannot be transparent.
     -- transparent-nvim
     require("transparent").setup({})
-    -- glance-nvim. Keybindings are the below: near lsp settings
-    require("glance").setup({
-      border = { enable = true }
-    })
     -- statusline
     require('incline').setup()
     vim.opt.laststatus = 0 -- For no statusline
@@ -269,18 +274,11 @@ let
       end,
     })
     local lsp_mappings = {
-      { 'gD', '<CMD>Glance definitions<CR>' },
-      { 'gR', '<CMD>Glance references<CR>' },
-      { 'gY', '<CMD>Glance type_definitions<CR>' },
-      { 'gM', '<CMD>Glance implementations<CR>' },
-    }
-    for i, mapping in pairs(lsp_mappings) do
-      map('n', mapping[1], mapping[2])
-    end
-    local lsp_mappings_func = {
+      { 'gD', vim.lsp.buf.definition },
+      { 'gR', vim.lsp.buf.references },
       { '<C-k>', vim.lsp.buf.signature_help },
     }
-    for i, mapping in pairs(lsp_mappings_func) do
+    for i, mapping in pairs(lsp_mappings) do
       map('n', mapping[1], function() mapping[2]() end)
     end
     map('x', '\\a', function() vim.lsp.buf.code_action() end)
@@ -398,7 +396,6 @@ in
         gitsigns-nvim
         faster-nvim # feature switcher for big files.
         (vimPluginFromGitHubRev "OXY2DEV/markview.nvim" "dbf74b6db11c1468d5128a38b26b6d99dc7316e9") # 2026-05-04
-        glance-nvim
 
         # Tools
         fzf-lua
