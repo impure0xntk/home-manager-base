@@ -1,8 +1,3 @@
-# Strategy:
-# * Base LSP: pyrefly
-# * Strict LSP
-#   * editor: zuban (performance)
-#   * ide: pyright (usability)
 {
   config,
   lib,
@@ -23,9 +18,7 @@ in
   config = mkIf cfg.enable {
     my.home.editors = {
       lspConfig = {
-        # pyright.cmd = [ "${pkgs.unstable.pyright}/bin/pyright-langserver" "--stdio" ];
-        pyrefly.cmd = [ "${lib.getExe pkgs.unstable.pyrefly}" "lsp" ];
-        zuban.cmd = [ "${lib.getExe pkgs.unstable.zuban}" "server" ];
+        ty.cmd = [ "${lib.getExe pkgs.unstable.ty}" "server" ];
 
         ruff = {
           cmd = [ "${lib.getExe pkgs.unstable.ruff}" "server" ];
@@ -36,7 +29,10 @@ in
 
     home.packages = with pkgs; [
       python3
-    ];
+    ] ++ (with pkgs.unstable; [
+      ty
+      ruff
+    ]);
 
     home.sessionVariables = {
       PYTHONPATH = "${config.home.homeDirectory}/.local/lib/python${pkgs.python3.pythonVersion}/site-packages";
@@ -55,9 +51,7 @@ in
         "ms-python.debugpy"
         "njpwerner.autodocstring"
 
-        "ms-pyright.pyright"
-        "meta.pyrefly"
-        # "zuban.zubanls"
+        "astral-sh.ty"
 
         "charliermarsh.ruff"
       ];
@@ -68,8 +62,15 @@ in
           };
         }
         // (lib.my.flatten "_flattenIgnore" {
-          pyrefly.lspPath = lib.getExe pkgs.unstable.pyrefly;
-          python.pyrefly.syncNotebooks = false;
+          ty.path = [ (lib.getExe pkgs.unstable.ty) ];
+          # Insert the following configuration to .vscode/settings.json if there is no source path in root:
+          # "ty.configuration": {
+          #   "environment": {
+          #     "extra-paths": [
+          #       "src"
+          #     ]
+          #   }
+          # }
 
           ruff = {
             enable = true;
