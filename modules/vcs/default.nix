@@ -34,15 +34,18 @@ let
     "gg" = shellAliases.git-graph;
 
     "gtr" = "git gtr";
+
+    "ghcp" = "gh pr create --editor";
+    "ghd" = "gh-dash";
   };
 
 in {
   home.packages = with pkgs; [
+    gh
     ghq
     git-crypt
     commitizen
     git-graph
-    gh-dash
 
     my.git-gtr # git worktree runner
   ];
@@ -111,6 +114,22 @@ in {
           output = "terminal";
         }
       ];
+    };
+  };
+  programs.gh-dash = {
+    enable = true;
+    package = pkgs.unstable.gh-dash;
+    settings = {
+      pager.diff = lib.getExe pkgs.unstable.diffnav;
+      keybindings = {
+        universal = [
+          {
+            key = "g";
+            name = "lazygit";
+            command = "cd {{.RepoPath}} && lazygit";
+          }
+        ];
+      };
     };
   };
 
