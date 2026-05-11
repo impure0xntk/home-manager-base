@@ -192,6 +192,11 @@ let
     local markview_settings_base = {
       preview = {
         enable = true,
+        filetypes = {
+          "markdown",
+          "codecompanion" -- for AI
+        },
+        ignore_buftypes = {},
       }
     }
     require("markview").setup(
@@ -221,6 +226,23 @@ let
     })
     -- lazygit-nvim
     map("n", "<Leader>lg", ":LazyGitCurrentFile<CR>", { desc = "Lazygit", silent = true, })
+
+    --[[
+      AI settings
+    --]]
+    require("codecompanion").setup({
+      display = {
+        chat = {
+          window = {
+            width = 0.25,
+          },
+        },
+      },
+      extensions = {
+        spinner = { enabled = true, },
+        history = { enabled = true, },
+      }
+    })
 
     --[[
       The LSP related plugins only enable on native only
@@ -425,6 +447,11 @@ in
         friendly-snippets  # blink-cmp snippets source
         (vimPluginFromGitHubRev "mvllow/modes.nvim" "fc7bc0141500d9cf7c14f46fca846f728545a781")
         nvim-treesitter-context
+
+        # AI
+        codecompanion-nvim
+        codecompanion-history-nvim
+        (vimPluginFromGitHubRev "lalitmee/codecompanion-spinners.nvim" "86926cbf7554d69d40d2a5c3cf576063814a42d5")
 
         # Syntax
         neovim-treesitter-parsers-and-queries # self-maid
