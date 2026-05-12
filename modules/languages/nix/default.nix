@@ -8,6 +8,18 @@ let
   cfg = config.my.home.languages.nix;
 
   statix = pkgs.unstable.statix;
+
+  # For nixd
+  formatterPath = lib.getExe pkgs.nixfmt-rfc-style;
+  serverSettings = {
+    "nixd" = {
+      "formatting" = {
+        "command" = [ formatterPath ];
+      };
+      options = cfg.currentConfigurations;
+    };
+    _flattenIgnore = true;
+  };
 in
 {
   options.my.home.languages.nix = {
@@ -30,7 +42,10 @@ in
   config = lib.mkIf cfg.enable {
     my.home.editors = {
       lspConfig = {
-        nixd.cmd = [ "${lib.getExe pkgs.unstable.nixd}" ];
+        nixd = {
+          cmd = [ "${lib.getExe pkgs.unstable.nixd}" ];
+          settings = serverSettings;
+        };
       };
       lspIntegrationConfig = lib.forEach [
         ''code_actions.statix.with({ command = "${lib.getExe statix}" })''
@@ -81,22 +96,13 @@ in
         // lib.my.flatten "_flattenIgnore" {
           nix = rec {
             enableLanguageServer = true;
-            serverPath = "${pkgs.nixd}/bin/nixd"; # nixd depends old llvm(too large)...
+            serverPath = lib.getExe pkgs.nixd; # nixd depends old llvm(too large)...
             # The workaround of "textDocument/documentHighlight failed".
             # https://github.com/nix-community/vscode-nix-ide/issues/411
             hiddenLanguageServerErrors = [
               "textDocument/definition"
             ];
-            formatterPath = "nixfmt";
-            serverSettings = {
-              "nixd" = {
-                "formatting" = {
-                  "command" = [ formatterPath ];
-                };
-                options = cfg.currentConfigurations;
-              };
-              _flattenIgnore = true;
-            };
+            inherit formatterPath serverSettings;
           };
         };
       };
