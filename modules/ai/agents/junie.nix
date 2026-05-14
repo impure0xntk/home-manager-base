@@ -22,8 +22,12 @@ let
       makeWrapper
     ];
 
-    postBuild = ''
-      wrapProgram $out/bin/junie \
+    postBuild =
+    let
+      cfgProxy = config.my.home.networks.proxy;
+      proxyOpts = if cfgProxy.enable then ''--set JAVA_TOOL_OPTIONS "${cfgProxy.snippet.javaopts}"'' else "";
+    in ''
+      wrapProgram $out/bin/junie ${proxyOpts} \
         --set JUNIE_CONFIG_LOCATION ${config.xdg.configFile.${configPath}.source}
     '';
   };
