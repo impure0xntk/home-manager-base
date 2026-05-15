@@ -25,7 +25,7 @@ let
     postBuild =
     let
       cfgProxy = config.my.home.networks.proxy;
-      proxyOpts = if cfgProxy.enable then ''--set JAVA_TOOL_OPTIONS "${cfgProxy.snippet.javaopts}"'' else "";
+      proxyOpts = if cfgProxy.enable then ''--set JAVA_TOOL_OPTIONS "${cfgProxy.snippet.javaOpts}"'' else "";
     in ''
       wrapProgram $out/bin/junie ${proxyOpts} \
         --set JUNIE_CONFIG_LOCATION ${config.xdg.configFile.${configPath}.source}
