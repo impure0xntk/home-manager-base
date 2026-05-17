@@ -15,6 +15,7 @@ in
     (import ./codex.nix (args // { inherit searchModelByRole; }))
     (import ./goose-cli.nix (args // { inherit searchModelByRole; }))
     (import ./junie.nix (args // { inherit searchModelByRole; }))
+    (import ./copilot-cli.nix (args // { inherit searchModelByRole; }))
     # (import ./opencode.nix (args // { inherit searchModelByRole; }))
     # Future agents can be added here:
     # (import ./agent-deck.nix (args // { inherit searchModelByRole; }))
