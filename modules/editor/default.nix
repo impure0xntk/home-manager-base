@@ -42,8 +42,22 @@ let
   };
   neovim-treesitter-parsers-and-queries =
   let
-    parsers = with pkgs.unstable; [ (tree-sitter.withPlugins (_: tree-sitter.allGrammars)) ];
-    queries = pkgs.unstable.vimPlugins.nvim-treesitter.withAllGrammars.dependencies;
+    selfMaidGrammars = with pkgs.unstable; [
+      (tree-sitter.buildGrammar rec {
+        language = "java_manifest";
+        version = "0.1.3";
+        src = pkgs.fetchFromGitHub {
+          owner = "impure0xntk";
+          repo = "tree-sitter-java-manifest";
+          rev = "v${version}";
+          hash = "sha256-GqZSlXS9caV2tcljv9EsznFE4R3t0eRI4/R5xFT+VZc=";
+        };
+      })
+    ];
+    parsers = with pkgs.unstable; [ (tree-sitter.withPlugins (_: tree-sitter.allGrammars
+      ++ selfMaidGrammars)) ];
+    queries = pkgs.unstable.vimPlugins.nvim-treesitter.withAllGrammars.dependencies
+      ++ (lib.forEach selfMaidGrammars (grammar: pkgs.unstable.neovimUtils.grammarToPlugin grammar));
   in pkgs.unstable.symlinkJoin {
     name = "neovim-treesitter-parsers-and-queries";
     paths = [ parsers ] ++ queries;
@@ -133,6 +147,12 @@ let
 
         vim.treesitter.start(args.buf, lang)
       end,
+    })
+    -- For self-maid grammars
+    vim.filetype.add({
+      pattern = {
+        ['MANIFEST%.MF'] = 'java_manifest',
+      },
     })
 
     -- Disable options that is enabled automatically
