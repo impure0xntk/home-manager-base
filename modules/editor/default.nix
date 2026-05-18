@@ -45,12 +45,12 @@ let
     selfMaidGrammars = with pkgs.unstable; [
       (tree-sitter.buildGrammar rec {
         language = "java_manifest";
-        version = "0.1.4";
+        version = "0.1.5";
         src = pkgs.fetchFromGitHub {
           owner = "impure0xntk";
           repo = "tree-sitter-java-manifest";
           rev = "v${version}";
-          hash = "sha256-u5efbYcBI6lLLW+9F7pd9DkzF81FaSm77vyzpRwEU84=";
+          hash = "sha256-lR8SpnEr1ep1Jd6ANy73GUrzxQp8EdwYmHZ+5GYO8iA=";
         };
       })
     ];
