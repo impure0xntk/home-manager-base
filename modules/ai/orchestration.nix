@@ -3,6 +3,6 @@
   home.packages = with pkgs; [
     # beads-rust
     # beads-viewer
-    gnhf
+    # gnhf
   ];
 }
