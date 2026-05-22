@@ -117,11 +117,9 @@ in
           "ms-vscode-remote.remote-ssh"
           "ms-vscode-remote.remote-ssh-edit"
           "ms-vscode-remote.remote-containers"
-          "ms-vscode.vscode-speech"
-          "ms-vscode.vscode-speech-language-pack-${config.my.home.ide.vscode.languages.voice}"
 
-          "christian-kohler.path-intellisense" # maybe exists in both.
           # found
+          "christian-kohler.path-intellisense" # maybe exists in both.
           "usernamehw.errorlens"
           "asvetliakov.vscode-neovim"
           "mkhl.direnv"
@@ -133,12 +131,9 @@ in
 
           "GitHub.vscode-pull-request-github"
 
-
           "gruntfuggly.todo-tree"
           "oderwat.indent-rainbow"
 
-          "wmaurer.change-case"
-          "streetsidesoftware.code-spell-checker"
           "tekumara.typos-vscode"
           "redhat.vscode-xml"
           "redhat.vscode-yaml"
@@ -150,13 +145,8 @@ in
           "github.github-vscode-theme"
 
           "tompollak.lazygit-vscode"
-          "eriklynd.json-tools"
-          "richie5um2.vscode-sort-json"
-          "tyriar.sort-lines"
-          "sleistner.vscode-fileutils"
           "rioj7.command-variable"
           "augustocdias.tasks-shell-input"
-          "gruntfuggly.triggertaskonsave" # Not used, but useful
           "s-nlf-fh.glassit"
         ];
         # Refs:
