@@ -37,7 +37,11 @@ let
   extensionList = lib.flatten [
     (lib.mapAttrsToList (
       n: v:
-      (lib.forEach v.extensions (ext: "${ext.vscodeExtPublisher}.${ext.vscodeExtName}@${ext.version}"))
+      (lib.forEach v.extensions (ext:
+        if builtins.hasAttr "vsix" ext
+          then ext.vsix # use vsix directly
+          else "${ext.vscodeExtPublisher}.${ext.vscodeExtName}@${ext.version}"
+        ))
     ) config.programs.vscode.profiles)
   ];
 
