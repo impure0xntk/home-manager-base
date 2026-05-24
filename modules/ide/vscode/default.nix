@@ -153,7 +153,7 @@ in
           "augustocdias.tasks-shell-input"
           "s-nlf-fh.glassit"
         ] ++ (with pkgs.my; [
-          # vscode-extension-codebook-vscode
+          vscode-extension-codebook-vscode
         ]);
         # Refs:
         #  Look and feel: https://dev.to/andrewgeorge/minimal-vscode-ui-343e
