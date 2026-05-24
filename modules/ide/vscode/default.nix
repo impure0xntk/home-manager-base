@@ -152,7 +152,9 @@ in
           "rioj7.command-variable"
           "augustocdias.tasks-shell-input"
           "s-nlf-fh.glassit"
-        ];
+        ] ++ (with pkgs.my; [
+          # vscode-extension-codebook-vscode
+        ]);
         # Refs:
         #  Look and feel: https://dev.to/andrewgeorge/minimal-vscode-ui-343e
         userSettings =
@@ -392,6 +394,8 @@ in
               preferBinary = true;
             };
             tombi.path = lib.getExe pkgs.unstable.tombi;
+
+            codebook.binaryPath = lib.getExe pkgs.unstable.codebook;
           })
           // proxySettings;
 
