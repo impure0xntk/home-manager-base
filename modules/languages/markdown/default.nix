@@ -8,6 +8,7 @@ let
   cfg = config.my.home.languages.markdown;
 
   rumdlConfigPath = lib.my.toToml cfg.lint.config;
+  mplsArgs = ["--theme" "dark" "--enable-emoji" "--enable-footnotes" "--enable-wikilinks" "--no-auto" ];
 in
 {
   options.my.home.languages.markdown = {
@@ -32,15 +33,16 @@ in
         "--config" rumdlConfigPath ];
 
       # Previewer
-      mpls.cmd = [ "${lib.getExe pkgs.unstable.mpls}" "--theme" "dark" "--enable-emoji" "--enable-footnotes" "--no-auto" ];
+      mpls.cmd = [ "${lib.getExe pkgs.unstable.mpls}" ] ++ mplsArgs;
     };
     programs.vscode.profiles.default = {
-      extensions = pkgs.nix4vscode.forVscode [
-        "shd101wyy.markdown-preview-enhanced"
+      extensions = (pkgs.nix4vscode.forVscode [
         "rvben.rumdl"
         "arr.marksman"
         "jolars.panache"
-      ];
+      ]) ++ (with pkgs.my; [
+        vscode-extension-mpls-vscode-client
+      ]);
       userSettings = {
         "[markdown]" = {
           "editor.defaultFormatter" = "rvben.rumdl";
@@ -49,15 +51,16 @@ in
       } // lib.my.flatten "_flattenIgnore" {
         rumdl = {
           server.path = "${lib.getExe pkgs.unstable.rumdl}";
-          fixOnSave = true;
-        };
-        markdown-preview-enhanced = {
-          enableExtendedTableSyntax = true;
-          previewTheme = "github-light.css";
+          fixOnSave = false;
         };
         marksman = {
           customCommand = "${pkgs.unstable.marksman}/bin/marksman";
           trace.server = "messages";
+        };
+        mpls = {
+          executablePath = lib.getExe pkgs.unstable.mpls;
+          optionalArguments = mplsArgs;
+          shutdownWhenAllClosed = true;
         };
         panache = {
           commandPath = lib.getExe pkgs.unstable.panache;
