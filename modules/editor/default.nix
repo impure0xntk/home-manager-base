@@ -415,7 +415,7 @@ in
         ''diagnostics.actionlint.with({ command = "${lib.getExe pkgs.unstable.actionlint}" })''
         ''diagnostics.dotenv_linter.with({ command = "${lib.getExe pkgs.unstable.dotenv-linter}" })''
         ''diagnostics.gitleaks.with({ command = "${lib.getExe pkgs.unstable.gitleaks}" })''
-        ''diagnostics.semgrep.with({ command = "${lib.getExe pkgs.unstable.semgrep}" })''
+        # ''diagnostics.semgrep.with({ command = "${lib.getExe pkgs.unstable.semgrep}" })'' # cannot work under graphene-hardened allocator
       ] (source: "null_ls.builtins.${source}");
     };
 
