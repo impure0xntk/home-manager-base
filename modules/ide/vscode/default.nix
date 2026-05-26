@@ -154,6 +154,7 @@ in
           "s-nlf-fh.glassit"
         ] ++ (with pkgs.my; [
           vscode-extension-codebook-vscode
+          vscode-extension-codespell-extension
         ]);
         # Refs:
         #  Look and feel: https://dev.to/andrewgeorge/minimal-vscode-ui-343e
@@ -396,6 +397,7 @@ in
             tombi.path = lib.getExe pkgs.unstable.tombi;
 
             codebook.binaryPath = lib.getExe pkgs.unstable.codebook;
+            codespell.path = lib.getExe pkgs.unstable.codespell;
           })
           // proxySettings;
 
