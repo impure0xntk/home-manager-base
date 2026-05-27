@@ -10,26 +10,24 @@ in {
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    matchBlocks."*" = {
-      compression = true;
-      forwardAgent = true;
-      controlMaster = "auto";
-      controlPersist = "60s";
-      userKnownHostsFile = "/dev/null";
-      hashKnownHosts = false;  # for host completion
-      serverAliveCountMax = 3; # keepalive
-      serverAliveInterval = 30; # keepalive
-      extraOptions = {
-        Ciphers = lib.concatStringsSep "," [
-          "aes128-ctr" "aes192-ctr" "aes256-ctr"
-        ];
-        IgnoreUnknown = lib.concatStringsSep "," [
-          "UseKeychain"
-        ];
-        UseKeychain = "yes";
-        StrictHostKeyChecking = "no";
-        LogLevel = "QUIET";
-      };
+    settings."*" = {
+      Compression = true;
+      ForwardAgent = true;
+      ControlMaster = "auto";
+      ControlPersist = "60s";
+      UserKnownHostsFile = "/dev/null";
+      HashKnownHosts = false;  # for host completion
+      ServerAliveCountMax = 3; # keepalive
+      ServerAliveInterval = 30; # keepalive
+      Ciphers = lib.concatStringsSep "," [
+        "aes128-ctr" "aes192-ctr" "aes256-ctr"
+      ];
+      IgnoreUnknown = lib.concatStringsSep "," [
+        "UseKeychain"
+      ];
+      UseKeychain = "yes";
+      StrictHostKeyChecking = "no";
+      LogLevel = "QUIET";
     };
   };
 }
