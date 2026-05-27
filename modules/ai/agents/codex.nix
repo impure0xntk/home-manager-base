@@ -106,7 +106,7 @@ in
     programs.codex = {
       enable = true;
       package = codex-wrapped;
-      custom-instructions = config.my.home.ai.prompts.instructions."AGENTS.md".text;
+      context = config.my.home.ai.prompts.instructions."AGENTS.md".text;
       inherit settings;
     };
 

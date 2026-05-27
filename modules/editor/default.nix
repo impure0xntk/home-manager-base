@@ -609,7 +609,7 @@ in
 
         nnoremap <leader>n <cmd>NnnExplorer %:p:h<CR>
       '';
-      extraLuaConfig = ''
+      initLua = ''
         ${neovimExtraLuaConfigForAllEnvironment}
         if not vim.g.vscode then
           ${neovimExtraLuaConfigForNativeOnly}
