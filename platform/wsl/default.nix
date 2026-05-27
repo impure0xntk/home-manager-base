@@ -153,7 +153,6 @@ in {
     ];
     home.packages = (with pkgs; [
       wsl-open # is faster than wslview on wslu
-      wslu
 
       my.wslsudo
     ]) ++ lib.attrValues scripts;
