@@ -133,6 +133,21 @@ in {
       };
     };
   };
+  programs.lazyworktree = {
+    enable = true;
+    enableFishIntegration = true;
+    package = pkgs.unstable.lazyworktree;
+    settings = {
+      auto_refresh = true;
+      ci_auto_refresh = false;
+      layout = "default";
+      palette_mru = true;
+      palette_mru_limit = 5;
+      refresh_interval = 10;
+      search_auto_select = false;
+      sort_mode = "switched";
+    };
+  };
 
   programs.bash.shellAliases = shellAliases;
 
