@@ -34,8 +34,9 @@ let
     "gg" = shellAliases.git-graph;
 
     "gtr" = "git gtr";
+    "gtrcopy" = "git gtr copy";
+    "gtrclean" = "git gtr clean --merged --force";
 
-    "ghcp" = "gh pr create --editor";
     "ghd" = "gh-dash";
   };
 
@@ -85,6 +86,12 @@ in {
       };
       ghq = {
         root = "~/ghq";
+      };
+
+      gtr = {
+        copy = {
+          includeDirs = ".vscode";
+        };
       };
     };
   };
