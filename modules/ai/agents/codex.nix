@@ -34,6 +34,7 @@ let
     '' else ''
       wrapProgram $out/bin/codex \
     '') + ''
+        --set CODEX_HOME ${config.xdg.configHome}/codex \
         --set ${dummyEnvKey} dummy
     '';
   };
