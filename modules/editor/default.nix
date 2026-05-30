@@ -448,7 +448,7 @@ in
         incline-nvim
         gitsigns-nvim
         faster-nvim # feature switcher for big files.
-        (vimPluginFromGitHubRev "OXY2DEV/markview.nvim" "dbf74b6db11c1468d5128a38b26b6d99dc7316e9") # 2026-05-04
+        markview-nvim
 
         # Tools
         fzf-lua
