@@ -48,6 +48,7 @@ in {
     git-graph
 
     my.git-gtr # git worktree runner
+    my.ghqr # For GitHub repository management
   ];
   # user/email in home-manager/profiles/*.nix
   programs.git = {
