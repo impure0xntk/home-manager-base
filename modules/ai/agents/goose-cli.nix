@@ -14,11 +14,10 @@ let
       model = (searchModelByRole "edit").model;
       provider = (searchModelByRole "edit").provider;
     };
-    leader = {
+    planner = {
       model = (searchModelByRole "chat").model;
       provider = (searchModelByRole "chat").provider;
     };
-    planner = leader;
   };
 
   goose-cli-wrapped = let
@@ -36,8 +35,6 @@ let
   gooseConfig = lib.my.deepMerge {
     GOOSE_PROVIDER = modelInfo.worker.provider;
     GOOSE_MODEL = modelInfo.worker.model;
-    GOOSE_LEAD_PROVIDER = modelInfo.leader.provider;
-    GOOSE_LEAD_MODEL = modelInfo.leader.model;
     GOOSE_PLANNER_PROVIDER = modelInfo.planner.provider;
     GOOSE_PLANNER_MODEL = modelInfo.planner.model;
     GOOSE_MODE = "auto";
