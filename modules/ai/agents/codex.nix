@@ -107,7 +107,7 @@ in
     programs.codex = {
       enable = true;
       package = codex-wrapped;
-      context = config.my.home.ai.prompts.instructions."AGENTS.md".text;
+      context = builtins.readFile config.my.home.ai.prompts.instructions."AGENTS.md".source;
       inherit settings;
     };
 

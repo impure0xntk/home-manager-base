@@ -123,7 +123,7 @@ in
         };
       }
     );
-    "opencode/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
+    "opencode/AGENTS.md".source = config.my.home.ai.prompts.instructions."AGENTS.md".source;
   };
 
   programs = {

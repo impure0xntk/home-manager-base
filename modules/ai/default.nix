@@ -31,7 +31,7 @@ let
 in
 {
   imports = [
-    ./prompt.nix
+    ./prompts
     ./skills.nix
 
     # CLI agents module

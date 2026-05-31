@@ -90,7 +90,7 @@ in
     ];
     xdg.configFile = {
       "goose/config.yaml.orig".source = lib.my.toYaml gooseConfig;
-      "goose/AGENTS.md".text = config.my.home.ai.prompts.instructions."AGENTS.md".text;
+      "goose/AGENTS.md".source = config.my.home.ai.prompts.instructions."AGENTS.md".source;
     } // lib.optionalAttrs (cfg.providers != null) (
       builtins.listToAttrs (
         map (p: {
