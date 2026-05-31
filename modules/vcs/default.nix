@@ -42,7 +42,6 @@ let
 
 in {
   home.packages = with pkgs; [
-    gh
     ghq
     git-crypt
     commitizen
@@ -125,8 +124,16 @@ in {
       ];
     };
   };
-  programs.gh-dash = {
+  programs.gh = {
     enable = true;
+    package = pkgs.unstable.gh;
+    extensions = with pkgs.unstable; [
+      gh-poi
+      gh-notify
+    ];
+  };
+  programs.gh-dash = {
+    # enable = true; # Failed to launch on WSL
     package = pkgs.unstable.gh-dash;
     settings = {
       pager.diff = lib.getExe pkgs.unstable.diffnav;
