@@ -78,6 +78,8 @@ let
         };
       }) cfg.providers
     );
+
+    web_search = "disabled"; # To reduce search cost
   })) cfg.codex.extraSettings;
 
   profiles = {
