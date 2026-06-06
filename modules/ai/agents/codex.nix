@@ -149,6 +149,13 @@ let
     };
   };
 
+  configFiles = lib.mapAttrs' (name: profile: {
+    name = "codex/${name}.config.toml";
+    value = {
+      source = lib.my.toToml profile;
+    };
+  }) profiles;
+
   shellAliases = {
     cx = "codex";
   };
@@ -179,12 +186,6 @@ in
     };
 
     xdg.configFile = lib.mkMerge [
-      (lib.mapAttrs' (name: profile: {
-        name = "codex/${name}.config.toml";
-        value = {
-          source = lib.my.toToml profile;
-        };
-      }) profiles)
       (lib.mapAttrs' (name: agent: {
         name = "codex/agents/agent-${name}.toml";
         value = {
@@ -192,5 +193,18 @@ in
         };
       }) agents)
     ];
+
+    # Config file that includes profile info must be writable for trust directory adding
+    home.activation.fixCodexConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+    let
+      makeInstallCommands = lib.mapAttrsToList (targetPath: configAttr:
+        let
+          srcFile = if configAttr ? text then pkgs.writeText (baseNameOf targetPath) configAttr.text else configAttr.source;
+        in
+        ''
+          install -D -m 644 "${srcFile}" "${config.xdg.configHome}/${targetPath}"
+        ''
+      ) configFiles;
+    in lib.concatStringsSep "\n" makeInstallCommands);
   };
 }
