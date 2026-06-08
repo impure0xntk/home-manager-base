@@ -35,6 +35,10 @@ in
         command = "goose";
         args = [ "acp" ] ;
       };
+      "Junie CLI" = lib.optionalAttrs cfg.junie.enable {
+        command = "junie";
+        args = [ "--acp" "true" ];
+      };
     };
   };
 }
