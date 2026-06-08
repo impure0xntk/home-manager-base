@@ -55,7 +55,7 @@ let
   };
 
   settings = lib.my.deepMerge ({
-    model_reasoning_effort = "high";
+    model_reasoning_effort = "medium";
     hide_agent_reasoning = true;
 
     # policy: strict
@@ -118,7 +118,7 @@ let
       name = "planner";
       description = "Planner agent";
       model = models.planner.model;
-      model_reasoning_effort = "high";
+      model_reasoning_effort = "medium";
       sandbox_mode = "read-only";
       developer_instructions = ''
       You are the plan agent.
