@@ -7,6 +7,7 @@
 let
   # To set AGENTS.md content to default and pin it.
   # If remove this to default or config, this cannot be refer in other modules.
+  # Not used: set via harness.nix
   presets = {
     instructions = {
       "AGENTS.md".source = ./AGENTS.md;

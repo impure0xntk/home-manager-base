@@ -10,29 +10,17 @@ let
 
   dummyEnvKey = "OPENAI_API_KEY"; # just-every/code allows only OPENAI_API_KEY
 
-  # Create a wrapped version of the "codex" package.
-  # This forces $CODEX_HOME to always point to $XDG_CONFIG_DIRECTORY.
-  # See: https://github.com/openai/codex/issues/1980
-  #
-  # And integrate to litellm.
-  codexWrapProgramArgs = let
-    envVars = ["CODEX_HOME ${config.xdg.configHome}/codex"]
-      ++ (lib.optionals cfg.codex.enableCustomProvider ["${dummyEnvKey} dummy"]);
-  in 
-    lib.concatStringsSep " "
-      (lib.forEach envVars (envvar: "--set ${envvar}"));
+  codexWrapProgramArgs =
+    let
+      envVars = [ "CODEX_HOME ${config.xdg.configHome}/codex" ]
+        ++ (lib.optionals cfg.codex.enableCustomProvider [ "${dummyEnvKey} dummy" ]);
+    in
+    lib.concatStringsSep " " (lib.forEach envVars (envvar: "--set ${envvar}"));
   codex-wrapped = pkgs.symlinkJoin {
     name = "codex";
     version = pkgs.codex.version;
-
-    paths = [
-      pkgs.codex
-    ];
-
-    nativeBuildInputs = with pkgs; [
-      makeWrapper
-    ];
-
+    paths = [ pkgs.codex ];
+    nativeBuildInputs = with pkgs; [ makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/codex ${codexWrapProgramArgs}
     '';
@@ -40,47 +28,40 @@ let
   codex-acp-wrapped = pkgs.symlinkJoin {
     name = "codex-acp";
     version = pkgs.codex-acp.version;
-
-    paths = [
-      pkgs.codex-acp
-    ];
-
-    nativeBuildInputs = with pkgs; [
-      makeWrapper
-    ];
-
+    paths = [ pkgs.codex-acp ];
+    nativeBuildInputs = with pkgs; [ makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/codex-acp ${codexWrapProgramArgs}
     '';
   };
 
-  settings = lib.my.deepMerge ({
-    model_reasoning_effort = "medium";
-    hide_agent_reasoning = true;
-
-    # policy: strict
-    approval_policy = "untrusted";
-    sandbox_mode = "read-only";
-  } // (let
-    chatModel = searchModelByRole "chat";
-  in lib.optionalAttrs cfg.codex.enableCustomProvider {
-    preferred_auth_method = "apikey";
-    # model/provider
-    model = chatModel.model;
-    model_provider = "custom-${chatModel.provider}";
-    model_providers = builtins.listToAttrs (
-      builtins.map (provider: {
-        name = "custom-${provider.name}";
-        value = {
-          name = provider.name;
-          base_url = "${provider.url}";
-          env_key = dummyEnvKey;
-        };
-      }) cfg.providers
-    );
-
-    web_search = "disabled"; # To reduce search cost
-  })) cfg.codex.extraSettings;
+  settings = lib.my.deepMerge
+    ({
+      model_reasoning_effort = "medium";
+      hide_agent_reasoning = true;
+      approval_policy = "untrusted";
+      sandbox_mode = "read-only";
+    } //
+    (let
+      chatModel = searchModelByRole "chat";
+    in
+    lib.optionalAttrs cfg.codex.enableCustomProvider {
+      preferred_auth_method = "apikey";
+      model = chatModel.model;
+      model_provider = "custom-${chatModel.provider}";
+      model_providers = builtins.listToAttrs (
+        builtins.map (provider: {
+          name = "custom-${provider.name}";
+          value = {
+            name = provider.name;
+            base_url = "${provider.url}";
+            env_key = dummyEnvKey;
+          };
+        }) cfg.providers
+      );
+      web_search = "disabled";
+    }))
+    cfg.codex.extraSettings;
 
   profiles = {
     full_auto = {
@@ -94,66 +75,50 @@ let
   };
 
   hasCustomModels = cfg.codex.enableCustomProvider && cfg.providers != null;
-  codexModels = lib.listToAttrs (lib.forEach ["gpt-5.4" "gpt-5.4-mini"] (modelName: {
-    name = modelName;
-    value = {
-      provider = null;
-      url = null;
-      model = modelName;
-      roles = [];
-    };
-  }));
-  models = if hasCustomModels then rec {
-    planner = searchModelByRole "chat";
-    worker = searchModelByRole "edit";
-    reviewer = planner;
-  } else rec {
-    planner = codexModels."gpt-5.4";
-    worker = codexModels."gpt-5.4-mini";
-    reviewer = planner;
-  };
 
-  agents = {
-    planner = {
-      name = "planner";
-      description = "Planner agent";
-      model = models.planner.model;
-      model_reasoning_effort = "medium";
-      sandbox_mode = "read-only";
-      developer_instructions = ''
-      You are the plan agent.
-      You analyze the task, create detailed plans, and assign work to workers.
-      '';
-    };
-    worker = {
-      name = "worker";
-      description = "Worker agent";
-      model = models.worker.model;
-      model_reasoning_effort = "low";
-      developer_instructions = ''
-      You are the worker agent.
-      You execute the plan from the plan agent, write code, and verify results.
-      '';
-    };
-    reviewer = {
-      name = "reviewer";
-      description = "PR reviewer focused on correctness, security, and missing tests.";
-      model = models.planner.model;
-      model_reasoning_effort = "high";
-      sandbox_mode = "read-only";
-      developer_instructions = ''
-      Review code like an owner.
-      Prioritize correctness, security, behavior regressions, and missing test coverage.
-      Lead with concrete findings, include reproduction steps when possible, and avoid style-only comments unless they hide a real bug.
-      '';
-    };
-  };
+  # ── Merge built-in + extra abstract sub-agent profiles ───────────────
+  allProfiles = cfg.subagents.profiles // cfg.subagents.extraProfiles;
+
+  # Resolve model for a profile: look up by role from providers
+  resolveModel =
+    profileName:
+    let
+      profile = allProfiles.${profileName};
+      found = searchModelByRole profile.model_role;
+    in
+    if hasCustomModels && found != null then
+      found
+    else if hasCustomModels then
+      let
+        firstProvider = builtins.head cfg.providers;
+        chatModels = builtins.filter (m: lib.elem "chat" m.roles) firstProvider.models;
+      in
+      {
+        provider = firstProvider.name;
+        url = firstProvider.url;
+        model = if chatModels != [ ] then (builtins.head chatModels).model else "gpt-5.4";
+      }
+    else
+      null;
+
+  # Build Codex agent TOML entries from ALL abstract profiles
+  codexAgentConfigs = lib.mapAttrs (name: profile: {
+    inherit name;
+    description = profile.description;
+    model =
+      let m = resolveModel name;
+      in lib.optionalString (m != null) m.model;
+    model_reasoning_effort = profile.reasoning_effort;
+    sandbox_mode = profile.sandbox_mode;
+    developer_instructions = profile.instructions;
+  }) allProfiles;
+
+  # Only generate when "codex" is listed as a subagent target
+  generateCodexAgents = builtins.elem "codex" cfg.subagents.targets;
 
   configFiles = lib.mapAttrs' (name: profile: {
     name = "codex/${name}.config.toml";
-    value = {
-      source = lib.my.toToml profile;
-    };
+    value.source = lib.my.toToml profile;
   }) profiles;
 
   shellAliases = {
@@ -166,7 +131,7 @@ in
     enableCustomProvider = lib.mkEnableOption "Enable custom provider configuration";
     extraSettings = lib.mkOption {
       type = lib.types.attrs;
-      default = {};
+      default = { };
       description = "Codex agent settings";
     };
   };
@@ -186,25 +151,23 @@ in
     };
 
     xdg.configFile = lib.mkMerge [
-      (lib.mapAttrs' (name: agent: {
+      (lib.optionalAttrs generateCodexAgents (lib.mapAttrs' (name: agentCfg: {
         name = "codex/agents/agent-${name}.toml";
-        value = {
-          source = lib.my.toToml agent;
-        };
-      }) agents)
+        value.source = lib.my.toToml agentCfg;
+      }) codexAgentConfigs))
     ];
 
-    # Config file that includes profile info must be writable for trust directory adding
     home.activation.fixCodexConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-    let
-      makeInstallCommands = lib.mapAttrsToList (targetPath: configAttr:
-        let
-          srcFile = if configAttr ? text then pkgs.writeText (baseNameOf targetPath) configAttr.text else configAttr.source;
-        in
-        ''
-          install -D -m 644 "${srcFile}" "${config.xdg.configHome}/${targetPath}"
-        ''
-      ) configFiles;
-    in lib.concatStringsSep "\n" makeInstallCommands);
+      let
+        makeInstallCommands = lib.mapAttrsToList (targetPath: configAttr:
+          let
+            srcFile = if configAttr ? text then pkgs.writeText (baseNameOf targetPath) configAttr.text else configAttr.source;
+          in ''
+            install -D -m 644 "${srcFile}" "${config.xdg.configHome}/${targetPath}"
+          ''
+        ) configFiles;
+      in
+      lib.concatStringsSep "\n" makeInstallCommands
+    );
   };
 }
