@@ -105,9 +105,9 @@ in {
     package = pkgs.unstable.lazygit;
     settings = {
       git = {
-        pagers = [{
+        diffRenderers = [{
           colorArg = "always";
-          pager = "${pkgs.delta}/bin/delta --dark --paging=never";
+          command = "${pkgs.delta}/bin/delta --dark --paging=never";
         }];
         allBranchesLogCmds = [ gitGraphLogOneline ];
         branchLogCmd = gitGraphLogShort;
