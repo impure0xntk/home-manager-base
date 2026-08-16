@@ -24,7 +24,6 @@ in
 
   programs.vscode.profiles.default = {
     extensions = (pkgs.nix4vscode.forVscode [
-      "formulahendry.acp-client"
     ]);
     userSettings."acp.agents" = {
       "Codex CLI" = lib.optionalAttrs cfg.codex.enable { # TODO: fix
