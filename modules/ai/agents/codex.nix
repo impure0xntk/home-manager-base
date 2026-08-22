@@ -96,7 +96,7 @@ let
       {
         provider = firstProvider.name;
         url = firstProvider.url;
-        model = if chatModels != [ ] then (builtins.head chatModels).model else "gpt-5.4";
+        model = if chatModels != [ ] then (builtins.head chatModels).model else "gpt-5.6-luna";
       }
     else
       null;
