@@ -11,9 +11,15 @@ let
   mvnd = pkgs.my.mvnd;
   pmd = pkgs.my.pmd;
 
+  tunedJavaArgs = [
+    "-XX:+UseStringDeduplication"
+    "-XX:+UseZGC" # "-XX:+ZGenerational" is the default.
+    "-XX:+UseLargePages"
+  ];
+
   # Vmargs for VS code tools.
   # It includes tuned java args, and proxy if needed.
-  toolsVscodeVmargs = (lib.concatStringsSep " " pkgs.my.tunedJavaArgs)
+  toolsVscodeVmargs = (lib.concatStringsSep " " tunedJavaArgs)
     + (lib.optionalString cfgNetworks.proxy.enable (" " + cfgNetworks.proxy.snippet.javaOpts)); # consider proxy
 
   scripts = import ./script.nix { inherit pkgs lib config; };
@@ -105,7 +111,7 @@ in {
           java = {
             jdt.ls = {
               java.home = "${pkgs.jdk}"; # config.programs.java.package;
-              vmargs = lib.concatStringsSep " " pkgs.my.tunedJavaArgs;
+              vmargs = lib.concatStringsSep " " tunedJavaArgs;
             };
             configuration = {
               detectJdksAtStart = false;
@@ -143,7 +149,7 @@ in {
             inlayHints.parameterNames.enabled = "all";
 
             # Experimental so if not work, remove them.
-            # "java.jdt.ls.javac.enabled" = if (lib.versionAtLeast pkgs.jdk.version "23") then "on" else "off" ;
+            # "java.jdt.ls.javac.enabled" = if (lib.versionAtLeast pkgs.jdk.version "24") then "on" else "off" ;
             # "java.completion.engine" = "dom";
             sharedIndexes = {
               enabled = "on";
