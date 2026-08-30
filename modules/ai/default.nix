@@ -163,10 +163,11 @@ in
         "GitHub.copilot"
         "GitHub.copilot-chat"
 
-        "johnny-zhao.oai-compatible-copilot" # instead of BYOK
         "ozzafar.debugmcpextension"
       ]) ++ lib.optionals useContinueDev (pkgs.nix4vscode.forVscode [
         "continue.continue"
+      ]) ++ (with pkgs.my; [
+        vscode-extension-acp-client
       ]);
       userSettings =
         let
@@ -244,6 +245,7 @@ in
             useAgentSkills = true;
             customAgentInSubagent.enabled = true;
             commandCenter.enabled = false; # disabled title bar icon
+            agentHost.byokModels.enabled = true;
             mcp = lib.optionalAttrs config.my.home.mcp.hub.client.enable {
               access = "all";
               discovery.enabled = { # conflict: https://github.com/microsoft/vscode/issues/243687#issuecomment-2734934398
