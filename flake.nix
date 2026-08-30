@@ -22,6 +22,10 @@
       url = "github:numtide/nix-ai-tools";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    oranc = {
+      url = "github:linyinfeng/oranc";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -58,6 +62,7 @@
       sops-nix,
       nix-lib,
       nix-pkgs,
+      oranc,
       ...
     }: flake-utils.lib.eachSystem (
       with flake-utils.lib.system; [ # supported system
@@ -89,6 +94,7 @@
         nix4vscode.overlays.forVscode
         # Add 3rd-party packages as overlays because no overlays are provided.
         (final: prev: nix-ai-tools.packages.${system})
+        oranc.overlays.default
       ];
     in
     {

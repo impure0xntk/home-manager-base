@@ -59,6 +59,8 @@ in
       nvd
       deploy-rs
       nurl
+
+      oranc # see home-manager-base flake
     ];
 
     programs.nh = {
