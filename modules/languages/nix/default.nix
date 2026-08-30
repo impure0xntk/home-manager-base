@@ -60,7 +60,7 @@ in
       deploy-rs
       nurl
 
-      oranc # see home-manager-base flake
+      # oranc # nix binary cache management. See nixos-reactor
     ];
 
     programs.nh = {
