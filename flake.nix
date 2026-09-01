@@ -18,9 +18,9 @@
         flake-utils.follows = "flake-utils";
       };
     };
-    nix-ai-tools = {
-      url = "github:numtide/nix-ai-tools";
-      inputs.nixpkgs.follows = "nixpkgs";
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     oranc = {
       url = "github:linyinfeng/oranc";
@@ -58,7 +58,7 @@
       home-manager,
       nix4vscode,
       vscode-server,
-      nix-ai-tools,
+      llm-agents,
       sops-nix,
       nix-lib,
       nix-pkgs,
@@ -93,7 +93,7 @@
         nix-pkgs.overlays.${system}
         nix4vscode.overlays.forVscode
         # Add 3rd-party packages as overlays because no overlays are provided.
-        (final: prev: nix-ai-tools.packages.${system})
+        (final: prev: llm-agents.packages.${system})
         oranc.overlays.default
       ];
     in
