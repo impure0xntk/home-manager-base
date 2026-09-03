@@ -39,7 +39,7 @@ let
     ({
       model_reasoning_effort = "medium";
       hide_agent_reasoning = true;
-      approval_policy = "untrusted";
+      approval_policy = "on-request";
       sandbox_mode = "read-only";
     } //
     (let
