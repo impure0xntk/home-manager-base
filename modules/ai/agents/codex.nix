@@ -1,3 +1,5 @@
+# Use specific profile except not for the default one.
+#   By default, codex try to write settings to config.yaml and fail because the config.yaml is readonly.
 {
   config,
   pkgs,
