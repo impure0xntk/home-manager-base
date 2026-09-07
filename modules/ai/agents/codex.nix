@@ -66,13 +66,20 @@ let
     cfg.codex.extraSettings;
 
   profiles = {
-    full_auto = {
+    global_auto = {
+      approval_policy = "on-request";
+      sandbox_mode = "danger-full-access";
+      network_access = true;
+    };
+    workspace_auto = {
       approval_policy = "on-request";
       sandbox_mode = "workspace-write";
+      network_access = true;
     };
     readonly_quiet = {
       approval_policy = "never";
       sandbox_mode = "read-only";
+      network_access = true;
     };
   };
 
