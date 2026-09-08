@@ -43,6 +43,11 @@ let
       hide_agent_reasoning = true;
       approval_policy = "on-request";
       sandbox_mode = "read-only";
+
+      agents = {
+        max_threads = 4;
+        max_depth = 1;
+      } // subagentConfigFiles;
     } //
     (let
       chatModel = searchModelByRole "chat";
@@ -83,47 +88,34 @@ let
     };
   };
 
-  hasCustomModels = cfg.codex.enableCustomProvider && cfg.providers != null;
-
-  # ── Merge built-in + extra abstract sub-agent profiles ───────────────
   allProfiles = cfg.subagents.profiles // cfg.subagents.extraProfiles;
 
-  # Resolve model for a profile: look up by role from providers
-  resolveModel =
-    profileName:
+  generateCodexAgents = cfg.subagents.enable && builtins.elem "codex" cfg.subagents.targets;
+
+  # https://github.com/openai/codex/issues/19399#issuecomment-5102191771
+  subagentConfigFiles = lib.optionalAttrs generateCodexAgents (
+    lib.mapAttrs (name: _profile: {
+      config_file = "agents/${name}.toml";
+    }) allProfiles
+  );
+
+  codexAgentConfigs = lib.mapAttrs (
+    name: profile:
     let
-      profile = allProfiles.${profileName};
-      found = searchModelByRole profile.model_role;
+      resolvedModel = searchModelByRole profile.model_role;
     in
-    if hasCustomModels && found != null then
-      found
-    else if hasCustomModels then
-      let
-        firstProvider = builtins.head cfg.providers;
-        chatModels = builtins.filter (m: lib.elem "chat" m.roles) firstProvider.models;
-      in
-      {
-        provider = firstProvider.name;
-        url = firstProvider.url;
-        model = if chatModels != [ ] then (builtins.head chatModels).model else "gpt-5.6-luna";
-      }
-    else
-      null;
-
-  # Build Codex agent TOML entries from ALL abstract profiles
-  codexAgentConfigs = lib.mapAttrs (name: profile: {
-    inherit name;
-    description = profile.description;
-    model =
-      let m = resolveModel name;
-      in lib.optionalString (m != null) m.model;
-    model_reasoning_effort = profile.reasoning_effort;
-    sandbox_mode = profile.sandbox_mode;
-    developer_instructions = profile.instructions;
-  }) allProfiles;
-
-  # Only generate when "codex" is listed as a subagent target
-  generateCodexAgents = builtins.elem "codex" cfg.subagents.targets;
+    {
+      inherit name;
+      description = profile.description;
+      model_reasoning_effort = profile.reasoning_effort;
+      sandbox_mode = profile.sandbox_mode;
+      developer_instructions = profile.instructions;
+    }
+    // lib.optionalAttrs (cfg.codex.enableCustomProvider && resolvedModel != null) {
+      model = resolvedModel.model;
+      model_provider = "custom-${resolvedModel.provider}";
+    }
+  ) allProfiles;
 
   configFiles = lib.mapAttrs' (name: profile: {
     name = "codex/${name}.config.toml";
@@ -161,7 +153,7 @@ in
 
     xdg.configFile = lib.mkMerge [
       (lib.optionalAttrs generateCodexAgents (lib.mapAttrs' (name: agentCfg: {
-        name = "codex/agents/agent-${name}.toml";
+        name = "codex/agents/${name}.toml";
         value.source = lib.my.toToml agentCfg;
       }) codexAgentConfigs))
     ];
