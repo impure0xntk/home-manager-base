@@ -59,6 +59,7 @@ in {
         "hediet.vscode-drawio"
         "jebbs.plantuml"
         "3w36zj6.textlint"
+        "fregante.ghost-text"
       ];
       userSettings = {
         "linter.linters" = {
@@ -81,6 +82,7 @@ in {
             ];
           };
         };
+        "ghostText.fileExtension" = "md";
       };
     };
   };
