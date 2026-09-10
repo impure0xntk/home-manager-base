@@ -162,6 +162,7 @@ in
       extensions = (pkgs.nix4vscode.forVscode [
         "GitHub.copilot"
         "GitHub.copilot-chat"
+        "openai.chatgpt"
 
         "ozzafar.debugmcpextension"
       ]) ++ lib.optionals useContinueDev (pkgs.nix4vscode.forVscode [
@@ -171,21 +172,6 @@ in
       ]);
       userSettings =
         let
-          oaiCompatibleFirstProvider = builtins.head config.my.home.ai.providers;
-          oaiCompatibleModelsConfig = lib.flatten (
-            lib.forEach cfg.providers (
-              provider:
-              lib.forEach provider.models (model: {
-                id = model.model;
-                owned_by = "litellm";
-                vision = false;
-                reasoning = {
-                  effort = "auto";
-                };
-                _flattenIgnore = true;
-              })
-            )
-          );
           debugmcpServerPort = 23001;
         in {
             # This section is to avoid infinite recursion of programs.vscode.userSettings.
@@ -209,10 +195,8 @@ in
             enableTabAutocomplete = true;
             telemetryEnabled = false;
           };
-          oaicopilot = {
-            # TODO: baseurl selection
-            baseUrl = "${oaiCompatibleFirstProvider.url}/v1";
-            models = oaiCompatibleModelsConfig;
+          chatgpt = lib.optionalAttrs config.programs.codex.enable {
+            cliExecutable = lib.getExe config.programs.codex.package;
           };
           debugmcp.serverPort = debugmcpServerPort;
           # The main agent is GitHub Copilot, but it uses only remote models for completions.
