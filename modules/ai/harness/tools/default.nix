@@ -7,8 +7,8 @@
 let
   cfg = config.my.home.ai;
 
+  # Execute `rtk trust` when new files are created.
   rtkFilterPath = language: ./rtk/filters/${language}.toml;
-
   rtkFiltersCombined = pkgs.writeText "filters.toml" (
     lib.concatStringsSep "\n" (
       [ (builtins.readFile ./rtk/filters/common.toml) ]
@@ -29,6 +29,7 @@ let
       "rtk/filters.toml".source = rtkFiltersCombined;
     }
   ];
+
 in
 {
   options.my.home.ai.harness.codingAgentTools =
@@ -61,6 +62,11 @@ in
         rtk = {
           package = pkgs.rtk;
           prompt = builtins.readFile ./RTK.md;
+        };
+        codegraph = {
+          package = pkgs.my.codegraph;
+          # Self maid
+          prompt = builtins.readFile ./CODEGRAPH.md;
         };
       };
     };
