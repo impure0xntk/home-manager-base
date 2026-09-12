@@ -31,8 +31,6 @@ let
 in
 {
   imports = [
-    ./prompts
-
     # Harness (Nix-native skill distribution, replaces skills.nix)
     ./harness.nix
 
@@ -241,7 +239,7 @@ in
               };
             };
             promptFilesLocations = {
-              "${config.my.home.ai.prompts.baseDir}/instructions" = true;
+              "${config.my.home.ai.harness.promptsDir}" = true;
               _flattenIgnore = true;
             };
           };

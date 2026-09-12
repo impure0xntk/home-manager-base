@@ -171,7 +171,7 @@ in
         }
       );
 
-      "opencode/AGENTS.md".source = config.my.home.ai.prompts.instructions."AGENTS.md".source;
+      "opencode/AGENTS.md".source = config.my.home.ai.harness.agentsMd.source;
     }
     (lib.optionalAttrs generateOpencodeAgents opencodeAgentFiles)
   ];

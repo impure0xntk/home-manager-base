@@ -140,7 +140,7 @@ in
     programs.codex = {
       enable = true;
       package = codex-wrapped;
-      context = builtins.readFile config.my.home.ai.prompts.instructions."AGENTS.md".source;
+      context = builtins.readFile config.my.home.ai.harness.agentsMd.source;
       inherit settings;
     };
 

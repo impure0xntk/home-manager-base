@@ -131,7 +131,7 @@ in
     xdg.configFile = lib.mkMerge [
       {
         "goose/config.yaml.orig".source = lib.my.toYaml gooseConfig;
-        "goose/AGENTS.md".source = config.my.home.ai.prompts.instructions."AGENTS.md".source;
+        "goose/AGENTS.md".source = config.my.home.ai.harness.agentsMd.source;
       }
       (lib.optionalAttrs generateGooseRecipes (lib.mapAttrs' (name: recipe: {
         name = "goose/recipes/subagent-${name}.yaml";

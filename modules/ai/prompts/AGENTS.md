@@ -66,3 +66,6 @@ Use environment variables.
 - Prevent Injection: Always use parameterized queries for database interactions.
 - Sanitize Input: Always validate and sanitize user inputs to prevent XSS.
 - Access Control: Always implement authentication and authorization on new endpoints.
+
+---
+
