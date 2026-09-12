@@ -25,6 +25,7 @@ let
         wrapProgram $out/bin/junie ${proxyOpts} \
           --set JUNIE_HOME  ${config.xdg.dataHome}/junie \
           --set JUNIE_SHARE_ANONYMOUS_STATISTICS false \
+          --set JUNIE_SKILL_LOCATIONS ${config.my.home.ai.harness.skillsDir} \
           --set JUNIE_CONFIG_LOCATION ${config.xdg.configFile.${configPath}.source}
       '';
   };

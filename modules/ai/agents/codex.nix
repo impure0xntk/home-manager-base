@@ -14,7 +14,9 @@ let
 
   codexWrapProgramArgs =
     let
-      envVars = [ "CODEX_HOME ${config.xdg.configHome}/codex" ]
+      envVars = [
+        "CODEX_HOME ${config.xdg.configHome}/codex"
+      ]
         ++ (lib.optionals cfg.codex.enableCustomProvider [ "${dummyEnvKey} dummy" ]);
     in
     lib.concatStringsSep " " (lib.forEach envVars (envvar: "--set ${envvar}"));
@@ -92,7 +94,7 @@ let
 
   generateCodexAgents = cfg.subagents.enable && builtins.elem "codex" cfg.subagents.targets;
 
-  # https://github.com/openai/codex/issues/19399#issuecomment-5102191771
+  # https://github.com/openai/codex/issues/19399#issuecomment-[PHONE]
   subagentConfigFiles = lib.optionalAttrs generateCodexAgents (
     lib.mapAttrs (name: _profile: {
       config_file = "agents/${name}.toml";
@@ -156,6 +158,11 @@ in
         name = "codex/agents/${name}.toml";
         value.source = lib.my.toToml agentCfg;
       }) codexAgentConfigs))
+      {
+        "codex/skills" = {
+          source = config.my.home.ai.harness.skillsDir;
+        };
+      }
     ];
 
     home.activation.fixCodexConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] (
