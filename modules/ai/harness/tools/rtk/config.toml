@@ -1,0 +1,20 @@
+[display]
+colors = false
+emoji = false
+
+[filters]
+ignore_dirs = [
+    ".git",
+    "node_modules",
+    "target",
+    "__pycache__",
+    ".venv",
+    "vendor",
+]
+ignore_files = ["*.lock", "*.min.js", "*.min.css"]
+
+[telemetry]
+enable = false
+
+[tracking]
+enable = false

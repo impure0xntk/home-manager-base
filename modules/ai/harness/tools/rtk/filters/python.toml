@@ -1,0 +1,29 @@
+[filters.uv]
+description = "Compact uv output — drop resolver/install preamble, keep the wrapped command output"
+match_command = "^uv\\s+(run|sync|pip|lock|add|remove)\\b"
+strip_ansi = true
+filter_stderr = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^Resolved \\d+ package",
+  "^Prepared \\d+ package",
+  "^Installed \\d+ package",
+  "^Audited \\d+ package",
+  "^Uninstalled \\d+ package",
+  "^\\s*[-+] \\S+==",
+  "^Using CPython",
+  "^Creating virtual environment",
+]
+truncate_lines_at = 150
+max_lines = 80
+on_empty = "uv: ok"
+
+[[tests.uv]]
+name = "strips resolver preamble, keeps program output"
+input = """
+Resolved 42 packages in 12ms
+Installed 3 packages in 40ms
+ + click==8.1.7
+Building the docs
+"""
+expected = "Building the docs"

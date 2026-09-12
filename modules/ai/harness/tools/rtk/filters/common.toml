@@ -1,0 +1,10 @@
+[filters.direnv]
+description = "Strip direnv exec loading/using noise"
+match_command = "^direnv\\s+exec\\b"
+filter_stderr = true
+strip_ansi = true
+strip_lines_matching = [
+  "^direnv: loading ",
+  "^direnv: using ",
+  "^direnv: nix-direnv: ",
+]

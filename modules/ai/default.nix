@@ -32,7 +32,7 @@ in
 {
   imports = [
     # Harness (Nix-native skill distribution, replaces skills.nix)
-    ./harness.nix
+    ./harness
 
     # Sub-agent profiles (planner/worker/reviewer)
     ./subagents.nix
