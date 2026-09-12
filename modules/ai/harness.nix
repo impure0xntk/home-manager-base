@@ -16,27 +16,31 @@ let
       revision = "34040c9c568585f6929bedeaad110ad08f079624"; # e.g. "abc123def456..." — set to pin
       hash = "sha256-tI4bTTBfI1ylltklGyiyA7pLoKXEWtrT6lrmwrpLbCw=";
       description = "Anthropic official skills";
+      includes = [ "mcp-builder" "doc-coauthoring" "docx" "pdf" "pptx" "xlsx" ];
+      excludes = [ ];
     };
     obra-superpowers = {
       url = "https://github.com/obra/superpowers.git";
       revision = "b36e0829c6d0140e93cfef2ca599b1b07d4a7797";
       hash = "sha256-EsGNO0dULWf5Bx6bGrCv2kI2Z8aKH0kRvGiuN23wChQ=";
       description = "Obra's superpowers skill set";
+      includes = [ ];
+      excludes = [ ];
     };
     awesome-copilot = {
       url = "https://github.com/github/awesome-copilot.git";
       revision = "7568a482ce2df38f8965ab5336a3220db796a4ba";
       hash = "sha256-wMNloxg/mKRu6yr6pj1crdk08D+wTv/kjIcjrkHriw8=";
       description = "GitHub Copilot community resources";
+      includes = [ "acquire-codebase-knowledge" "agent.*" "autoresearch" "conventional.*" "create-specification" "create-readme" "create-tldr-page" ];
+      excludes = [ ];
     };
   };
 
-  # Default prompts - empty by default, users can add their own
   defaultPrompts = { };
 
   defaultAgentsMd = pkgs.writeText "AGENTS.md" (
     (builtins.readFile ./prompts/AGENTS.md)
-    /*
     + ''
       ## Installed Skills
 
@@ -45,17 +49,70 @@ let
           - Source: `${path}`
       '') skillDerivationSet)}
     ''
-    */
   );
 
-  # Build a nix fetchurl/fetchgit for pinned skills to get their hash
-  # This ensures the content matches what we expect
+  matchPatterns = patterns: name:
+    lib.any (pattern: builtins.match ("^" + pattern + "$") name != null) patterns;
+
+  # Filter skills based on includes/excludes options using regex patterns
+  # Output structure: flat directory with repoName-skillName
+  filterSkills = name: value: src:
+    let
+      # Get skill names from the skills/ subdirectory or root
+      skillsSubDir = "${src}/skills";
+      skillNames = if builtins.pathExists skillsSubDir
+        then builtins.attrNames (builtins.readDir skillsSubDir)
+        else builtins.attrNames (builtins.readDir src);
+
+      filteredNames = lib.filter (skillName:
+        let
+          inIncludes = value.includes == [ ] || matchPatterns value.includes skillName;
+          inExcludes = matchPatterns value.excludes skillName;
+        in
+          inIncludes && !inExcludes
+      ) skillNames;
+    in
+    pkgs.runCommand "${name}-filtered" { } ''
+      mkdir -p $out
+      # Copy filtered skills from skills/ subdirectory if it exists
+      if [ -d ${src}/skills ]; then
+        for skill in ${lib.concatStringsSep " " filteredNames}; do
+          cp -r ${src}/skills/$skill $out/${name}-$skill 2>/dev/null || true
+        done
+      else
+        # Otherwise copy from root
+        for skill in ${lib.concatStringsSep " " filteredNames}; do
+          cp -r ${src}/$skill $out/${name}-$skill 2>/dev/null || true
+        done
+      fi
+    '';
+
+  # Fetch and filter skills
   skillDerivationSet = lib.mapAttrs (name: value:
-    pkgs.fetchgit {
-      inherit (value) url;
-      rev = value.revision;
-      sha256 = value.hash;
-    }) cfg.harness.skills;
+    let
+      fetched = pkgs.fetchgit {
+        inherit (value) url;
+        rev = value.revision;
+        sha256 = value.hash;
+      };
+    in
+    filterSkills name value fetched
+  ) cfg.harness.skills;
+
+  # Flatten all skills into individual entries for xdg.configFile
+  # Each skill gets its own symlink directly under ai/skills/
+  # Map each repo's output to individual skill entries, then merge all
+  repoSkills = lib.mapAttrs (repoName: repoPath:
+    let
+      skillDirs = builtins.attrNames (builtins.readDir repoPath);
+    in
+    lib.listToAttrs (lib.map (skillName: {
+      name = skillName;
+      value = { source = "${repoPath}/${skillName}"; };
+    }) skillDirs)
+  ) skillDerivationSet;
+
+  flatSkills = builtins.foldl' (acc: skills: acc // skills) { } (builtins.attrValues repoSkills);
 in
 {
   options.my.home.ai.harness = with lib; with lib.types; {
@@ -111,6 +168,29 @@ in
             type = str;
             default = "";
             description = "Human-readable description of this skill";
+          };
+          includes = mkOption {
+            type = listOf str;
+            default = [ ];
+            description = ''
+              List of regex patterns to include from the repository.
+              If empty, all skills are included (subject to excludes).
+              Patterns are anchored (^pattern$) for full string matching.
+              Examples:
+                includes = [ "claude-api" "doc-coauthoring" ];  # exact match
+                includes = [ "agent.*" "conventional.*" "create-.*" ];  # regex patterns
+            '';
+          };
+          excludes = mkOption {
+            type = listOf str;
+            default = [ ];
+            description = ''
+              List of regex patterns to exclude from the repository.
+              Patterns are anchored (^pattern$) for full string matching.
+              Examples:
+                excludes = [ "brand-guidelines" "canvas-design" ];  # exact match
+                excludes = [ ".*-deprecated" "test-.*" ];           # regex patterns
+            '';
           };
         };
       });
@@ -212,10 +292,10 @@ in
     ];
 
     xdg.configFile = lib.mkMerge [
-      (lib.mapAttrs' (name: path: {
-          name = "ai/skills/${name}";
-          value = { source = path; };
-      }) skillDerivationSet)
+      (lib.mapAttrs' (name: entry: {
+        name = "ai/skills/${name}";
+        value = entry;
+      }) flatSkills)
       (lib.mapAttrs' (name: prompt: {
         name = "ai/prompts/${name}";
         value = {
