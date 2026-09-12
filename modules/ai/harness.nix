@@ -15,7 +15,6 @@ let
       url = "https://github.com/anthropics/skills.git";
       revision = "34040c9c568585f6929bedeaad110ad08f079624"; # e.g. "abc123def456..." — set to pin
       hash = "sha256-tI4bTTBfI1ylltklGyiyA7pLoKXEWtrT6lrmwrpLbCw=";
-      description = "Anthropic official skills";
       includes = [ "mcp-builder" "doc-coauthoring" "docx" "pdf" "pptx" "xlsx" ];
       excludes = [ ];
     };
@@ -23,7 +22,6 @@ let
       url = "https://github.com/obra/superpowers.git";
       revision = "b36e0829c6d0140e93cfef2ca599b1b07d4a7797";
       hash = "sha256-EsGNO0dULWf5Bx6bGrCv2kI2Z8aKH0kRvGiuN23wChQ=";
-      description = "Obra's superpowers skill set";
       includes = [ ];
       excludes = [ ];
     };
@@ -31,7 +29,6 @@ let
       url = "https://github.com/github/awesome-copilot.git";
       revision = "7568a482ce2df38f8965ab5336a3220db796a4ba";
       hash = "sha256-wMNloxg/mKRu6yr6pj1crdk08D+wTv/kjIcjrkHriw8=";
-      description = "GitHub Copilot community resources";
       includes = [ "acquire-codebase-knowledge" "agent.*" "autoresearch" "conventional.*" "create-specification" "create-readme" "create-tldr-page" ];
       excludes = [ ];
     };
@@ -41,14 +38,21 @@ let
 
   defaultAgentsMd = pkgs.writeText "AGENTS.md" (
     (builtins.readFile ./prompts/AGENTS.md)
-    + ''
-      ## Installed Skills
+    +
+    (lib.optionalString (cfg.harness.codingAgentTools != { }) ''
+      ## Coding Agent Tools
 
-      ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: path: ''
-        - **${name}**: ${cfg.harness.skills.${name}.description}
-          - Source: `${path}`
-      '') skillDerivationSet)}
-    ''
+      The following tools are available exclusively inside coding agent wrappers.
+      They are automatically injected into the agent's environment.
+
+      ${lib.concatStringsSep "\n\n" (
+        lib.mapAttrsToList (name: tool:
+          lib.optionalString (tool.prompt != "") ''
+            ${tool.prompt}
+          ''
+        ) cfg.harness.codingAgentTools
+      )}
+    '')
   );
 
   matchPatterns = patterns: name:
@@ -113,6 +117,82 @@ let
   ) skillDerivationSet;
 
   flatSkills = builtins.foldl' (acc: skills: acc // skills) { } (builtins.attrValues repoSkills);
+
+  # Default coding agent tool configurations
+  defaultCodingAgentToolsXdgConfigDirs = [
+    {
+      "rtk/config.toml".source = lib.my.toToml {
+        tracking.enable = false;
+        display = {
+          colors = false;
+          emoji = false;
+        };
+        filters = {
+          ignore_dirs = [
+            ".git"
+            "node_modules"
+            "target"
+            "__pycache__"
+            ".venv"
+            "vendor"
+          ];
+          ignore_files = [
+            "*.lock"
+            "*.min.js"
+            "*.min.css"
+          ];
+        };
+        telemetry.enable = false;
+      };
+      "rtk/filters.toml".source = lib.my.toToml {
+        filters = {
+          direnv = {
+            description = "Strip direnv exec loading/using noise";
+            match_command = ''^direnv\\s+exec\\b'';
+            filter_stderr = true;
+            strip_ansi = true;
+            strip_lines_matching = [
+              "^direnv: loading "
+              "^direnv: using "
+              "^direnv: nix-direnv: "
+            ];
+          };
+          nix = lib.optionalAttrs config.my.home.languages.nix.enable {
+            description = "Strip nix run/shell/develop/build/flake-check store-fetch boilerplate";
+            match_command = ''^nix\\s+(run|shell|develop|build|flake\\s+check)\\b'';
+            filter_stderr = true;
+            strip_ansi = true;
+            strip_lines_matching = [
+              ''^\\s*$''
+              ''^this path will be fetched''
+              ''^these \\d+ paths will be fetched''
+              ''^\\s+/nix/store/''
+              ''^copying path '.*' from '.*'\\.\\.\\.''
+              ''^warning: Git tree '.*' is dirty''
+            ];
+          };
+          mvn-build = lib.optionalAttrs config.my.home.languages.java.enable {
+            description = "Compact Maven build output";
+            match_command = ''^mvn\\s+(compile|package|clean|install)\\b'';
+            strip_ansi = true;
+            strip_lines_matching = [
+              ''^\\[INFO\\] ---''
+              ''^\\[INFO\\] Building\\s''
+              ''^\\[INFO\\] Downloading\\s''
+              ''^\\[INFO\\] Downloaded\\s''
+              ''^\\[INFO\\]\\s*$''
+              ''^\\s*$''
+              ''^Downloading:''
+              ''^Downloaded:''
+              ''^Progress''
+            ];
+            max_lines = 50;
+            on_empty = "mvn: ok";
+          };
+        };
+      };
+    }
+  ];
 in
 {
   options.my.home.ai.harness = with lib; with lib.types; {
@@ -135,7 +215,9 @@ in
         my-home.ai.harness.skills.my-skill = {
           url = "https://github.com/org/skill-repo.git";
           revision = "abc123def456789...";  # Pin to exact commit
-          description = "My custom skill";
+          hash = "sha256-...";  # Optional additional integrity check
+          includes = [ "skill-name" ];  # Optional: include specific skills
+          excludes = [ ];  # Optional: exclude specific skills
         };
         ```
       '';
@@ -143,8 +225,7 @@ in
         options = {
           url = mkOption {
             type = str;
-            description = "Git URL (https:// or git://) or absolute local path (starting with /)";
-            example = "https://github.com/anthropics/skills.git";
+            description = "Git repository URL (https:// or git@).";
           };
           revision = mkOption {
             type = nullOr str;
@@ -163,11 +244,6 @@ in
               If provided, Nix will verify the fetched content matches this hash.
               Use `nix-prefetch-git <url> --rev <revision>` to obtain.
             '';
-          };
-          description = mkOption {
-            type = str;
-            default = "";
-            description = "Human-readable description of this skill";
           };
           includes = mkOption {
             type = listOf str;
@@ -271,6 +347,52 @@ in
       };
     };
 
+    # Coding agent specific tools - only available inside agent wrappers
+    codingAgentTools = mkOption {
+      description = ''
+        Tools that are only available inside coding agent wrappers (codex, junie, goose, etc.).
+        Each tool defines:
+        - package: The Nix package to provide
+        - envVars: Environment variables to set in the agent wrapper
+        - prompt: Prompt fragment to include in AGENTS.md for agents
+        - wrappers: List of agent wrapper names to inject into (default: all)
+
+        Example:
+        ```nix
+        my-home.ai.harness.codingAgentTools.rtk = {
+          package = pkgs.rtk;
+          envVars = { RTK_ENABLED = "1"; };
+          prompt = "Use 'rtk' prefix for all shell commands to reduce token usage: rtk git status, rtk cargo test";
+          wrappers = [ "codex" "junie" "goose" ];
+        };
+        ```
+      '';
+      type = attrsOf (submodule {
+        options = {
+          package = mkOption {
+            type = package;
+            description = "The Nix package to provide for this tool.";
+          };
+          envVars = mkOption {
+            type = attrsOf str;
+            default = { };
+            description = "Environment variables to set in the agent wrapper.";
+          };
+          prompt = mkOption {
+            type = str;
+            default = "";
+            description = "Prompt fragment to include in AGENTS.md for agents.";
+          };
+        };
+      });
+      default = {
+        rtk = {
+          package = pkgs.rtk;
+          prompt = builtins.readFile ./prompts/RTK.md;
+        };
+      };
+    };
+
     skillsDir = mkOption {
       type = path;
       default = "${config.xdg.configHome}/ai/skills";
@@ -287,11 +409,7 @@ in
   };
 
   config = lib.mkIf cfg.harness.enable {
-    home.packages = with pkgs; [
-      rtk
-    ];
-
-    xdg.configFile = lib.mkMerge [
+    xdg.configFile = lib.mkMerge ([
       (lib.mapAttrs' (name: entry: {
         name = "ai/skills/${name}";
         value = entry;
@@ -307,6 +425,6 @@ in
           source = cfg.harness.agentsMd.source or (pkgs.writeText "AGENTS.md" cfg.harness.agentsMd.text);
         };
       })
-    ];
+    ] ++ defaultCodingAgentToolsXdgConfigDirs);
   };
 }
