@@ -12,24 +12,19 @@ let
 
   dummyEnvKey = "OPENAI_API_KEY"; # just-every/code allows only OPENAI_API_KEY
 
-  # Build package list and environment variables for codex wrapper
-  toolPackages = lib.mapAttrsToList (name: tool: tool.package) cfg.harness.codingAgentTools;
-  toolEnvVars = lib.concatMap (tool: lib.mapAttrsToList (name: value: "${name} ${value}") tool.envVars) (builtins.attrValues cfg.harness.codingAgentTools);
-
   codexWrapProgramArgs =
     let
       envVars = [
         "CODEX_HOME ${config.xdg.configHome}/codex"
       ]
-        ++ (lib.optionals cfg.codex.enableCustomProvider [ "${dummyEnvKey} dummy" ])
-        ++ toolEnvVars;
+        ++ (lib.optionals cfg.codex.enableCustomProvider [ "${dummyEnvKey} dummy" ]);
     in
     lib.concatStringsSep " " (lib.forEach envVars (envvar: "--set ${envvar}"));
 
   codex-wrapped = pkgs.symlinkJoin {
     name = "codex";
     version = pkgs.codex.version;
-    paths = [ pkgs.codex ] ++ toolPackages;
+    paths = [ pkgs.codex ];
     nativeBuildInputs = with pkgs; [ makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/codex ${codexWrapProgramArgs}
@@ -38,7 +33,7 @@ let
   codex-acp-wrapped = pkgs.symlinkJoin {
     name = "codex-acp";
     version = pkgs.codex-acp.version;
-    paths = [ pkgs.codex-acp ] ++ toolPackages;
+    paths = [ pkgs.codex-acp ];
     nativeBuildInputs = with pkgs; [ makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/codex-acp ${codexWrapProgramArgs}

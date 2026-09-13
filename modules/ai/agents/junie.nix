@@ -11,23 +11,18 @@ let
   configPath = "junie/config.json";
   agentsPath = "junie/agents";
 
-  # Build package list and environment variables for codex wrapper
-  toolPackages = lib.mapAttrsToList (name: tool: tool.package) cfg.harness.codingAgentTools;
-  toolEnvVars = lib.concatMap (tool: lib.mapAttrsToList (name: value: "${name} ${value}") tool.envVars) (builtins.attrValues cfg.harness.codingAgentTools);
-
   junie-wrapped = pkgs.symlinkJoin {
     name = "junie";
     version = pkgs.junie.version;
-    paths = [ pkgs.junie ] ++ toolPackages;
+    paths = [ pkgs.junie ];
     nativeBuildInputs = with pkgs; [ makeWrapper ];
     postBuild =
       let
         cfgProxy = config.my.home.networks.proxy;
         proxyOpts = if cfgProxy.enable then ''--set JAVA_TOOL_OPTIONS "${cfgProxy.snippet.javaOpts}"'' else "";
-        junieToolEnvVars = lib.concatStringsSep " " (lib.map (e: "--set ${e}") toolEnvVars);
       in
       ''
-        wrapProgram $out/bin/junie ${proxyOpts} ${junieToolEnvVars} \
+        wrapProgram $out/bin/junie ${proxyOpts} \
           --set JUNIE_HOME  ${config.xdg.dataHome}/junie \
           --set JUNIE_SHARE_ANONYMOUS_STATISTICS false \
           --set JUNIE_SKILL_LOCATIONS ${config.my.home.ai.harness.skillsDir} \

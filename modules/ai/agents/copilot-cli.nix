@@ -8,21 +8,16 @@
 let
   cfg = config.my.home.ai;
 
-  # Build package list and environment variables for codex wrapper
-  toolPackages = lib.mapAttrsToList (name: tool: tool.package) cfg.harness.codingAgentTools;
-  toolEnvVars = lib.concatMap (tool: lib.mapAttrsToList (name: value: "${name} ${value}") tool.envVars) (builtins.attrValues cfg.harness.codingAgentTools);
-
   # wrapped copilot-cli: force $COPILOT_HOME to $XDG_CONFIG_DIRECTORY
   # See: https://github.com/github/copilot-cli/issues/1750
   copilot-cli-wrapped = pkgs.symlinkJoin {
     name = "copilot-cli";
     version = pkgs.copilot-cli.version;
-    paths = [ pkgs.copilot-cli ] ++ toolPackages;
+    paths = [ pkgs.copilot-cli ];
     nativeBuildInputs = with pkgs; [ makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/copilot \
-        --set COPILOT_HOME ${config.xdg.configHome}/copilot \
-        ${lib.concatStringsSep " " (lib.map (e: "--set ${e}") toolEnvVars)}
+        --set COPILOT_HOME ${config.xdg.configHome}/copilot
     '';
   };
 

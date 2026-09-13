@@ -12,8 +12,8 @@ let
     + (lib.optionalString (cfg.harness.codingAgentTools != { }) ''
       ## Coding Agent Tools
 
-      The following tools are available exclusively inside coding agent wrappers.
-      They are automatically injected into the agent's environment.
+      The following tools are available as standalone commands and to coding agents.
+      Their environment variables are configured by the installed command wrappers.
 
       ${lib.concatStringsSep "\n\n" (
         lib.mapAttrsToList (

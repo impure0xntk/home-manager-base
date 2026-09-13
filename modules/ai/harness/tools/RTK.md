@@ -5,7 +5,7 @@ Prefix every shell command with `rtk`: `rtk git status`, `rtk cargo test`,
 `rtk git add . && rtk git commit -m "msg"`. Commands RTK has no filter for
 run as-is, so the prefix is always safe.
 
-# Command output
+## Command Output
 
 Command output here is condensed to save tokens, keeping every signal and
 dropping costly noise. Treat it as the complete result: run commands

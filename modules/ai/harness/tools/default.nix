@@ -34,6 +34,21 @@ let
       "ctx/config.toml".source = ./ctx/config.toml;
     }
   ];
+
+  createWrappedPackage = package: envVars: (pkgs.writeShellApplication {
+    name = package.pname;
+    runtimeInputs = [ package ];
+    text = ''
+      exec ${lib.getExe package} "$@"
+    '';
+  }).overrideAttrs (prev:
+  let
+    envVarsStr = lib.concatStringsSep " " (lib.mapAttrsToList (n: v: "--set ${n} ${v}") envVars);
+  in {
+    postInstall = prev.postInstall or "" + ''
+      wrapProgram $out/bin/${prev.meta.mainProgram} ${envVarsStr}
+    '';
+  });
 in
 {
   options.my.home.ai.harness.codingAgentTools =
@@ -41,7 +56,7 @@ in
     with lib.types;
     mkOption {
       description = ''
-        Tools that are only available inside coding agent wrappers (codex, junie, goose, etc.).
+        Tools exposed as standalone commands and to coding agents (codex, junie, goose, etc.).
         Each tool defines a package, environment variables, and a prompt fragment.
       '';
       type = attrsOf (submodule {
@@ -73,8 +88,7 @@ in
           prompt = builtins.readFile ./CODEGRAPH.md;
         };
         ctx = {
-          package = pkgs.ctx;
-          envVars = {
+          package = createWrappedPackage pkgs.ctx {
             CTX_DATA_ROOT = "${config.xdg.dataHome}/ctx";
             CTX_ANALYTICS_ENABLED = "false";
             CTX_UPGRADE_AUTO = "off";
@@ -85,13 +99,13 @@ in
     };
 
   config = lib.mkIf cfg.harness.enable {
+    home.packages = lib.forEach (builtins.attrValues config.my.home.ai.harness.codingAgentTools) (v: v.package);
     xdg.configFile = lib.mkMerge defaultCodingAgentToolsXdgConfigDirs;
     # xdg.dataFile = lib.mkMerge defaultCodingAgentToolsXdgDataDirs;
 
     systemd.user.services.ctx-history =
     let
       ctxBin = lib.getExe config.my.home.ai.harness.codingAgentTools.ctx.package;
-      ctxEnvVars = config.my.home.ai.harness.codingAgentTools.ctx.envVars;
     in {
       Unit.Description = "Index local coding-agent history for CTX";
       Service = {
@@ -101,7 +115,6 @@ in
         TimeoutStartSec = "10min";
         Restart = "on-failure";
         RestartSec = 5;
-        Environment = lib.mapAttrsToList (name: value: "${name}=${value}") ctxEnvVars;
       };
       Install.WantedBy = ["default.target"];
     };
