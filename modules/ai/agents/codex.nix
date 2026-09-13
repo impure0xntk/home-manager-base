@@ -160,8 +160,8 @@ in
         value.source = lib.my.toToml agentCfg;
       }) codexAgentConfigs))
       {
-        "codex/skills" = {
-          source = config.my.home.ai.harness.skillsDir;
+        "codex/skills" = lib.optionalAttrs config.my.home.ai.harness.enable {
+          source = config.lib.file.mkOutOfStoreSymlink config.my.home.ai.harness.skillsDir;
         };
       }
     ];

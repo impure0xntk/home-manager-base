@@ -82,8 +82,8 @@ in
     xdg.configFile = lib.mkMerge [
       { "copilot/settings.json".text = builtins.toJSON settings; }
       {
-        "copilot/skills" = {
-          source = config.my.home.ai.harness.skillsDir;
+        "copilot/skills" = lib.optionalAttrs config.my.home.ai.harness.enable {
+          source = config.lib.file.mkOutOfStoreSymlink config.my.home.ai.harness.skillsDir;
         };
       }
       (lib.optionalAttrs generateCopilotAgents copilotAgentConfigs)
