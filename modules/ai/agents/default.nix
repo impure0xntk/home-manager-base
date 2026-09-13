@@ -23,15 +23,5 @@ in
   programs.vscode.profiles.default = {
     extensions = (pkgs.nix4vscode.forVscode [
     ]);
-    userSettings."acp.agents" = {
-      "Codex CLI" = lib.optionalAttrs cfg.codex.enable { # TODO: fix
-        command = "codex-acp"; # For details, see codex.nix
-        args = [ ];
-      };
-      "Junie CLI" = lib.optionalAttrs cfg.junie.enable {
-        command = "junie";
-        args = [ "--acp" "true" ];
-      };
-    };
   };
 }

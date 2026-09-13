@@ -165,8 +165,6 @@ in
         "ozzafar.debugmcpextension"
       ]) ++ lib.optionals useContinueDev (pkgs.nix4vscode.forVscode [
         "continue.continue"
-      ]) ++ (with pkgs.my; [
-        vscode-extension-acp-client
       ]);
       userSettings =
         let
