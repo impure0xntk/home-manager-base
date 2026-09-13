@@ -245,7 +245,6 @@ let
     })
     -- lazygit-nvim
     map("n", "<Leader>lg", ":LazyGitCurrentFile<CR>", { desc = "Lazygit", silent = true, })
-    })
 
     --[[
       The LSP related plugins only enable on native only
