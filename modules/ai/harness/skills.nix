@@ -44,6 +44,14 @@ let
       ];
       excludes = [ ];
     };
+    agentic-awesome-skills =  {
+      url = "https://github.com/sickn33/agentic-awesome-skills.git";
+      revision = "46cafc80378eabd5b04b1d32ad1e96a00476df59";
+      hash = "sha256-Rz6Fb9GTOLg+eC/C9f41yj4DcNg2X1gAyrBmYrsIECM=";
+      includes = [
+        "debugging.*"
+      ];
+    };
     "5-whys" = {
       url = "https://github.com/awesome-skills/5-whys-skill";
       revision = "353a57673f1978de4b47fb363bb065e2547fd024";
