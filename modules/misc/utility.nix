@@ -54,7 +54,7 @@ let
     gitRoot = pkgs.writeShellApplication {
       name = "git-root";
       runtimeInputs = [pkgs.busybox pkgs.git];
-      text = "${pkgs.busybox}/bin/readlink -f \"$(${pkgs.git}/bin/git rev-parse --git-dir)\" | sed 's/\\\/\\\.git.*//g'";
+      text = "${pkgs.busybox}/bin/readlink -f \"$(${pkgs.git}/bin/git rev-parse --git-dir)\" | sed 's/\\/\\.git.*//g'";
     };
     gitBlameRg = pkgs.writeShellApplication { # TODO: oil
       name = "gitblamerg";

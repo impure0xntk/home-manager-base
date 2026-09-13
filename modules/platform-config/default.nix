@@ -10,7 +10,7 @@ in {
   options.my.home.platform = {
     type = mkOption {
       type = enum directoryNames;
-      description = "Platform type string. available string is the directory name of $\{repository root}/platform/*";
+      description = "Platform type string. available string is the directory name of \${repository root}/platform/*";
       example = "wsl";
       default = "native-linux";
     };

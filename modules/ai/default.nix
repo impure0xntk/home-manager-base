@@ -192,7 +192,7 @@ in
             telemetryEnabled = false;
           };
           chatgpt = lib.optionalAttrs config.programs.codex.enable {
-            cliExecutable = lib.getExe config.programs.codex.package;
+            cliExecutable = lib.getExe' config.programs.codex.package "codex";
           };
           debugmcp.serverPort = debugmcpServerPort;
           # The main agent is GitHub Copilot, but it uses only remote models for completions.

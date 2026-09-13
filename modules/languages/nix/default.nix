@@ -10,7 +10,7 @@ let
   statix = pkgs.unstable.statix;
 
   # For nixd
-  formatterPath = lib.getExe pkgs.nixfmt-rfc-style;
+  formatterPath = lib.getExe pkgs.nixfmt;
   serverSettings = {
     "nixd" = {
       "formatting" = {
@@ -54,7 +54,7 @@ in
     };
 
     home.packages = with pkgs; [
-      nixfmt-rfc-style
+      nixfmt
       nix-tree
       nvd
       deploy-rs
