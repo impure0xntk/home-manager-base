@@ -29,7 +29,11 @@ let
       "rtk/filters.toml".source = rtkFiltersCombined;
     }
   ];
-
+  defaultCodingAgentToolsXdgDataDirs = [
+    {
+      "ctx/config.toml".source = ./ctx/config.toml;
+    }
+  ];
 in
 {
   options.my.home.ai.harness.codingAgentTools =
@@ -68,10 +72,38 @@ in
           # Self maid
           prompt = builtins.readFile ./CODEGRAPH.md;
         };
+        ctx = {
+          package = pkgs.ctx;
+          envVars = {
+            CTX_DATA_ROOT = "${config.xdg.dataHome}/ctx";
+            CTX_ANALYTICS_ENABLED = "false";
+            CTX_UPGRADE_AUTO = "off";
+          };
+          prompt = builtins.readFile ./CTX.md;
+        };
       };
     };
 
   config = lib.mkIf cfg.harness.enable {
     xdg.configFile = lib.mkMerge defaultCodingAgentToolsXdgConfigDirs;
+    # xdg.dataFile = lib.mkMerge defaultCodingAgentToolsXdgDataDirs;
+
+    systemd.user.services.ctx-history =
+    let
+      ctxBin = lib.getExe config.my.home.ai.harness.codingAgentTools.ctx.package;
+      ctxEnvVars = config.my.home.ai.harness.codingAgentTools.ctx.envVars;
+    in {
+      Unit.Description = "Index local coding-agent history for CTX";
+      Service = {
+        Type = "simple";
+        ExecStartPre = "${ctxBin} setup --no-daemon --quiet";
+        ExecStart = "${ctxBin} daemon run";
+        TimeoutStartSec = "10min";
+        Restart = "on-failure";
+        RestartSec = 5;
+        Environment = lib.mapAttrsToList (name: value: "${name}=${value}") ctxEnvVars;
+      };
+      Install.WantedBy = ["default.target"];
+    };
   };
 }
