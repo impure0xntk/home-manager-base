@@ -2,8 +2,11 @@
 {
   config = {
     my.testOption = "test-value";
+    assertions = [
+      {
+        assertion = config.my.testOption == "test-value";
+        message = "my.testOption must be set to test-value.";
+      }
+    ];
   };
-
-  # Assert that the option is set correctly.
-  assert config.my.testOption == "test-value";
 }

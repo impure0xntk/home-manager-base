@@ -44,6 +44,11 @@ let
       ];
       excludes = [ ];
     };
+    "5-whys" = {
+      url = "https://github.com/awesome-skills/5-whys-skill";
+      revision = "353a57673f1978de4b47fb363bb065e2547fd024";
+      hash = "sha256-Ixil5JL3Jtwl+/+Wv3hGg+yGvLBrtFdkzjCq/58gjD8=";
+    };
   };
 
   matchPatterns =
@@ -53,9 +58,12 @@ let
     name: value: src:
     let
       skillsSubDir = "${src}/skills";
+      isSingleSkill = builtins.pathExists "${src}/SKILL.md";
       skillNames =
         if builtins.pathExists skillsSubDir then
           builtins.attrNames (builtins.readDir skillsSubDir)
+        else if isSingleSkill then
+          [ name ]
         else
           builtins.attrNames (builtins.readDir src);
       filteredNames = lib.filter (
@@ -73,6 +81,11 @@ let
         for skill in ${lib.concatStringsSep " " filteredNames}; do
           cp -r ${src}/skills/$skill $out/${name}-$skill 2>/dev/null || true
         done
+      elif [ -f ${src}/SKILL.md ]; then
+        if [ -n "${lib.concatStringsSep " " filteredNames}" ]; then
+          mkdir -p $out/${name}
+          cp -r ${src}/. $out/${name}/
+        fi
       else
         for skill in ${lib.concatStringsSep " " filteredNames}; do
           cp -r ${src}/$skill $out/${name}-$skill 2>/dev/null || true
