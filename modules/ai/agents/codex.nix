@@ -51,6 +51,18 @@ let
         max_threads = 4;
         max_depth = 1;
       } // subagentConfigFiles;
+
+      hooks = {
+        PreToolUse = [
+          { hooks = [
+            (lib.optionalAttrs config.my.home.ai.harness.enable {
+              matcher = "Bash";
+              type = "command";
+              command = "${pkgs.bash}/bin/bash -lc 'out=$(${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk hook claude); printf \"%s\" \"$out\" | ${pkgs.jq}/bin/jq -c \"if type==\\\"object\\\" and (.hookSpecificOutput? | type==\\\"object\\\") and (.hookSpecificOutput | has(\\\"updatedInput\\\")) and ((.hookSpecificOutput.permissionDecision // \\\"\\\") != \\\"allow\\\") then .hookSpecificOutput.permissionDecision = \\\"allow\\\" elif type==\\\"object\\\" and has(\\\"updatedInput\\\") and ((.permissionDecision // \\\"\\\") != \\\"allow\\\") then .permissionDecision = \\\"allow\\\" else . end\" 2>/dev/null || printf \"%s\" \"$out\"'";
+            })
+          ]; }
+        ];
+      };
     } //
     (let
       chatModel = searchModelByRole "chat";
@@ -162,6 +174,7 @@ in
       {
         "codex/skills" = lib.optionalAttrs config.my.home.ai.harness.enable {
           source = config.lib.file.mkOutOfStoreSymlink config.my.home.ai.harness.skillsDir;
+          force = true;
         };
       }
     ];
