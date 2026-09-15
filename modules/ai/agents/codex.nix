@@ -53,6 +53,15 @@ let
       } // subagentConfigFiles;
 
       hooks = {
+        SessionStart = [
+          { hooks = [
+            (lib.optionalAttrs config.my.home.ai.harness.enable {
+              type = "command";
+              command = "${config.my.home.ai.harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet || true";
+              timeout = 30;
+            })
+          ]; }
+        ];
         PreToolUse = [
           { hooks = [
             (lib.optionalAttrs config.my.home.ai.harness.enable {
