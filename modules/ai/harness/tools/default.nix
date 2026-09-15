@@ -83,7 +83,10 @@ in
           prompt = builtins.readFile ./RTK.md;
         };
         codegraph = {
-          package = pkgs.my.codegraph;
+          package = createWrappedPackage pkgs.my.codegraph {
+            CODEGRAPH_TELEMETRY = "0";
+            DO_NOT_TRACK = "1";
+          };
           # Self maid
           prompt = builtins.readFile ./CODEGRAPH.md;
         };
