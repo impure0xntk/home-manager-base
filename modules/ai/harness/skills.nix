@@ -7,11 +7,14 @@
 let
   cfg = config.my.home.ai;
 
+  # All default skills now use path with fetchgit expressions
   defaultSkillRepos = {
     anthropics-skills = {
-      url = "https://github.com/anthropics/skills.git";
-      revision = "34040c9c568585f6929bedeaad110ad08f079624";
-      hash = "sha256-tI4bTTBfI1ylltklGyiyA7pLoKXEWtrT6lrmwrpLbCw=";
+      path = pkgs.fetchgit {
+        url = "https://github.com/anthropics/skills.git";
+        rev = "34040c9c568585f6929bedeaad110ad08f079624";
+        sha256 = "sha256-tI4bTTBfI1ylltklGyiyA7pLoKXEWtrT6lrmwrpLbCw=";
+      };
       includes = [
         "mcp-builder"
         "doc-coauthoring"
@@ -23,16 +26,20 @@ let
       excludes = [ ];
     };
     obra-superpowers = {
-      url = "https://github.com/obra/superpowers.git";
-      revision = "b36e0829c6d0140e93cfef2ca599b1b07d4a7797";
-      hash = "sha256-EsGNO0dULWf5Bx6bGrCv2kI2Z8aKH0kRvGiuN23wChQ=";
+      path = pkgs.fetchgit {
+        url = "https://github.com/obra/superpowers.git";
+        rev = "b36e0829c6d0140e93cfef2ca599b1b07d4a7797";
+        sha256 = "sha256-EsGNO0dULWf5Bx6bGrCv2kI2Z8aKH0kRvGiuN23wChQ=";
+      };
       includes = [ ];
       excludes = [ ];
     };
     awesome-copilot = {
-      url = "https://github.com/github/awesome-copilot.git";
-      revision = "7568a482ce2df38f8965ab5336a3220db796a4ba";
-      hash = "sha256-wMNloxg/mKRu6yr6pj1crdk08D+wTv/kjIcjrkHriw8=";
+      path = pkgs.fetchgit {
+        url = "https://github.com/github/awesome-copilot.git";
+        rev = "7568a482ce2df38f8965ab5336a3220db796a4ba";
+        sha256 = "sha256-wMNloxg/mKRu6yr6pj1crdk08D+wTv/kjIcjrkHriw8=";
+      };
       includes = [
         "acquire-codebase-knowledge"
         "agent.*"
@@ -45,17 +52,24 @@ let
       excludes = [ ];
     };
     agentic-awesome-skills =  {
-      url = "https://github.com/sickn33/agentic-awesome-skills.git";
-      revision = "46cafc80378eabd5b04b1d32ad1e96a00476df59";
-      hash = "sha256-Rz6Fb9GTOLg+eC/C9f41yj4DcNg2X1gAyrBmYrsIECM=";
+      path = pkgs.fetchgit {
+        url = "https://github.com/sickn33/agentic-awesome-skills.git";
+        rev = "46cafc80378eabd5b04b1d32ad1e96a00476df59";
+        sha256 = "sha256-Rz6Fb9GTOLg+eC/C9f41yj4DcNg2X1gAyrBmYrsIECM=";
+      };
       includes = [
         "debugging.*"
       ];
+      excludes = [ ];
     };
     "5-whys" = {
-      url = "https://github.com/awesome-skills/5-whys-skill";
-      revision = "353a57673f1978de4b47fb363bb065e2547fd024";
-      hash = "sha256-Ixil5JL3Jtwl+/+Wv3hGg+yGvLBrtFdkzjCq/58gjD8=";
+      path = pkgs.fetchgit {
+        url = "https://github.com/awesome-skills/5-whys-skill";
+        rev = "353a57673f1978de4b47fb363bb065e2547fd024";
+        sha256 = "sha256-Ixil5JL3Jtwl+/+Wv3hGg+yGvLBrtFdkzjCq/58gjD8=";
+      };
+      includes = [ ];
+      excludes = [ ];
     };
   };
 
@@ -104,11 +118,7 @@ let
   skillDerivationSet = lib.mapAttrs (
     name: value:
     let
-      fetched = pkgs.fetchgit {
-        inherit (value) url;
-        rev = value.revision;
-        sha256 = value.hash;
-      };
+      fetched = value.path;
     in
     filterSkills name value fetched
   ) cfg.harness.skills;
@@ -135,50 +145,19 @@ in
     with lib;
     with lib.types;
     mkOption {
-      description = ''
-        Skill repositories to clone/symlink into the skills directory.
-
-        Each skill can be:
-        - A git URL with an optional revision (commit SHA or tag) for pinning
-        - A local absolute path (starting with /)
-
-        **Security**: Always set `revision` to a specific commit SHA for remote
-        repos. This prevents supply chain attacks where a malicious commit
-        could inject harmful instructions into your AI agent's context.
-
-        Example:
-        ```nix
-        my-home.ai.harness.skills.my-skill = {
-          url = "https://github.com/org/skill-repo.git";
-          revision = "abc123def456789...";
-          hash = "sha256-...";
-          includes = [ "skill-name" ];
-          excludes = [ ];
-        };
-        ```
-      '';
+      description = ''Skill repositories to clone/symlink into the skills directory.'';
       type = attrsOf (submodule {
         options = {
-          url = mkOption {
-            type = str;
-            description = "Git repository URL (https:// or git@).";
-          };
-          revision = mkOption {
-            type = nullOr str;
+          path = mkOption {
+            type = nullOr (either str path);
             default = null;
             description = ''
-              Git revision (commit SHA or tag) to pin this skill to.
-              **Strongly recommended** for remote repos to prevent supply chain attacks.
-              If null, the latest HEAD will be fetched (unpinned, less secure).
-            '';
-          };
-          hash = mkOption {
-            type = nullOr str;
-            default = null;
-            description = ''
-              Optional SHA-256 hash of the fetched content for additional integrity verification.
-              If provided, Nix will verify the fetched content matches this hash.
-              Use `nix-prefetch-git <url> --rev <revision>` to obtain.
+              Path to the skills directory.
+              Can be any Nix expression evaluating to a path:
+              - fetchgit / fetchurl / fetchtar / fetchFromGitHub + subdirectory
+              - Local absolute path
+              - Any other path-valued expression
+              When set, `package` is ignored.
             '';
           };
           includes = mkOption {
