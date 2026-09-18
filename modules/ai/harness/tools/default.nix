@@ -29,11 +29,6 @@ let
       "rtk/filters.toml".source = rtkFiltersCombined;
     }
   ];
-  defaultCodingAgentToolsXdgDataDirs = [
-    {
-      "ctx/config.toml".source = ./ctx/config.toml;
-    }
-  ];
 
   createWrappedPackage = package: envVars: (pkgs.writeShellApplication {
     name = package.pname;
@@ -104,7 +99,6 @@ in
   config = lib.mkIf cfg.harness.enable {
     home.packages = lib.forEach (builtins.attrValues config.my.home.ai.harness.codingAgentTools) (v: v.package);
     xdg.configFile = lib.mkMerge defaultCodingAgentToolsXdgConfigDirs;
-    # xdg.dataFile = lib.mkMerge defaultCodingAgentToolsXdgDataDirs;
 
     systemd.user.services.ctx-history =
     let
