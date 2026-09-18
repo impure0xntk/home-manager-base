@@ -18,10 +18,6 @@ let
       includes = [
         "mcp-builder"
         "doc-coauthoring"
-        "docx"
-        "pdf"
-        "pptx"
-        "xlsx"
       ];
       excludes = [ ];
     };
