@@ -158,7 +158,6 @@ in
 
     programs.vscode.profiles.default = {
       extensions = (pkgs.nix4vscode.forVscode [
-        "GitHub.copilot"
         "GitHub.copilot-chat"
         "openai.chatgpt"
 

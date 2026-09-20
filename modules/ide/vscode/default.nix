@@ -40,6 +40,8 @@ let
       (lib.forEach v.extensions (ext:
         if builtins.hasAttr "vsix" ext
           then ext.vsix # use vsix directly
+        else if lib.hasSuffix ".vsix" (toString ext.src)
+          then ext.src # marketplace extensions hide their downloaded VSIX in src
           else "${ext.vscodeExtPublisher}.${ext.vscodeExtName}@${ext.version}"
         ))
     ) config.programs.vscode.profiles)
@@ -76,7 +78,7 @@ let
       exit 1
     fi
     for ext in ${lib.concatStringsSep " " extensionList}; do
-      ${binName} --install-extension $ext || true
+      ${binName} --install-extension "$ext" --force || true
     done
   '';
 
@@ -135,7 +137,7 @@ in
 
           "GitHub.vscode-pull-request-github"
 
-          "gruntfuggly.todo-tree"
+          "FanaticPythoner.better-todo-tree"
           "oderwat.indent-rainbow"
 
           "tekumara.typos-vscode"
@@ -337,6 +339,7 @@ in
               _flattenIgnore = true;
             };
             todo-tree = {
+              ripgrep.ripgrep = lib.getExe config.programs.ripgrep.package;
               general.tags = [
                 # Default
                 "BUG"
