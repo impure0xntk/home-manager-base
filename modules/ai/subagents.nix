@@ -88,7 +88,7 @@ in
 
     targets = lib.mkOption {
       type = lib.types.listOf (lib.types.enum agentFormats);
-      default = [ "codex" "junie" "opencode" "copilot" ];
+      default = [ "codex" "junie" "goose" "copilot" ];
       description = "Agent adapters that receive the common sub-agent profiles.";
     };
   };

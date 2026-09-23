@@ -45,6 +45,8 @@ let
       configured = true;
     };
 
+    GOOSE_RECIPE_PATH = "${config.xdg.configHome}/goose/recipes";
+
     extensions = {
       developer = {
         bundled = true;
@@ -72,7 +74,7 @@ let
   gooseRecipes = lib.mapAttrs (name: profile:
     let
       model = searchModelByRole profile.model_role;
-      id = "subagent-${name}";
+      id = name;
     in
     {
       inherit id;
@@ -80,7 +82,7 @@ let
       title = id;
       description = profile.description;
       instructions = profile.instructions;
-      activities = [ profile.model_role ];
+      # activities = [ profile.model_role ];
       prompt = profile.instructions;
       parameters = [
         {
@@ -132,7 +134,7 @@ in
         "goose/AGENTS.md".source = config.my.home.ai.harness.agentsMd.source;
       }
       (lib.optionalAttrs generateGooseRecipes (lib.mapAttrs' (name: recipe: {
-        name = "goose/recipes/subagent-${name}.yaml";
+        name = "goose/recipes/${name}.yaml";
         value.source = lib.my.toYaml recipe;
       }) gooseRecipes))
       (lib.optionalAttrs (cfg.providers != null) (
