@@ -176,5 +176,11 @@ in
       name = "ai/skills/${name}";
       value = entry;
     }) flatSkills;
+    # Agent Skills common path
+    # https://agentskills.io/client-implementation/adding-skills-support#how-to-add-skills-support-to-your-agent
+    home.file = lib.mapAttrs' (name: entry: {
+      name = ".agents/skills/${name}";
+      value = entry;
+    }) flatSkills;
   };
 }
