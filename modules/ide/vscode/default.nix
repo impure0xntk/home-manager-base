@@ -338,7 +338,7 @@ in
               "asvetliakov.vscode-neovim" = lib.mkIf config.programs.neovim.enable 1;
               _flattenIgnore = true;
             };
-            todo-tree = {
+            better-todo-tree = {
               ripgrep.ripgrep = lib.getExe config.programs.ripgrep.package;
               general.tags = [
                 # Default

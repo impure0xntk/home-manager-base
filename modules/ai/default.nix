@@ -236,7 +236,7 @@ in
               };
             };
             promptFilesLocations = {
-              "${config.my.home.ai.harness.promptsDir}" = true;
+              "${lib.replaceStrings ["${config.xdg.configHome}"] ["~/.config"] config.my.home.ai.harness.promptsDir}" = true;
               _flattenIgnore = true;
             };
           };

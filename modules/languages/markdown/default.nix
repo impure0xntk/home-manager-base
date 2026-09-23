@@ -63,9 +63,8 @@ in
           shutdownWhenAllClosed = true;
         };
         panache = {
+          executableStrategy = "path";
           commandPath = lib.getExe pkgs.unstable.panache;
-          downloadBinary = false;
-          experimental.incrementalParsing = true;
         };
       };
     };
