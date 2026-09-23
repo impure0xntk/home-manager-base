@@ -13,6 +13,7 @@ in
   imports = [
     # CLI agent configurations
     (import ./codex.nix (args // { inherit searchModelByRole; }))
+    (import ./goose.nix (args // { inherit searchModelByRole; }))
     (import ./junie.nix (args // { inherit searchModelByRole; }))
     (import ./copilot-cli.nix (args // { inherit searchModelByRole; }))
     # Future agents can be added here:
