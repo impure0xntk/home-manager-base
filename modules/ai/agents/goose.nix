@@ -103,6 +103,10 @@ let
 
   # Only generate when "goose" is listed as a subagent target
   generateGooseRecipes = builtins.elem "goose" cfg.subagents.targets;
+
+  # Skills directory symlink for Goose
+  # Goose discovers skills from ~/.agents/skills/ (recommended), .goose/skills/, .claude/skills/, ~/.claude/skills/
+  # my.home.ai.harness.skills sets to ~/.agents/skills so no need to set by goose.
 in
 {
   options.my.home.ai.goose = {
