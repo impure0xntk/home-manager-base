@@ -9,17 +9,6 @@
 let
   cfg = config.my.home.ai;
 
-  modelInfo = rec {
-    worker = {
-      model = (searchModelByRole "edit").model;
-      provider = (searchModelByRole "edit").provider;
-    };
-    planner = {
-      model = (searchModelByRole "chat").model;
-      provider = (searchModelByRole "chat").provider;
-    };
-  };
-
   goose-cli-wrapped =
     let
       exportEnvVarStrs = lib.mapAttrsToList (name: value: "export ${name}=${value}") config.my.home.ai.goose.environmentVariables;
@@ -34,11 +23,9 @@ let
       '';
     };
 
+  chatProvider = searchModelByRole "chat";
+
   gooseConfig = lib.my.deepMerge {
-    GOOSE_PROVIDER = modelInfo.worker.provider;
-    GOOSE_MODEL = modelInfo.worker.model;
-    GOOSE_PLANNER_PROVIDER = modelInfo.planner.provider;
-    GOOSE_PLANNER_MODEL = modelInfo.planner.model;
     GOOSE_MODE = "auto";
     GOOSE_MAX_TURNS = 1000;
     GOOSE_CLI_MIN_PRIORITY = 0.0;
@@ -50,6 +37,13 @@ let
     GOOSE_TELEMETRY_ENABLED = false;
     SECURITY_PROMPT_ENABLED = true;
     SECURITY_PROMPT_THRESHOLD = 0.7;
+
+    active_provider = chatProvider.provider;
+    providers.${chatProvider.provider} = {
+      enabled = true;
+      model = chatProvider.model;
+      configured = true;
+    };
 
     extensions = {
       developer = {
