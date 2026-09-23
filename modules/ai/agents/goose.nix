@@ -28,7 +28,8 @@ let
   gooseConfig = lib.my.deepMerge {
     GOOSE_MODE = "auto";
     GOOSE_MAX_TURNS = 1000;
-    GOOSE_CLI_MIN_PRIORITY = 0.0;
+    GOOSE_CLI_MIN_PRIORITY = 0.8; # High: low verbosity
+    GOOSE_TRUNCATED_SHOW_LINES = 10;
     GOOSE_CLI_THEME = "dark";
     GOOSE_CLI_SHOW_THINKING = 1;
     GOOSE_RANDOM_THINKING_MESSAGES = false;
