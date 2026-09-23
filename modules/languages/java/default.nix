@@ -15,6 +15,7 @@ let
     "-XX:+UseStringDeduplication"
     "-XX:+UseZGC" # "-XX:+ZGenerational" is the default.
     "-XX:+UseLargePages"
+    "-XX:+UseCompactObjectHeaders" # will be default in Java 27
   ];
 
   # Vmargs for VS code tools.
