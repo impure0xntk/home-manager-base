@@ -29,6 +29,7 @@ let
     GOOSE_MODE = "auto";
     GOOSE_MAX_TURNS = 1000;
     GOOSE_CLI_MIN_PRIORITY = 0.8; # High: low verbosity
+    GOOSE_MAX_CODE_BLOCK_LINES = 20;
     GOOSE_TRUNCATED_SHOW_LINES = 10;
     GOOSE_CLI_THEME = "dark";
     GOOSE_CLI_SHOW_THINKING = 1;
@@ -164,6 +165,9 @@ in
     # Goose cannot recognize config as symlink.
     home.activation."copy-goose-config" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       install -m 644 -D ${config.xdg.configHome}/goose/config.yaml{.orig,}
+    '';
+    programs.fish.interactiveShellInit = ''
+      goose completion fish | source
     '';
   };
 }
