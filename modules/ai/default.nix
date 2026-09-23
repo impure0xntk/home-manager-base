@@ -40,7 +40,7 @@ in
     # CLI agents module
     (import ./agents (args // { inherit searchModelByRole; }))
 
-    ./orchestration.nix
+    ./orchestration
   ];
 
   options.my.home.ai =
