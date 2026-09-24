@@ -28,11 +28,14 @@
     };
   config = lib.mkIf config.my.home.ai.harness.enable {
     my.home.ai.harness.plugins = {
-      "nixos-reactor-harness" = {
+      "nixos-reactor-harness-for-all-agents" = {
         "plugin.json" = {
-          name = "nixos-reactor-harness";
+          # No "$schema": codex loads plugin hooks only for legacy-format
+          # manifests (loader.rs skips hooks when the manifest declares
+          # the agent-plugins schema).
+          name = "nixos-reactor-harness-for-all-agents";
           version = "1.0.0";
-          description = "NixOS Reactor Harness Plugin.";
+          description = "NixOS Reactor Harness Plugin for all agents.";
         };
         "hooks/hooks.json" = {
           hooks = {

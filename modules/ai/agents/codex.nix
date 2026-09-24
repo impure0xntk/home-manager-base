@@ -53,7 +53,10 @@ let
       } // subagentConfigFiles;
 
       features.plugins = true;
-      plugins."nixos-reactor-harness@local-repo".enabled = true;
+      plugins = {
+        "nixos-reactor-harness-for-all-agents@local-repo".enabled = true;
+        "nixos-reactor-harness-for-codex@local-repo".enabled = true;
+      };
     } //
     (let
       chatModel = searchModelByRole "chat";
@@ -193,10 +196,22 @@ in
       name = "local-repo";
       plugins = [
         {
-          name = "nixos-reactor-harness";
+          name = "nixos-reactor-harness-for-all-agents";
           source = {
             source = "local";
-            path = "./nixos-reactor-harness";
+            path = "./.agents/plugins/nixos-reactor-harness-for-all-agents";
+          };
+          policy = {
+            installation = "AVAILABLE";
+            authentication = "ON_INSTALL";
+          };
+          category = "Productivity";
+        }
+        {
+          name = "nixos-reactor-harness-for-codex";
+          source = {
+            source = "local";
+            path = "./.agents/plugins/nixos-reactor-harness-for-codex";
           };
           policy = {
             installation = "AVAILABLE";
@@ -206,9 +221,17 @@ in
         }
       ];
     };
-    my.home.ai.harness.plugins."nixos-reactor-harness" = {
-      "plugins.json".extensions."com.openai" = {
-        hooks = ["./hooks/hooks.json" "./com.openai/hooks/hooks.json"];
+    my.home.ai.harness.plugins."nixos-reactor-harness-for-codex" = {
+      "plugin.json" = {
+        # No "$schema": codex loads plugin hooks only for legacy-format manifests.
+        # Top-level "hooks" is what codex parses; "extensions" is inert for codex.
+        name = "nixos-reactor-harness-for-codex";
+        version = "1.0.0";
+        description = "NixOS Reactor Harness Plugin for codex.";
+        hooks = "./com.openai/hooks/hooks.json";
+        extensions."com.openai" = {
+          hooks = ["./com.openai/hooks/hooks.json"];
+        };
       };
       "com.openai/hooks/hooks.json" = {
         hooks = {

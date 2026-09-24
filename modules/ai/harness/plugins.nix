@@ -7,21 +7,18 @@
 let
   cfg = config.my.home.ai;
 
-  pluginHomeFiles = lib.listToAttrs (
-    lib.concatLists (
-      lib.mapAttrsToList (
-        pluginName: files:
-        lib.mapAttrsToList (
-          fileName: value: {
-            name = ".agents/plugins/${pluginName}/${fileName}";
-            value.text = builtins.toJSON value;
-          }
-        )
-        files
-      )
-      config.my.home.ai.harness.plugins
-    )
-  );
+  # Codex copies plugin contents into its cache without following symlinks
+  # (entry.file_type() skips symlinked files), so home.file symlinks install an
+  # empty plugin and hooks disappear. Materialize real files via activation.
+  installAgentPlugins = plugins:
+    lib.concatStringsSep "\n" (
+      lib.mapAttrsToList (pluginName: pkg: ''
+        rm -rf "${config.home.homeDirectory}/.agents/plugins/${pluginName}"
+        mkdir -p "${config.home.homeDirectory}/.agents/plugins"
+        cp -r "${pkg}/." "${config.home.homeDirectory}/.agents/plugins/${pluginName}"
+        chmod -R u+w "${config.home.homeDirectory}/.agents/plugins/${pluginName}"
+      '') plugins
+    );
 
   pluginPackages = lib.mapAttrs (
     pluginName: files:
@@ -57,8 +54,8 @@ in
     };
 
   config = lib.mkIf cfg.harness.enable {
-    # Agent Plugins common path
-    home.file = pluginHomeFiles;
+    home.activation.installAgentPlugins =
+      lib.hm.dag.entryAfter [ "writeBoundary" ] (installAgentPlugins pluginPackages);
     my.home.ai.harness.pluginPackages = pluginPackages;
   };
 }
