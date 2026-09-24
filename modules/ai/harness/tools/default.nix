@@ -60,11 +60,6 @@ in
             type = package;
             description = "The Nix package to provide for this tool.";
           };
-          envVars = mkOption {
-            type = attrsOf str;
-            default = { };
-            description = "Environment variables to set in the agent wrapper.";
-          };
           prompt = mkOption {
             type = str;
             default = "";

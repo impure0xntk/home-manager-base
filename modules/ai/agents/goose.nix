@@ -108,7 +108,7 @@ let
   # Only generate when "goose" is listed as a subagent target
   generateGooseRecipes = builtins.elem "goose" cfg.subagents.targets;
 
-  # Skills directory symlink for Goose
+  # Skills directory:
   # Goose discovers skills from ~/.agents/skills/ (recommended), .goose/skills/, .claude/skills/, ~/.claude/skills/
   # my.home.ai.harness.skills sets to ~/.agents/skills so no need to set by goose.
 in
@@ -144,12 +144,12 @@ in
           map (p: {
             name = "goose/custom_providers/custom_${p.name}.json";
             value = {
-              source = lib.my.toYaml {
+              text = builtins.toJSON {
                 name = p.name;
                 engine = "openai";
                 display_name = p.name;
                 description = "Custom ${p.name} provider";
-                api_key_env = "${lib.strings.toUpper p.name}_API_KEY";
+                api_key_env = p.api-key-env;
                 base_url = "${p.url}/v1/chat/completions";
                 models = map (m: {
                   name = m.model;

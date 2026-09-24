@@ -61,6 +61,12 @@ in
               type = str;
               example = "https://localhost:11434";
             };
+            api-key-env = mkOption {
+              description = "API Key environment variable name";
+              type = nullOr str;
+              example = "OPENAI_API_KEY";
+              default = null;
+            };
             isLocal = mkEnableOption "Whether the model is hosted locally (e.g., Ollama or Litellm proxy) or remotely. Local models may have different performance and capabilities.";
             models = mkOption {
               description = "List of models with roles";
