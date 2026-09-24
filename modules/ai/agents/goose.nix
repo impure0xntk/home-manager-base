@@ -23,6 +23,12 @@ let
       '';
     };
 
+  gooseRtkHook = let
+    rtkBin = "${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk";
+    jqBin = "${pkgs.jq}/bin/jq";
+  in
+    "${pkgs.bash}/bin/bash -lc 'in=$(cat); if cmd=$(printf \"%s\" \"$in\" | ${jqBin} -r \".tool_input.command // empty\" 2>/dev/null) && [ -n \"$cmd\" ]; then out=$(printf \"%s\" \"$in\" | ${rtkBin} hook claude); printf \"%s\" \"$out\" | ${jqBin} -c --arg orig \"$cmd\" \"if ((.hookSpecificOutput.updatedInput.command // \\\"\\\") != \\\"\\\") and ((.hookSpecificOutput.updatedInput.command // \\\"\\\") != \\$orig) then {decision: \\\"block\\\", reason: (\\\"Token savings: use \\`\\\" + .hookSpecificOutput.updatedInput.command + \\\"\\` instead\\\")} else empty end\" 2>/dev/null || true; fi'";
+
   chatProvider = searchModelByRole "chat";
 
   gooseConfig = lib.my.deepMerge {
@@ -126,30 +132,7 @@ let
     value = { enabled = enable; };
   });
 
-  # Goose hooks cannot rewrite tool input (no updatedInput support); stdout
-  # {"decision":"block"} is the only decision channel. Follow rtk's Copilot CLI
-  # pattern: deny with an rtk-rewritten suggestion, allow silently otherwise.
-  # https://goose-docs.ai/docs/guides/context-engineering/hooks
-  gooseRtkHook =
-    let
-      rtkBin = "${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk";
-      jqBin = "${pkgs.jq}/bin/jq";
-
-      gooseRtkHookScript = pkgs.writeShellScriptBin "goose-rtk-hook" ''
-        payload=$(cat)
-        cmd=$(printf '%s' "$payload" | ${jqBin} -r '.tool_input.command // empty' 2>/dev/null)
-        [ -n "$cmd" ] || exit 0
-
-        rewritten=$(${rtkBin} rewrite "$cmd" 2>/dev/null || true)
-
-        if [ -n "$rewritten" ] && [ "$rewritten" != "$cmd" ]; then
-          ${jqBin} -cn \
-            --arg c "$rewritten" \
-            '{decision:"block", reason:("Token savings: use `" + $c + "` instead")}'
-        fi
-      '';
-    in
-      "${gooseRtkHookScript}/bin/goose-rtk-hook";
+  
 
   # Skills directory:
   # Goose discovers skills from ~/.agents/skills/ (recommended), .goose/skills/, .claude/skills/, ~/.claude/skills/
@@ -227,11 +210,11 @@ in
               # Shell tool is exposed unprefixed by the developer extension.
               matcher = "^shell$";
               hooks = [
-                {
+                (lib.optionalAttrs config.my.home.ai.harness.enable {
                   type = "command";
-                  command = gooseRtkHook;
+                  command = "${pkgs.bash}/bin/bash -lc 'in=$(cat); if cmd=$(printf \"%s\" \"$in\" | ${pkgs.jq}/bin/jq -r \".tool_input.command // empty\" 2>/dev/null) && [ -n \"$cmd\" ]; then out=$(printf \"%s\" \"$in\" | ${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk hook claude); printf \"%s\" \"$out\" | ${pkgs.jq}/bin/jq -c --arg orig \"$cmd\" \"if ((.hookSpecificOutput.updatedInput.command // \\\"\\\") != \\\"\\\") and ((.hookSpecificOutput.updatedInput.command // \\\"\\\") != \\$orig) then {decision: \\\"block\\\", reason: (\\\"Token savings: use \\`\\\" + .hookSpecificOutput.updatedInput.command + \\\"\\` instead\\\")} else empty end\" 2>/dev/null || true; fi'";
                   timeout = 10;
-                }
+                })
               ];
             }
           ];
