@@ -65,6 +65,11 @@ let
         type = "builtin";
       };
     };
+
+    plugins = builtins.listToAttrs (
+      (generatePluginConfig enabledPlugins true)
+        ++ (generatePluginConfig disabledPlugins false)
+    );
   } cfg.goose.extraSettings;
 
   # ── Merge built-in + extra abstract sub-agent profiles ───────────────
@@ -107,6 +112,44 @@ let
 
   # Only generate when "goose" is listed as a subagent target
   generateGooseRecipes = builtins.elem "goose" cfg.subagents.targets;
+
+  enabledPlugins = [
+    "nixos-reactor-harness-for-all-agents"
+    "nixos-reactor-harness-for-goose"
+  ];
+  disabledPlugins =
+    lib.filter (
+      name: !builtins.elem name enabledPlugins
+    ) (builtins.attrNames config.my.home.ai.harness.plugins);
+  generatePluginConfig = plugins: enable: lib.forEach plugins (name: {
+    name = "${config.my.home.ai.harness.pluginDir}/${name}";
+    value = { enabled = enable; };
+  });
+
+  # Goose hooks cannot rewrite tool input (no updatedInput support); stdout
+  # {"decision":"block"} is the only decision channel. Follow rtk's Copilot CLI
+  # pattern: deny with an rtk-rewritten suggestion, allow silently otherwise.
+  # https://goose-docs.ai/docs/guides/context-engineering/hooks
+  gooseRtkHook =
+    let
+      rtkBin = "${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk";
+      jqBin = "${pkgs.jq}/bin/jq";
+
+      gooseRtkHookScript = pkgs.writeShellScriptBin "goose-rtk-hook" ''
+        payload=$(cat)
+        cmd=$(printf '%s' "$payload" | ${jqBin} -r '.tool_input.command // empty' 2>/dev/null)
+        [ -n "$cmd" ] || exit 0
+
+        rewritten=$(${rtkBin} rewrite "$cmd" 2>/dev/null || true)
+
+        if [ -n "$rewritten" ] && [ "$rewritten" != "$cmd" ]; then
+          ${jqBin} -cn \
+            --arg c "$rewritten" \
+            '{decision:"block", reason:("Token savings: use `" + $c + "` instead")}'
+        fi
+      '';
+    in
+      "${gooseRtkHookScript}/bin/goose-rtk-hook";
 
   # Skills directory:
   # Goose discovers skills from ~/.agents/skills/ (recommended), .goose/skills/, .claude/skills/, ~/.claude/skills/
@@ -170,5 +213,30 @@ in
     programs.fish.interactiveShellInit = ''
       goose completion fish | source
     '';
+
+    my.home.ai.harness.plugins."nixos-reactor-harness-for-goose" = {
+      "plugin.json" = {
+        name = "nixos-reactor-harness-for-goose";
+        version = "1.0.0";
+        description = "NixOS Reactor Harness Plugin for goose.";
+      };
+      "hooks/hooks.json" = {
+        hooks = {
+          PreToolUse = [
+            {
+              # Shell tool is exposed unprefixed by the developer extension.
+              matcher = "^shell$";
+              hooks = [
+                {
+                  type = "command";
+                  command = gooseRtkHook;
+                  timeout = 10;
+                }
+              ];
+            }
+          ];
+        };
+      };
+    };
   };
 }

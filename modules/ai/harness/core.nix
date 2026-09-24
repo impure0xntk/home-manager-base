@@ -20,6 +20,13 @@
         description = "Target directory for installed prompt files";
       };
 
+      pluginDir = mkOption {
+        type = path;
+        default = "${config.home.homeDirectory}/.agents/plugins";
+        readOnly = true;
+        description = "Target directory for installed plugin files";
+      };
+
       pluginPackages = mkOption {
         type = attrsOf package;
         default = {};
