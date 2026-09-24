@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, pkgs, lib, ... }:
 {
   options.my.home.ai.harness =
     with lib;
@@ -61,6 +61,15 @@
                   type = "command";
                   command = "${config.my.home.ai.harness.codingAgentTools.codegraph.package}/bin/codegraph prompt-hook || true";
                   timeout = 30;
+                }
+              ]; }
+            ];
+            Stop = [
+              { hooks = [
+                {
+                  type = "command";
+                  command = "${pkgs.libnotify}/bin/notify-send --category \"Agent\" --expire-time 10 \"Task completed.\"";
+                  timeout = 10;
                 }
               ]; }
             ];
