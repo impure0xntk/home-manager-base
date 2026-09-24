@@ -22,6 +22,29 @@ let
       config.my.home.ai.harness.plugins
     )
   );
+
+  pluginPackages = lib.mapAttrs (
+    pluginName: files:
+    pkgs.runCommand pluginName {} ''
+      mkdir -p "$out"
+
+      ${lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (
+          fileName: value:
+          let
+            json = builtins.toJSON value;
+          in
+          ''
+            mkdir -p "$out/$(dirname '${fileName}')"
+            cat > "$out/${fileName}" <<'EOF'
+            ${json}
+            EOF
+          ''
+        )
+        files
+      )}
+    ''
+  ) cfg.harness.plugins;
 in
 {
   options.my.home.ai.harness.plugins =
@@ -36,5 +59,6 @@ in
   config = lib.mkIf cfg.harness.enable {
     # Agent Plugins common path
     home.file = pluginHomeFiles;
+    my.home.ai.harness.pluginPackages = pluginPackages;
   };
 }

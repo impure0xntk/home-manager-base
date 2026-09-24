@@ -19,6 +19,12 @@
         readOnly = true;
         description = "Target directory for installed prompt files";
       };
+
+      pluginPackages = mkOption {
+        type = attrsOf package;
+        default = {};
+        description = "Packages to install as plugins for the harness";
+      };
     };
   config = lib.mkIf config.my.home.ai.harness.enable {
     my.home.ai.harness.plugins = {

@@ -52,26 +52,8 @@ let
         max_depth = 1;
       } // subagentConfigFiles;
 
-      hooks = {
-        SessionStart = [
-          { hooks = [
-            (lib.optionalAttrs config.my.home.ai.harness.enable {
-              type = "command";
-              command = "${config.my.home.ai.harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet || true";
-              timeout = 30;
-            })
-          ]; }
-        ];
-        PreToolUse = [
-          { hooks = [
-            (lib.optionalAttrs config.my.home.ai.harness.enable {
-              matcher = "Bash";
-              type = "command";
-              command = "${pkgs.bash}/bin/bash -lc 'out=$(${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk hook claude); printf \"%s\" \"$out\" | ${pkgs.jq}/bin/jq -c \"if type==\\\"object\\\" and (.hookSpecificOutput? | type==\\\"object\\\") and (.hookSpecificOutput | has(\\\"updatedInput\\\")) and ((.hookSpecificOutput.permissionDecision // \\\"\\\") != \\\"allow\\\") then .hookSpecificOutput.permissionDecision = \\\"allow\\\" elif type==\\\"object\\\" and has(\\\"updatedInput\\\") and ((.permissionDecision // \\\"\\\") != \\\"allow\\\") then .permissionDecision = \\\"allow\\\" else . end\" 2>/dev/null || printf \"%s\" \"$out\"'";
-            })
-          ]; }
-        ];
-      };
+      features.plugins = true;
+      plugins."nixos-reactor-harness@local-repo".enabled = true;
     } //
     (let
       chatModel = searchModelByRole "chat";
@@ -174,6 +156,9 @@ in
       bash.shellAliases = shellAliases;
       fish.shellAbbrs = shellAliases;
     };
+    programs.fish.interactiveShellInit = ''
+      codex completion fish | source
+    '';
 
     xdg.configFile = lib.mkMerge [
       (lib.optionalAttrs generateCodexAgents (lib.mapAttrs' (name: agentCfg: {
@@ -200,5 +185,44 @@ in
       in
       lib.concatStringsSep "\n" makeInstallCommands
     );
+
+    # https://agent-plugins.org/specification#8-client-extensions
+    # https://developers.openai.com/plugins/build/plugins
+    # TODO: replace to programs.codex.plugins after home-manager 26.11
+    home.file.".agents/plugins/marketplace.json".text = builtins.toJSON {
+      name = "local-repo";
+      plugins = [
+        {
+          name = "nixos-reactor-harness";
+          source = {
+            source = "local";
+            path = "./nixos-reactor-harness";
+          };
+          policy = {
+            installation = "AVAILABLE";
+            authentication = "ON_INSTALL";
+          };
+          category = "Productivity";
+        }
+      ];
+    };
+    my.home.ai.harness.plugins."nixos-reactor-harness" = {
+      "plugins.json".extensions."com.openai" = {
+        hooks = ["./hooks/hooks.json" "./com.openai/hooks/hooks.json"];
+      };
+      "com.openai/hooks/hooks.json" = {
+        hooks = {
+          PreToolUse = [
+            { hooks = [
+              (lib.optionalAttrs config.my.home.ai.harness.enable {
+                matcher = "Bash";
+                type = "command";
+                command = "${pkgs.bash}/bin/bash -lc 'out=$(${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk hook claude); printf \"%s\" \"$out\" | ${pkgs.jq}/bin/jq -c \"if type==\\\"object\\\" and (.hookSpecificOutput? | type==\\\"object\\\") and (.hookSpecificOutput | has(\\\"updatedInput\\\")) and ((.hookSpecificOutput.permissionDecision // \\\"\\\") != \\\"allow\\\") then .hookSpecificOutput.permissionDecision = \\\"allow\\\" elif type==\\\"object\\\" and has(\\\"updatedInput\\\") and ((.permissionDecision // \\\"\\\") != \\\"allow\\\") then .permissionDecision = \\\"allow\\\" else . end\" 2>/dev/null || printf \"%s\" \"$out\"'";
+              })
+            ]; }
+          ];
+        };
+      };
+    };
   };
 }
