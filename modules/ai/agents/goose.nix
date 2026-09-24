@@ -133,7 +133,6 @@ in
     xdg.configFile = lib.mkMerge [
       {
         "goose/config.yaml.orig".source = lib.my.toYaml gooseConfig;
-        "goose/AGENTS.md".source = config.my.home.ai.harness.agentsMd.source;
       }
       (lib.optionalAttrs generateGooseRecipes (lib.mapAttrs' (name: recipe: {
         name = "goose/recipes/${name}.yaml";
@@ -163,8 +162,10 @@ in
       ))
     ];
     # Goose cannot recognize config as symlink.
+    # And Goose cannot read AGENTS.md, read only .goosehints
     home.activation."copy-goose-config" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       install -m 644 -D ${config.xdg.configHome}/goose/config.yaml{.orig,}
+      install -m 644 -D ${config.my.home.ai.harness.agentsMd.source} ${config.xdg.configHome}/goose/.goosehints
     '';
     programs.fish.interactiveShellInit = ''
       goose completion fish | source
