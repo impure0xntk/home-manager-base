@@ -88,6 +88,10 @@ in
           };
           prompt = builtins.readFile ./CTX.md;
         };
+        ax = {
+          package = pkgs.ax;
+          prompt = builtins.readFile ./AX.md;
+        };
       };
     };
 
