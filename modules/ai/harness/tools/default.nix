@@ -101,10 +101,6 @@ in
             args = [ "mcp" "serve" ];
           };
         };
-        ax = {
-          package = pkgs.ax;
-          prompt = builtins.readFile ./AX.md;
-        };
         zg = rec {
           package = createWrappedPackage pkgs.my.zvec-grep {
             ZVEC_GREP_HOME = "${config.xdg.configHome}/zvec-grep";
