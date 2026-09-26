@@ -23,12 +23,6 @@ let
       '';
     };
 
-  gooseRtkHook = let
-    rtkBin = "${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk";
-    jqBin = "${pkgs.jq}/bin/jq";
-  in
-    "${pkgs.bash}/bin/bash -lc 'in=$(cat); if cmd=$(printf \"%s\" \"$in\" | ${jqBin} -r \".tool_input.command // empty\" 2>/dev/null) && [ -n \"$cmd\" ]; then out=$(printf \"%s\" \"$in\" | ${rtkBin} hook claude); printf \"%s\" \"$out\" | ${jqBin} -c --arg orig \"$cmd\" \"if ((.hookSpecificOutput.updatedInput.command // \\\"\\\") != \\\"\\\") and ((.hookSpecificOutput.updatedInput.command // \\\"\\\") != \\$orig) then {decision: \\\"block\\\", reason: (\\\"Token savings: use \\`\\\" + .hookSpecificOutput.updatedInput.command + \\\"\\` instead\\\")} else empty end\" 2>/dev/null || true; fi'";
-
   chatProvider = searchModelByRole "chat";
 
   # stdio MCP servers shared through the harness tool registry.
@@ -153,8 +147,6 @@ let
     value = { enabled = enable; };
   });
 
-  
-
   # Skills directory:
   # Goose discovers skills from ~/.agents/skills/ (recommended), .goose/skills/, .claude/skills/, ~/.claude/skills/
   # my.home.ai.harness.skills sets to ~/.agents/skills so no need to set by goose.
@@ -211,6 +203,7 @@ in
     # Goose cannot recognize config as symlink.
     # And Goose cannot read AGENTS.md, read only .goosehints
     home.activation."copy-goose-config" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      rm -f ${config.xdg.configHome}/goose/{config.yaml,goosehints}
       install -m 644 -D ${config.xdg.configHome}/goose/config.yaml{.orig,}
       install -m 644 -D ${config.my.home.ai.harness.agentsMd.source} ${config.xdg.configHome}/goose/.goosehints
     '';
