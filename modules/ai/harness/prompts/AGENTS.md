@@ -24,11 +24,6 @@ Output must be Japanese only (no romaji).
 
 ## CLI tools
 
-You can use high performance CLI tools:
-
-- `ripgrep` instead of `grep`,
-- `fd` instead of `find`.
-
 You must ensure the following constraints:
 
 - No sudo: - escalate config changes
@@ -68,4 +63,3 @@ Use environment variables.
 - Access Control: Always implement authentication and authorization on new endpoints.
 
 ---
-
