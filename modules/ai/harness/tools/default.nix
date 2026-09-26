@@ -31,7 +31,7 @@ let
   ];
 
   createWrappedPackage = package: envVars: (pkgs.writeShellApplication {
-    name = package.pname;
+    name = package.meta.mainProgram;
     runtimeInputs = [ package ];
     text = ''
       exec ${lib.getExe package} "$@"
@@ -91,6 +91,14 @@ in
         ax = {
           package = pkgs.ax;
           prompt = builtins.readFile ./AX.md;
+        };
+        zg = {
+          package = createWrappedPackage pkgs.my.zvec-grep {
+            ZVEC_GREP_HOME = "${config.xdg.configHome}/zvec-grep";
+            ZVEC_GREP_MODEL_CACHE = "${config.xdg.dataHome}/zvec-grep";
+            ZVEC_GREP_EMBEDDING = "local/qwen3-embedding-0.6b";
+          };
+          prompt = builtins.readFile ./ZVEC-GREP.md;
         };
       };
     };
