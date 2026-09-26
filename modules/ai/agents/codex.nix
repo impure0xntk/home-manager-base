@@ -252,6 +252,17 @@ in
       "com.openai/hooks/hooks.json" = {
         hooks = {
           PreToolUse = [
+            # codegraph and zvec-grep are registered as MCP servers, so a raw
+            # cat/rg spends context on a weaker answer than the index already
+            # holds. Deny it and name the tools to call instead.
+            { hooks = [
+              (lib.optionalAttrs config.my.home.ai.harness.enable {
+                matcher = "Bash";
+                type = "command";
+                command = lib.getExe config.my.home.ai.harness.hooks.retrievalRedirect.package;
+                timeout = 5;
+              })
+            ]; }
             { hooks = [
               (lib.optionalAttrs config.my.home.ai.harness.enable {
                 matcher = "Bash";

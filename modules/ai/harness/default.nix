@@ -7,5 +7,6 @@
     ./tools
     ./mcp.nix
     ./plugins.nix
+    ./hooks.nix
   ];
 }

@@ -18,6 +18,7 @@
     (import ./../modules/test-option.nix)
     (import ./../modules/test-option-check.nix)
     (import ./../modules/ai/harness-skills.nix)
+    (import ./../modules/ai/retrieval-redirect.nix)
     # (import ./../modules/ide/jetbrains-remote.nix args)
     # (import ./../modules/languages/java.nix args)
   ];
