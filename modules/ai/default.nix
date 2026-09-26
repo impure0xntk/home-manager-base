@@ -165,8 +165,6 @@ in
     programs.vscode.profiles.default = {
       extensions = (pkgs.nix4vscode.forVscode [
         "GitHub.copilot-chat"
-        "openai.chatgpt"
-
         "ozzafar.debugmcpextension"
       ]) ++ lib.optionals useContinueDev (pkgs.nix4vscode.forVscode [
         "continue.continue"
@@ -195,9 +193,6 @@ in
           continue = lib.optionalAttrs useContinueDev {
             enableTabAutocomplete = true;
             telemetryEnabled = false;
-          };
-          chatgpt = lib.optionalAttrs config.programs.codex.enable {
-            cliExecutable = lib.getExe' config.programs.codex.package "codex";
           };
           debugmcp.serverPort = debugmcpServerPort;
           # The main agent is GitHub Copilot, but it uses only remote models for completions.

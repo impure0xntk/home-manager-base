@@ -247,5 +247,10 @@ in
         };
       };
     };
+
+    programs.vscode.profiles.default = {
+      extensions = (pkgs.nix4vscode.forVscode [ "openai.chatgpt" ]);
+      userSettings.chatgpt.cliExecutable = lib.getExe' config.programs.codex.package "codex";
+    };
   };
 }
