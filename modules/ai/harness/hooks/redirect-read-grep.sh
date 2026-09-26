@@ -20,13 +20,22 @@ codegraph is registered as an MCP server, so call the tool instead of the binary
 
 Fall back to a raw read only when the index has no coverage for the file, and say why in the response.'
 
-readonly SEARCH_MESSAGE='Blocked: raw rg/grep is not the retrieval path on this machine.
+readonly SEARCH_MESSAGE='Blocked: a workspace-wide rg/grep is not the retrieval path on this machine. Route it by what the answer is, not by habit:
 
-zvec-grep is registered as an MCP server, so call the tool instead of the binary:
-- zvec_grep_search (goose exposes it as zg__zvec_grep_search) for concept, symbol, and how-does-X-work questions
-- zvec_grep_rg for exact literals, filenames, config keys, and error strings
+- sweep, you want the matching lines themselves -> zvec_grep_rg for exact literals, filenames, config keys, and error strings. Same answer as rg, rg cost.
+- sweep, you want concepts, symbols, how-does-X-work -> zvec_grep_search (goose exposes it as zg__zvec_grep_search).
+- small scoped lookup: one symbol, one module, one file you are about to edit -> codegraph_explore (goose exposes it as codegraph__codegraph_explore). Verbatim source with line numbers plus the call path, and cheaper than Read plus Grep.
+
+Never codegraph query for a sweep. It expands the bindings around every node, so 79 real hits come back as 147 nodes and 25200 bytes against rg 10686 (2.4x), 40 hits cost 20512 against 3660 (5.6x), and it saturates near 20-25K bytes whatever the hit count is. Counting or listing hits is the one shape it fits, and only as codegraph query -l <n>.
 
 The snippets a search returns are already-read evidence. Fall back to a raw grep only when both tools come back empty, and say why in the response.'
+
+readonly ENUM_MESSAGE='Blocked: this search only counts hits or lists hit paths, so a workspace-wide rg/grep is the wrong tool.
+
+- codegraph query -l <n> answers it. The -l <n> cap is the only form of codegraph query that stays inside the byte budget: a bare query returns the surrounding bindings with every node and saturates near 20-25K bytes whatever the hit count, which is 2.4-5.6x rg on the same query.
+- zvec_grep_rg is the fallback when what you want is the hit paths themselves rather than a count.
+
+Say which of the two you are after, then call that one.'
 
 readonly STRUCTURE_MESSAGE='Blocked: walking the tree with find/ls is not the retrieval path on this machine.
 
@@ -58,6 +67,20 @@ readonly NATIVE_READ_TOOLS=(
   search
   search_files
   codebase_search
+)
+
+# Options whose whole job is counting hits or listing hit paths. A workspace-wide
+# search in this shape is a `codegraph query -l <n>` candidate rather than a
+# sweep; a scoped one is already cheap enough to leave to rtk.
+readonly ENUM_ONLY_OPTIONS=(
+  -l
+  -c
+  --count
+  --count-matches
+  --files
+  --files-with-matches
+  --files-without-match
+  --stats
 )
 
 readonly SEARCH_VERBS=(
@@ -332,7 +355,31 @@ fi
 
 if in_list "$verb" "${SEARCH_VERBS[@]}"; then
   if is_workspace_wide_search "${argvec[@]}"; then
-    emit_deny "$SEARCH_MESSAGE"
+    # Counting or listing is the only sweep codegraph query fits, and only behind
+    # `-l <n>`; the same query asked for bodies costs 2.4-5.6x rg and saturates
+    # near 20-25K bytes whatever the hit count.
+    counts_only=0
+    for token in "${argvec[@]:1}"; do
+      if [[ $token == --* ]]; then
+        if in_list "${token%%=*}" "${ENUM_ONLY_OPTIONS[@]}"; then
+          counts_only=1
+          break
+        fi
+        continue
+      fi
+      # `-lc`, `-cl`: single-dash bundles, so read them character-wise.
+      if [[ $token == -?* ]]; then
+        if [[ ${token:1} == *c* || ${token:1} == *l* ]]; then
+          counts_only=1
+          break
+        fi
+      fi
+    done
+    if ((counts_only)); then
+      emit_deny "$ENUM_MESSAGE"
+    else
+      emit_deny "$SEARCH_MESSAGE"
+    fi
     exit 0
   fi
   emit_pass
