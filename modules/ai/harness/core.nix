@@ -53,6 +53,11 @@
                   command = "${config.my.home.ai.harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet || true";
                   timeout = 30;
                 }
+                {
+                  type = "command";
+                  command = "${config.my.home.ai.harness.codingAgentTools.zg.package}/bin/zg index || true";
+                  timeout = 300;
+                }
               ]; }
             ];
             UserPromptSubmit = [
