@@ -13,7 +13,6 @@ let
       ## Coding Agent Tools
 
       The following tools are available as standalone commands and to coding agents.
-      Their environment variables are configured by the installed command wrappers.
 
       ${lib.concatStringsSep "\n\n" (
         lib.mapAttrsToList (

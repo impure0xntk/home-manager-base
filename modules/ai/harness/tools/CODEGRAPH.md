@@ -1,4 +1,4 @@
-## Codegraph
+### Codegraph
 
 NEVER call Read or Grep to understand code structure or locate symbols.
 You MUST use `codegraph_context`, `codegraph_search`, or `codegraph_callers` first.
