@@ -31,6 +31,24 @@ let
 
   chatProvider = searchModelByRole "chat";
 
+  # stdio MCP servers shared through the harness tool registry.
+  # goose registers each of them as an extension of type `stdio`.
+  # https://goose-docs.ai/docs/getting-started/using-extensions
+  defaultMcpExtensions = lib.mapAttrs (
+    name: mcp: {
+      type = "stdio";
+      name = name;
+      enabled = mcp.enabled;
+      bundled = false;
+      cmd = mcp.command;
+      args = mcp.args;
+      env_keys = mcp.envKeys;
+      envs = mcp.env;
+      timeout = mcp.timeout;
+    }
+    // lib.optionalAttrs (mcp.displayName != null) { display_name = mcp.displayName; }
+  ) config.my.home.ai.harness.mcpServers;
+
   gooseConfig = lib.my.deepMerge {
     GOOSE_MODE = "auto";
     GOOSE_MAX_TURNS = 1000;
@@ -70,7 +88,10 @@ let
         timeout = 300;
         type = "builtin";
       };
-    };
+    }
+    # stdio MCP servers shared through the harness tool registry.
+    # https://goose-docs.ai/docs/getting-started/using-extensions
+    // lib.optionalAttrs config.my.home.ai.harness.enable defaultMcpExtensions;
 
     plugins = builtins.listToAttrs (
       (generatePluginConfig enabledPlugins true)

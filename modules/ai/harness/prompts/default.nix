@@ -18,7 +18,7 @@ let
       ${lib.concatStringsSep "\n\n" (
         lib.mapAttrsToList (
           name: tool:
-          lib.optionalString (tool.prompt != "") ''
+          lib.optionalString (tool.prompt != null) ''
             ${tool.prompt}
           ''
         ) cfg.harness.codingAgentTools

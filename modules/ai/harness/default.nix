@@ -5,6 +5,7 @@
     ./skills.nix
     ./prompts
     ./tools
+    ./mcp.nix
     ./plugins.nix
   ];
 }

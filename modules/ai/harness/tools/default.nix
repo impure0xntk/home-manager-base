@@ -61,9 +61,17 @@ in
             description = "The Nix package to provide for this tool.";
           };
           prompt = mkOption {
-            type = str;
-            default = "";
+            type = nullOr str;
+            default = null;
             description = "Prompt fragment to include in AGENTS.md for agents.";
+          };
+          mcpServer = mkOption {
+            type = nullOr (import ../mcp-server-type.nix { inherit lib; });
+            default = null;
+            description = ''
+              MCP server definition. When set, the tool is registered as a stdio
+              MCP server in every agent that supports MCP (codex, goose, ...).
+            '';
           };
         };
       });
@@ -72,33 +80,41 @@ in
           package = pkgs.rtk;
           prompt = builtins.readFile ./RTK.md;
         };
-        codegraph = {
+        codegraph = rec {
           package = createWrappedPackage pkgs.my.codegraph {
             CODEGRAPH_TELEMETRY = "0";
             DO_NOT_TRACK = "1";
           };
-          # Self maid
-          prompt = builtins.readFile ./CODEGRAPH.md;
+          mcpServer = {
+            command = lib.getExe package;
+            args = [ "serve" "--mcp" ];
+          };
         };
-        ctx = {
+        ctx = rec {
           package = createWrappedPackage pkgs.ctx {
             CTX_DATA_ROOT = "${config.xdg.dataHome}/ctx";
             CTX_ANALYTICS_ENABLED = "false";
             CTX_UPGRADE_AUTO = "off";
           };
-          prompt = builtins.readFile ./CTX.md;
+          mcpServer = {
+            command = lib.getExe package;
+            args = [ "mcp" "serve" ];
+          };
         };
         ax = {
           package = pkgs.ax;
           prompt = builtins.readFile ./AX.md;
         };
-        zg = {
+        zg = rec {
           package = createWrappedPackage pkgs.my.zvec-grep {
             ZVEC_GREP_HOME = "${config.xdg.configHome}/zvec-grep";
             ZVEC_GREP_MODEL_CACHE = "${config.xdg.dataHome}/zvec-grep";
             ZVEC_GREP_EMBEDDING = "local/qwen3-embedding-0.6b";
           };
-          prompt = builtins.readFile ./ZVEC-GREP.md;
+          mcpServer = {
+            command = lib.getExe package;
+            args = [ "server" "--stdio" ];
+          };
         };
       };
     };

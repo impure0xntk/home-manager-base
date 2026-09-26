@@ -40,6 +40,20 @@ let
     '';
   };
 
+  # stdio MCP servers shared through the harness tool registry.
+  # codex reads them from [mcp_servers.<name>] in ~/.codex/config.toml
+  # https://developers.openai.com/codex/mcp
+  defaultMcpServers = lib.mapAttrs (
+    name: mcp: {
+      command = mcp.command;
+      args = mcp.args;
+      enabled = mcp.enabled;
+      startup_timeout_sec = 30;
+      tool_timeout_sec = mcp.timeout;
+    }
+    // lib.optionalAttrs (mcp.env != { }) { env = mcp.env; }
+  ) config.my.home.ai.harness.mcpServers;
+
   settings = lib.my.deepMerge
     ({
       model_reasoning_effort = "medium";
@@ -57,7 +71,9 @@ let
         "nixos-reactor-harness-for-all-agents@local-repo".enabled = true;
         "nixos-reactor-harness-for-codex@local-repo".enabled = true;
       };
-    } //
+    } // (lib.optionalAttrs config.my.home.ai.harness.enable {
+      mcp_servers = defaultMcpServers;
+    }) //
     (let
       chatModel = searchModelByRole "chat";
     in
