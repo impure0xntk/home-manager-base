@@ -122,7 +122,7 @@ in
     home.packages = lib.forEach (builtins.attrValues config.my.home.ai.harness.codingAgentTools) (v: v.package);
     xdg.configFile = lib.mkMerge defaultCodingAgentToolsXdgConfigDirs;
 
-    home.activation.fixCodexConfig = lib.hm.dag.entryAfter [ "trust-rtk-custom-filter" ] ''
+    home.activation.trustRtkCustomFilter = lib.hm.dag.entryAfter [ "trust-rtk-custom-filter" ] ''
       ${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk trust --yes
     '';
 
