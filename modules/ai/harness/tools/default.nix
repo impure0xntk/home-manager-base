@@ -85,6 +85,7 @@ in
             CODEGRAPH_TELEMETRY = "0";
             DO_NOT_TRACK = "1";
           };
+          prompt = builtins.readFile ./CODEGRAPH.md; # Self maid
           mcpServer = {
             command = lib.getExe package;
             args = [ "serve" "--mcp" ];
@@ -96,6 +97,7 @@ in
             CTX_ANALYTICS_ENABLED = "false";
             CTX_UPGRADE_AUTO = "off";
           };
+          prompt = builtins.readFile ./CTX.md;
           mcpServer = {
             command = lib.getExe package;
             args = [ "mcp" "serve" ];
@@ -107,6 +109,7 @@ in
             ZVEC_GREP_MODEL_CACHE = "${config.xdg.dataHome}/zvec-grep";
             ZVEC_GREP_EMBEDDING = "local/qwen3-embedding-0.6b";
           };
+          prompt = builtins.readFile ./ZVEC-GREP.md;
           mcpServer = {
             command = lib.getExe package;
             args = [ "server" "--stdio" ];
