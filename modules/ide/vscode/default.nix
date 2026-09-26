@@ -323,6 +323,8 @@ in
               };
               sideBar.location = "right";
               statusBar.visible = false;
+
+              experimental.modernUI = false;
             };
             zenMode.showTabs = workbench.editor.showTabs;
 
