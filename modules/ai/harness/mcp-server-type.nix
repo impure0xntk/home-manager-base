@@ -25,6 +25,27 @@ lib.types.submodule {
       default = [ ];
       description = "Names of environment variables inherited from the agent process.";
     };
+    # Backend tool filters. `mcp-compressor` applies them before
+    # compression, so a filtered tool disappears from `tools/list` and
+    # `get_tool_schema` as well, it is not merely hidden from `invoke_tool`.
+    includeTools = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Backend tool names to keep. An empty list keeps every tool.
+        Names are compared literally against the names the backend reports
+        from `tools/list`, no glob expansion is performed.
+      '';
+    };
+    excludeTools = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Backend tool names to drop. Applied after `includeTools`.
+        Names are compared literally against the names the backend reports
+        from `tools/list`, no glob expansion is performed.
+      '';
+    };
     timeout = lib.mkOption {
       type = lib.types.int;
       default = 300;

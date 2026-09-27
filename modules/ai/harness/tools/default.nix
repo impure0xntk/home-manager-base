@@ -101,6 +101,19 @@ in
           mcpServer = {
             command = lib.getExe package;
             args = [ "mcp" "serve" ];
+            excludeTools = [
+              # graph: delegate to codegraph
+              "graph_query"
+              "graph_show"
+              "graph_callers"
+              "graph_callees"
+              "graph_impact"
+              "graph_path"
+              "graph_stats"
+              # sift: delegate to rtk
+              "output_compact"
+              "output_restore"
+            ];
           };
         };
         zg = rec {

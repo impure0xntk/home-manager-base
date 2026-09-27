@@ -61,6 +61,25 @@ let
 
   # A single `invoke_tool` call pays for the compressor plus its backend, so the
   # shared entry inherits the largest declared per-tool timeout.
+  # `mcp-compressor` has no per backend filter flag: `--include-tools` and
+  # `--exclude-tools` are process wide, so every backend contributes to a
+  # single deduplicated pair of flags. Names are matched literally, therefore
+  # two backends exposing the same tool name cannot be filtered apart.
+  toolFilterArgs =
+    flag: optionName:
+    let
+      names = lib.unique (
+        lib.sort builtins.lessThan (lib.concatMap (mcp: mcp.${optionName}) (lib.attrValues toolMcpServers))
+      );
+    in
+    lib.optionals (names != [ ]) [
+      flag
+      (lib.concatStringsSep "," names)
+    ];
+
+  includeToolArgs = toolFilterArgs "--include-tools" "includeTools";
+  excludeToolArgs = toolFilterArgs "--exclude-tools" "excludeTools";
+
   timeout = lib.foldl' (acc: mcp: lib.max acc mcp.timeout) 0 (lib.attrValues enabledMcpServers);
 in
 {
@@ -96,14 +115,19 @@ in
           cfg.compression
           "--toonify"
         ]
-        ++ multiServerArgs;
+        ++ multiServerArgs
+        ++ includeToolArgs
+        ++ excludeToolArgs;
         inherit timeout;
       };
     };
     description = ''
       MCP servers declared in `codingAgentTools`, multiplexed into the single
       `mcp-compressor` server named by `harness.mcp.name`. Tools without
-      `mcpServer` and tools with `enabled = false` are omitted.
+      `mcpServer` and tools with `enabled = false` are omitted. The
+      `mcpServer.includeTools` and `mcpServer.excludeTools` of every backend
+      are merged into the single process wide `--include-tools` and
+      `--exclude-tools` pair that `mcp-compressor` accepts.
     '';
   };
 }
