@@ -63,6 +63,8 @@ readonly STRUCTURE_VERBS=(
   tree
   glob
   list_dir
+  # qwen-code spells directory listing this way.
+  list_directory
 )
 
 # Read/search tools some agents expose natively instead of going through a
@@ -77,6 +79,8 @@ readonly NATIVE_READ_TOOLS=(
   search
   search_files
   codebase_search
+  # qwen-code spells content search this way.
+  grep_search
 )
 
 # Options whose whole job is counting hits or listing hit paths. A workspace-wide
