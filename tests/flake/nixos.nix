@@ -36,5 +36,6 @@
       # my.home.languages.java.enable = true; # zulu: x86_64-linux only
       my.home.languages.shell.enable = true;
     }
+    (import ./../modules/ai/main-agent.nix)
   ];
 }).activationPackage

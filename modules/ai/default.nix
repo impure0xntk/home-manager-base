@@ -127,32 +127,6 @@ in
           };
         });
       };
-      agents = mkOption {
-        description = "AI agent configuration for auto-approval rules";
-        type = listOf (submodule {
-          options = {
-            name = mkOption {
-              description = "Agent name (e.g., 'codex', 'goose', 'opencode')";
-              type = str;
-            };
-            autoApprovalRules = mkOption {
-              description = "Rules for automatically approving commands";
-              type = listOf (submodule {
-                options = {
-                  command = mkOption {
-                    description = "Command pattern to match (e.g., 'ls', 'git *')";
-                    type = str;
-                  };
-                  action = mkOption {
-                    description = "Action to take: 'allow', 'deny', or 'ask'";
-                    type = enum [ "allow" "deny" "ask" ];
-                  };
-                };
-              });
-            };
-          };
-        });
-      };
     };
   config = lib.mkIf cfg.enable {
     assertions = [

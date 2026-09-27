@@ -19,6 +19,7 @@
     (import ./../modules/test-option-check.nix)
     (import ./../modules/ai/harness-skills.nix)
     (import ./../modules/ai/retrieval-redirect.nix)
+    (import ./../modules/ai/main-agent.nix)
     (import ./../modules/ai/harness-mcp-filters.nix)
     (import ./../modules/ai/harness-rtk-filters.nix)
     # (import ./../modules/ide/jetbrains-remote.nix args)

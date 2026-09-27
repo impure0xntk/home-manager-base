@@ -94,6 +94,11 @@ Key facts a coding agent must not get wrong:
   ]` will not compile.
 - **A new agent goes in `agents/`, is imported in `agents/default.nix`,** and gets
   `searchModelByRole` explicitly. The commented-out `agent-deck.nix` line shows the intended shape.
+- **`agents/default.nix` owns every `gtr.*` git config key**, including `gtr.ai.default`, whose
+  value is the `main` command of an entry in `my.home.ai.agents` — the command gtr runs, not a name
+  to translate, because gtr resolves it itself (built-in adapter name, else a command on PATH). They
+  go through git config rather than a repo `.gtrconfig`, which gtr treats as executable entries it
+  ignores until `git gtr trust`.
 - **Prompt fragments are the single source of truth for tool docs.** `harness/prompts/default.nix`
   builds the deployed `~/.config/ai/AGENTS.md` by concatenating `harness/prompts/AGENTS.md` with
   every `harness.tools.<name>.prompt`. Adding a tool means adding both the tool entry in
