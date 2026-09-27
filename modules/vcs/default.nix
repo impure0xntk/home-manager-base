@@ -36,8 +36,6 @@ let
     "gtr" = "git gtr";
     "gtrcopy" = "git gtr copy";
     "gtrclean" = "git gtr clean --merged --force";
-
-    "ghd" = "gh-dash";
   };
 
 in {
@@ -132,38 +130,6 @@ in {
       gh-notify
     ];
   };
-  programs.gh-dash = {
-    # enable = true; # Failed to launch on WSL
-    package = pkgs.unstable.gh-dash;
-    settings = {
-      pager.diff = lib.getExe pkgs.unstable.diffnav;
-      keybindings = {
-        universal = [
-          {
-            key = "g";
-            name = "lazygit";
-            command = "cd {{.RepoPath}} && lazygit";
-          }
-        ];
-      };
-    };
-  };
-  programs.lazyworktree = {
-    enable = true;
-    enableFishIntegration = true;
-    package = pkgs.unstable.lazyworktree;
-    settings = {
-      auto_refresh = true;
-      ci_auto_refresh = false;
-      layout = "default";
-      palette_mru = true;
-      palette_mru_limit = 5;
-      refresh_interval = 10;
-      search_auto_select = false;
-      sort_mode = "switched";
-    };
-  };
-
   programs.bash.shellAliases = shellAliases;
 
   programs.fish.interactiveShellInit = ''
