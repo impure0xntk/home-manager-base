@@ -1,10 +1,12 @@
 [filters.nix]
-description = "Compact nix output — drop store-path lists, build/copy progress, dirty-tree warnings"
+description = "Compact nix output — drop eval/build progress, keep results and errors"
 match_command = "^(sudo\\s+)?nix\\b"
 strip_ansi = true
 filter_stderr = true
 strip_lines_matching = [
   "^\\s*$",
+  "^evaluating '",
+  "^fetching path input '",
   "^copying path ",
   "^copied \\d+ paths",
   "^copying \\d+ paths",
@@ -23,31 +25,11 @@ strip_lines_matching = [
   "^warning: updating lock file",
 ]
 truncate_lines_at = 150
-max_lines = 60
+# `nix eval` / `nix search` print the value or the error after the progress log,
+# so a head-only cap (max_lines) would drop exactly what the agent asked for.
+head_lines = 40
+tail_lines = 20
 on_empty = "nix: ok"
-
-[filters.home-manager]
-description = "Compact home-manager activation — drop Activating/copy/build noise, keep result and errors"
-match_command = "^(sudo\\s+)?home-manager\\b"
-strip_ansi = true
-filter_stderr = true
-strip_lines_matching = [
-  "^\\s*$",
-  "^Starting home-manager activation",
-  "^Activating ",
-  "^Creating profile generation ",
-  "^No change so reusing latest profile generation",
-  "^copying path ",
-  "^copied \\d+ paths",
-  "^these \\d+ derivations will be built:",
-  "^\\s+/nix/store/\\S+$",
-  "^building '/nix/store/",
-  "^\\s*\\[\\d+/\\d+ (built|copied)",
-  "^warning: Git tree '.*' is dirty",
-]
-truncate_lines_at = 150
-max_lines = 50
-on_empty = "home-manager: ok"
 
 [[tests.nix]]
 name = "strips store paths and dirty warning, keeps result"
@@ -69,6 +51,50 @@ warning: Git tree '/Users/x/repo' is dirty
 copying path '/nix/store/ccc-baz' from 'https://cache.nixos.org'
 """
 expected = "nix: ok"
+
+[[tests.nix]]
+name = "strips eval progress, keeps the evaluated value"
+input = """
+fetching path input 'path:/nix/store/aaa-source'
+evaluating 'legacyPackages.x86_64-linux'...
+evaluating 'legacyPackages.x86_64-linux.codegraph'...
+2
+"""
+expected = "2"
+
+[[tests.nix]]
+name = "strips a long eval log but keeps the trailing error"
+input = """
+evaluating 'legacyPackages.x86_64-linux.a'...
+evaluating 'legacyPackages.x86_64-linux.b'...
+evaluating 'legacyPackages.x86_64-linux.c'...
+error: no results for the given search term(s)!
+"""
+expected = "error: no results for the given search term(s)!"
+
+[filters.home-manager]
+description = "Compact home-manager activation — drop Activating/copy/build noise, keep result and errors"
+match_command = "^(sudo\\s+)?home-manager\\b"
+strip_ansi = true
+filter_stderr = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^Starting home-manager activation",
+  "^Activating ",
+  "^Creating profile generation ",
+  "^No change so reusing latest profile generation",
+  "^copying path ",
+  "^copied \\d+ paths",
+  "^these \\d+ derivations will be built:",
+  "^\\s+/nix/store/\\S+$",
+  "^building '/nix/store/",
+  "^\\s*\\[\\d+/\\d+ (built|copied)",
+  "^warning: Git tree '.*' is dirty",
+]
+truncate_lines_at = 150
+head_lines = 30
+tail_lines = 20
+on_empty = "home-manager: ok"
 
 [[tests.home-manager]]
 name = "strips activation steps, keeps warnings/output"

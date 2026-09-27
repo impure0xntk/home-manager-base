@@ -1,6 +1,10 @@
+# Every field below is mandatory: rtk deserializes config.toml with serde and
+# rejects unknown/missing keys, which silently disables the sqlite recall store.
+# Without it a lossy filter falls back to printing the full raw output.
 [display]
 colors = false
 emoji = false
+max_width = 120
 
 [filters]
 ignore_dirs = [
@@ -14,7 +18,8 @@ ignore_dirs = [
 ignore_files = ["*.lock", "*.min.js", "*.min.css"]
 
 [telemetry]
-enable = false
+enabled = false
 
 [tracking]
-enable = false
+enabled = false
+history_days = 90
