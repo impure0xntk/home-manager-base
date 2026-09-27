@@ -17,6 +17,16 @@ in
         description = "DO NOT EDIT: config file path to mysql client config file.";
       };
     };
+    # mycli 2.0 stopped reading ~/.my.cnf, so connection parameters are stored
+    # as DSN aliases in its own config file.
+    # https://www.mycli.net/credentials
+    mycli = {
+      configFilePath = lib.mkOption {
+        type = lib.types.path;
+        default = "${config.home.homeDirectory}/.myclirc";
+        description = "DO NOT EDIT: config file path to mycli config file.";
+      };
+    };
     lazysql = {
       configFilePath = lib.mkOption {
         type = lib.types.path;
