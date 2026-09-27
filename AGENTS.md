@@ -114,6 +114,8 @@ Key facts a coding agent must not get wrong:
   Verify a name against the backend's own `tools/list` before writing it into a prompt.
   The zvec-grep daemon runs its `agent` toolset, which registers `zvec_grep_search` **only** —
   `zvec_grep_rg` needs `--mcp-toolset full`, which is a daemon-wide switch every client inherits.
+  semble registers `search` and `find_related`, both bare names; `repo` on either takes a local
+  path, an https git URL, or a list mixing the two, and the list is searched as one corpus.
   See `docs/ai-harness-efficiency-plan.md` §3.1 and §3.11.
 - **`plugins.nix` ships the `nixos-reactor-harness-for-all-agents` plugin** whose `hooks.json` wires
   `codegraph sync` into `SessionStart` and `codegraph prompt-hook` into `UserPromptSubmit`. The

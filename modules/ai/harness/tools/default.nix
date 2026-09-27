@@ -128,6 +128,37 @@ in
             args = [ "server" "--stdio" ];
           };
         };
+        semble = rec {
+          # `runtimeEnv`, not `createWrappedPackage`: that helper appends a
+          # `wrapProgram` line to `postInstall`, and `writeShellApplication`
+          # builds with `runCommand`, so the phase never runs and the envVars
+          # are dropped. `runtimeEnv` is baked into the script text instead.
+          package = pkgs.writeShellApplication {
+            name = "semble";
+            runtimeInputs = [ pkgs.my.semble ];
+            runtimeEnv = {
+              # One XDG subtree for the three caches semble keeps, so a
+              # `semble clear` and a cache prune have a single place to look.
+              SEMBLE_CACHE_LOCATION = "${config.xdg.cacheHome}/semble/index";
+              # tree-sitter grammars unpack out of the wheel on first use
+              SEMBLE_GRAMMARS_CACHE_DIR = "${config.xdg.cacheHome}/semble/grammars";
+              # the potion-code-16M-v2 embedding model, fetched on first use
+              HF_HOME = "${config.xdg.cacheHome}/semble/huggingface";
+            };
+            text = ''
+              exec ${lib.getExe pkgs.my.semble} "$@"
+            '';
+          };
+          prompt = builtins.readFile ./SEMBLE.md;
+          mcpServer = {
+            command = lib.getExe package;
+            # `code` alone would blind the server to config keys and doc pages,
+            # which is a large share of what an agent asks a codebase. The
+            # `content` argument on a call still narrows it back to one scope.
+            args = [ "--content" "all" ];
+            env.SEMBLE_MCP_IDLE_TIMEOUT = "1800"; # drop idle indexes after 30 min
+          };
+        };
       };
     };
 
