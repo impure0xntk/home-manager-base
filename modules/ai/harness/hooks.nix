@@ -58,5 +58,27 @@
         '';
       };
     };
+
+    translatePrompt = {
+      package = lib.mkOption {
+        type = lib.types.package;
+        readOnly = true;
+        default = pkgs.writeShellApplication {
+          name = "translate-prompt";
+          text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./hooks/translate-prompt.sh);
+          runtimeInputs = [ pkgs.jq ];
+        };
+        defaultText = lib.literalExpression ''pkgs.writeShellApplication { name = "translate-prompt"; ... }'';
+        description = ''
+          UserPromptSubmit hook wrapper that translates the prompt using an external tool
+          (e.g., Google Translate). The translation is done by running a command
+          that reads the prompt from standard input, translates it to English,
+          and writes the translated prompt back to standard output. This hook can be
+          used to automatically translate prompts before they are submitted for
+          processing.
+        '';
+      };
+    };
+
   };
 }

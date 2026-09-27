@@ -66,7 +66,7 @@
                 { hooks = [
                   {
                     type = "command";
-                    command = "${config.my.home.ai.harness.codingAgentTools.codegraph.package}/bin/codegraph prompt-hook || true";
+                    command = "${config.my.home.ai.harness.hooks.translatePrompt.package}/bin/translate-prompt | ${config.my.home.ai.harness.codingAgentTools.codegraph.package}/bin/codegraph prompt-hook || true";
                     timeout = 30;
                   }
                 ]; }
