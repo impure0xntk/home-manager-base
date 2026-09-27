@@ -59,8 +59,6 @@ in
       nvd
       deploy-rs
       nurl
-
-      # oranc # nix binary cache management. See nixos-reactor
     ];
 
     programs.nh = {
