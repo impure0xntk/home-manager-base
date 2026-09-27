@@ -30,11 +30,6 @@ let
     }
   ];
 
-  # `writeShellApplication` builds with `runCommand`, so the standard phases
-  # after `buildPhase` never run: a `wrapProgram` appended to `postInstall` is
-  # accepted by the evaluation and then dropped at build time, and the wrapper
-  # ships with none of the env vars. `runtimeEnv` goes into the script text
-  # instead, which is written by the same `runCommand` build, so it survives.
   createWrappedPackage = package: envVars: pkgs.writeShellApplication {
     name = package.meta.mainProgram;
     runtimeInputs = [ package ];
@@ -125,29 +120,6 @@ in
           mcpServer = {
             command = lib.getExe package;
             args = [ "server" "--stdio" ];
-          };
-        };
-        semble = rec {
-          package = createWrappedPackage pkgs.my.semble {
-            # One XDG subtree for the three caches semble keeps, so a
-            # `semble clear` and a cache prune have a single place to look.
-            SEMBLE_CACHE_LOCATION = "${config.xdg.cacheHome}/semble/index";
-            # tree-sitter grammars unpack out of the wheel on first use
-            SEMBLE_GRAMMARS_CACHE_DIR = "${config.xdg.cacheHome}/semble/grammars";
-            # the potion-code-16M-v2 embedding model, fetched on first use
-            HF_HOME = "${config.xdg.cacheHome}/semble/huggingface";
-          };
-          prompt = builtins.readFile ./SEMBLE.md;
-          mcpServer = {
-            command = lib.getExe package;
-            # `code` alone would blind the server to config keys and doc pages,
-            # which is a large share of what an agent asks a codebase. The
-            # `content` argument on a call still narrows it back to one scope.
-            args = [ "--content" "all" ];
-            # Each searched repo stays resident in memory for the session, so
-            # drop the ones idle for 30 min rather than pinning every repo the
-            # session ever touched.
-            env.SEMBLE_MCP_IDLE_TIMEOUT = "1800";
           };
         };
       };

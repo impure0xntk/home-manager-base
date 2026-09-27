@@ -32,7 +32,7 @@ Supported systems: `x86_64-linux`, `aarch64-linux`. `home.stateVersion` is `"25.
 
 ## 2. Repository map
 
-```
+```text
 flake.nix                # createModules, platform attrset, overlays, checks
 platform/
   native-linux/default.nix
@@ -67,7 +67,7 @@ would activate it.
 
 ## 3. The `ai/` subsystem (read this before touching anything AI-related)
 
-```
+```text
 modules/ai/
   default.nix         # options.my.home.ai = { enable, providers, agents }; VS Code user settings
   agents/default.nix  # imports each agent file, threading searchModelByRole through args
@@ -114,8 +114,6 @@ Key facts a coding agent must not get wrong:
   Verify a name against the backend's own `tools/list` before writing it into a prompt.
   The zvec-grep daemon runs its `agent` toolset, which registers `zvec_grep_search` **only** —
   `zvec_grep_rg` needs `--mcp-toolset full`, which is a daemon-wide switch every client inherits.
-  semble registers `search` and `find_related`, both bare names; `repo` on either takes a local
-  path, an https git URL, or a list mixing the two, and the list is searched as one corpus.
   See `docs/ai-harness-efficiency-plan.md` §3.1 and §3.11.
 - **`plugins.nix` ships the `nixos-reactor-harness-for-all-agents` plugin** whose `hooks.json` wires
   `codegraph sync` into `SessionStart` and `codegraph prompt-hook` into `UserPromptSubmit`. The
@@ -222,9 +220,11 @@ evaluates a stale committed snapshot. `?submodules=1` picks up uncommitted submo
 
 - Consumed as `git+file:./submodules/home-manager-base` by `nixos-reactor`.
 - Before renaming or removing a `my.home.*` option, find every consumer:
+
   ```bash
   rtk grep -rn "my\.home\.<name>" ../../machines ../../home ../../profiles
   ```
+
 - The parent defines `createHomeModules { machine, extraImports, extraSystemImports, extraOverlays }`
   and injects `home-manager-base.nixosModules.${system}.myHomeModules` through `_module.args.imports`.
   A change that breaks the `_module.args` import cycle shows up as an infinite-recursion error, not
