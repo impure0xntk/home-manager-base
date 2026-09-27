@@ -99,6 +99,17 @@ Key facts a coding agent must not get wrong:
   every `harness.tools.<name>.prompt`. Adding a tool means adding both the tool entry in
   `tools/default.nix` **and** its `.md` fragment — otherwise the user-level AGENTS.md silently goes
   stale.
+- **Fragments and hook messages name backend tools only** (`zvec_grep_search`, `codegraph_explore`),
+  never the transport that carries them. `harness/mcp.nix` multiplexes every registered backend behind
+  one `mcp-compressor` process, so the tools an agent actually sees are
+  `<backend>_get_tool_schema` / `<backend>_invoke_tool` — but naming that in a prompt couples the
+  prompt to an implementation detail, and `--compression high` already keeps the argument names
+  resident in the schema description. A tool name that the agent cannot call is worse than no name at
+  all: the `PreToolUse` deny then leaves "use `rg`" as the only move, which that same hook denies.
+  Verify a name against the backend's own `tools/list` before writing it into a prompt.
+  The zvec-grep daemon runs its `agent` toolset, which registers `zvec_grep_search` **only** —
+  `zvec_grep_rg` needs `--mcp-toolset full`, which is a daemon-wide switch every client inherits.
+  See `docs/ai-harness-efficiency-plan.md` §3.1 and §3.11.
 - **`plugins.nix` ships the `nixos-reactor-harness-for-all-agents` plugin** whose `hooks.json` wires
   `codegraph sync` into `SessionStart` and `codegraph prompt-hook` into `UserPromptSubmit`. The
   comment in `core.nix` explains why `plugin.json` deliberately omits `$schema` (Codex only loads

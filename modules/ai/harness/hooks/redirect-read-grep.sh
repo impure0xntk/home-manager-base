@@ -9,39 +9,49 @@
 #
 # Both agents speak the Claude hook dialect, so one script serves both; the
 # tool names differ but are never inspected for shell calls, only the payload.
+#
+# Every tool name printed below has to be a real backend tool, or the deny
+# points at a name the agent cannot call and the only remaining move is a raw
+# grep, which this script also denies. Messages name backend tools only: the
+# transport that carries them (the multiplexing in `harness/mcp.nix`) is not
+# the agent's business, and naming it would break these messages the day the
+# transport changes.
+# The zvec-grep daemon runs its `agent` toolset, which registers
+# `zvec_grep_search` alone -- the managed-rg surface (`zvec_grep_rg`) is not
+# available, because exposing it means switching the shared daemon to the
+# `full` toolset, which every client of that daemon inherits.
+# Re-check against `zg server --stdio` tools/list before naming a tool below.
 
 set -euo pipefail
 
 readonly READ_MESSAGE='Blocked: reading a source file directly is not the retrieval path on this machine.
 
-codegraph is registered as an MCP server, so call the tool instead of the binary:
-- codegraph_explore (goose exposes it as codegraph__codegraph_explore) returns the relevant source with line numbers plus the call path, and replaces Read plus Grep in one call
-- codegraph_query locates a symbol, codegraph_callers / codegraph_callees map its relationships
+The codegraph MCP server registers exactly one tool, codegraph_explore(query, maxFiles, projectPath), and it replaces Read plus Grep in one call: verbatim source with line numbers plus the call path.
 
 Fall back to a raw read only when the index has no coverage for the file, and say why in the response.'
 
 readonly SEARCH_MESSAGE='Blocked: a workspace-wide rg/grep is not the retrieval path on this machine. Route it by what the answer is, not by habit:
 
-- sweep, you want the matching lines themselves -> zvec_grep_rg for exact literals, filenames, config keys, and error strings. Same answer as rg, rg cost.
-- sweep, you want concepts, symbols, how-does-X-work -> zvec_grep_search (goose exposes it as zg__zvec_grep_search).
-- small scoped lookup: one symbol, one module, one file you are about to edit -> codegraph_explore (goose exposes it as codegraph__codegraph_explore). Verbatim source with line numbers plus the call path, and cheaper than Read plus Grep.
+- sweep, you want the matching lines themselves -> zvec_grep_search with fts, bounded by globs / fileTypes. fts is the lexical route over the same index, so one call answers an exact literal, filename, config key, error string or regex. There is no separate rg tool registered here: the managed-rg surface is not part of the installed toolset, so naming it only wastes a round trip.
+- sweep, you want concepts, symbols, how-does-X-work -> zvec_grep_search with query / queries / vector.
+- small scoped lookup: one symbol, one module, one file you are about to edit -> codegraph_explore with an explicit maxFiles. Verbatim source with line numbers plus the call path, and cheaper than Read plus Grep.
 
-Never codegraph query for a sweep. It expands the bindings around every node, so 79 real hits come back as 147 nodes and 25200 bytes against rg 10686 (2.4x), 40 hits cost 20512 against 3660 (5.6x), and it saturates near 20-25K bytes whatever the hit count is. Counting or listing hits is the one shape it fits, and only as codegraph query -l <n>.
+Never codegraph query for a sweep. It expands the bindings around every node, so 79 real hits come back as 147 nodes and 25200 bytes against the lexical route 10686 (2.4x), 40 hits cost 20512 against 3660 (5.6x), and it saturates near 20-25K bytes whatever the hit count is. Counting or listing hits is the one shape it fits, and only as codegraph query -l <n>.
 
-The snippets a search returns are already-read evidence. Fall back to a raw grep only when both tools come back empty, and say why in the response.'
+The snippets a search returns are already-read evidence. Fall back to a raw grep only when the index comes back empty for a question it should cover, and say why in the response.'
 
 readonly ENUM_MESSAGE='Blocked: this search only counts hits or lists hit paths, so a workspace-wide rg/grep is the wrong tool.
 
-- codegraph query -l <n> answers it. The -l <n> cap is the only form of codegraph query that stays inside the byte budget: a bare query returns the surrounding bindings with every node and saturates near 20-25K bytes whatever the hit count, which is 2.4-5.6x rg on the same query.
-- zvec_grep_rg is the fallback when what you want is the hit paths themselves rather than a count.
+- codegraph query -l <n> answers it. The -l <n> cap is the only form of codegraph query that stays inside the byte budget: a bare query returns the surrounding bindings with every node and saturates near 20-25K bytes whatever the hit count, which is 2.4-5.6x the lexical route on the same query.
+- zvec_grep_search with fts answers it when what you want is the hit paths and the matching lines rather than a count.
 
 Say which of the two you are after, then call that one.'
 
 readonly STRUCTURE_MESSAGE='Blocked: walking the tree with find/ls is not the retrieval path on this machine.
 
-codegraph and zvec-grep are registered as MCP servers, so name the area instead of searching for it:
-- codegraph_explore (goose exposes it as codegraph__codegraph_explore) takes the module, package, or symbol and returns its files with the symbols and call paths in them
-- zvec_grep_search (goose exposes it as zg__zvec_grep_search) takes globs and fileTypes to match paths inside the index
+The codegraph and zvec-grep MCP servers are registered, so name the area instead of searching for it:
+- codegraph_explore takes the module, package, or symbol and returns its files with the symbols and call paths in them
+- zvec_grep_search takes globs and fileTypes to match paths inside the index
 
 Fall back to a raw find only for a path the index does not cover, and say why in the response.'
 

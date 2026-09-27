@@ -1,5 +1,8 @@
 ### zvec-grep
 
+The zvec-grep MCP server registers exactly one tool: `zvec_grep_search`. Call it with the
+arguments listed in its schema.
+
 Choose the evidence source before the retrieval mode, and choose the retrieval mode from
 the shape of the question rather than from habit.
 
@@ -9,12 +12,19 @@ One route per question. A second index over the same question is a wasted round 
 
 | Question shape | Route |
 | --- | --- |
-| Exact literal, filename, path, config key, error string, regex, hit count, path list | `zvec_grep_rg` when the host lists it, otherwise `rg` |
-| Concept, "how does X work", relationships, chronology, architecture, data or control flow, cross-file comparison | `zvec_grep_search` |
+| Exact literal, filename, path, config key, error string, regex, hit count, path list | `zvec_grep_search` with `fts`, bounded by `globs` / `fileTypes` |
+| Concept, "how does X work", relationships, chronology, architecture, data or control flow, cross-file comparison | `zvec_grep_search` with `query` / `queries` / `vector` |
 | One symbol, module, package, or the file you are about to edit; callers, callees, import edges | `codegraph_explore` with an explicit `maxFiles` |
 | Work a prior session did | `ctx` search |
 
-Never answer a lexical question with `codegraph_explore`: 2.4-5.6x the bytes, and literals inside lists, TOML or JSON array items, and regex patterns are not indexed, so text queries return nothing.
+`fts` returns the matching lines with their paths, so a workspace-wide exact lookup costs
+one call. The installed `PreToolUse` hook denies a raw workspace-wide `rg` / `grep`, which
+makes a raw-grep fallback a denied call rather than a fallback: narrow the question and use
+`fts` instead.
+
+Never answer a lexical question with `codegraph_explore`: 2.4-5.6x the bytes, and literals
+inside lists, TOML or JSON array items, and regex patterns are not indexed, so text queries
+return nothing. Empty results on a text query are a routing signal, not evidence of absence.
 
 #### Escalation
 
@@ -31,10 +41,10 @@ Never answer a lexical question with `codegraph_explore`: 2.4-5.6x the bytes, an
 
 #### Retrieval routing
 
-- When exact word, phrase, name, date, identifier, filename, path, configuration key, error message, source fragment, literal, or regex is known and locating its occurrences is sufficient, use `zvec_grep_rg` when it is listed by the current host; otherwise native Grep or `rg`.
-- Use `zvec_grep_search` when wording or location is unknown, or when the answer requires semantic, conceptual, fuzzy, or paraphrase discovery; relationships, chronology, causality, architecture, or data or control flow; or comparison or synthesis across files, sections, or documents.
-- For a mixed task with exact anchors that still requires relationships or cross-file synthesis, call `zvec_grep_search` with the concept and anchors, then use `zvec_grep_rg` when it is listed by the current host; otherwise native Grep or `rg` for focused follow-up.
-- When no sufficient exact anchor is available and the user asks whether conceptually related material exists locally, make at most one focused `zvec_grep_search` probe using the question plus distinctive names, dates, or terms. This probe does not apply to exact quotations, configuration keys, filenames, regexes, or exhaustive occurrence requests. Continue only when results are relevant; otherwise stop and report that the indexed workspace did not establish the answer.
+- When an exact word, phrase, name, date, identifier, filename, path, configuration key, error message, source fragment, literal, or regex is known and locating its occurrences is sufficient, use `fts`.
+- Use `query` / `queries` / `vector` when wording or location is unknown, or when the answer requires semantic, conceptual, fuzzy, or paraphrase discovery; relationships, chronology, causality, architecture, or data or control flow; or comparison or synthesis across files, sections, or documents.
+- For a mixed task with exact anchors that still requires relationships or cross-file synthesis, put the concept in `query` and the anchors in `fts`.
+- When no sufficient exact anchor is available and the user asks whether conceptually related material exists locally, make at most one focused `query` probe using the question plus distinctive names, dates, or terms. This probe does not apply to exact quotations, configuration keys, filenames, regexes, or exhaustive occurrence requests. Continue only when results are relevant; otherwise stop and report that the indexed workspace did not establish the answer.
 - Before broad file reads or delegating workspace discovery, use the appropriate search route. Do not delegate solely to locate material, and stop when the evidence is sufficient.
 - MUST use an English query.
 
@@ -47,5 +57,4 @@ Never answer a lexical question with `codegraph_explore`: 2.4-5.6x the bytes, an
 - Pass a daemon-visible absolute `root` on every zvec-grep workspace call.
 - Read `freshness` and `background_refresh` from search results without a status preflight.
 - When results are `served_from_current_index`, use them when sufficient instead of waiting for the background refresh.
-- If the index is missing but exact or regex lookup can answer the task, use `zvec_grep_rg` when it is listed by the current host; otherwise native Grep or `rg`.
-- Creating, rebuilding, or dropping a persistent index requires an explicit user request or authorization; never do so silently.
+- If the index does not cover the path at all, say so in the response and name the raw read you fell back to. Do not rebuild or drop an index on your own: that needs explicit user authorization.

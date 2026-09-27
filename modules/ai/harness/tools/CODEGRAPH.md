@@ -1,10 +1,20 @@
 ### Codegraph
 
-The codegraph MCP server exposes one tool: `codegraph_explore` (params: `query`, `maxFiles` default 12, `projectPath`).
+The codegraph MCP server registers exactly one tool:
+`codegraph_explore(query, maxFiles, projectPath)`.
 
-Use `codegraph_explore` for: one symbol, one module, one package, or the file you are about to edit; definition sites, callers, callees, import edges, dead code; the file set of an area.
+`codegraph_query`, `codegraph_callers` and
+`codegraph_callees` are not MCP tools: they are CLI subcommands of the same binary, and
+only the CLI can run them.
 
-Never use it for: exact literals, filenames, config keys, error strings, regexes, hit counts, path lists; string literals inside lists, TOML or JSON array items, and regex data, which are not indexed; workspace-wide sweeps. Use `zvec_grep_rg` when the host lists it, otherwise `rg`.
+Use `codegraph_explore` for: one symbol, one module, one package, or the file you are about
+to edit; definition sites, callers, callees, import edges, dead code; the file set of an
+area.
+
+Never use it for: exact literals, filenames, config keys, error strings, regexes, hit counts,
+path lists; string literals inside lists, TOML or JSON array items, and regex data, which are
+not indexed; workspace-wide sweeps. The exact route is the `fts` parameter of
+`zvec_grep_search`, which is a lexical route over the zvec-grep index.
 
 - Set `maxFiles` explicitly. The default returns the surrounding bindings of every node and saturates near 20-25 KB regardless of hit count, 2.4-5.6x the lexical route on the same question (79 hits: 25200 B vs 10686 B; 40 hits: 20512 B vs 3660 B).
 - One index per question. Never call `codegraph_explore` and then grep for the same thing.
