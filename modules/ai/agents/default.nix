@@ -23,9 +23,6 @@ in
     (import ./goose.nix (args // { inherit searchModelByRole; }))
     (import ./junie.nix (args // { inherit searchModelByRole; }))
     (import ./copilot-cli.nix (args // { inherit searchModelByRole; }))
-    # Cline resolves no model declaratively, so it has no use for
-    # `searchModelByRole` and takes no extra module arguments.
-    ./cline.nix
     # Future agents can be added here:
     # (import ./agent-deck.nix (args // { inherit searchModelByRole; }))
     # (import ./other-agent.nix (args // { inherit searchModelByRole; }))
