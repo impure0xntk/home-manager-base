@@ -85,8 +85,12 @@ in
             args = [ "serve" "--mcp" ];
           };
         };
+        # pkgs.ctx is a different project: nixpkgs ships a vector-graphics
+        # terminal under that name, and the llm-agents overlay pins ctx 2.0.3
+        # with a stale cargoHash. pkgs.my.ctx is the coding-agent history search
+        # CLI, whose 2.0.4 refresh path no longer burns the CPU (ctxrs/ctx#1030).
         ctx = rec {
-          package = createWrappedPackage pkgs.ctx {
+          package = createWrappedPackage pkgs.my.ctx {
             CTX_DATA_ROOT = "${config.xdg.dataHome}/ctx";
             CTX_ANALYTICS_ENABLED = "false";
             CTX_UPGRADE_AUTO = "off";
@@ -142,9 +146,18 @@ in
         Type = "simple";
         ExecStartPre = "${ctxBin} setup --no-daemon --quiet";
         ExecStart = "${ctxBin} daemon run";
-        TimeoutStartSec = "10min";
-        Restart = "on-failure";
-        RestartSec = 5;
+
+        # ctx 2.x refreshes through a persistent daemon whose scheduler can retry a
+        # stuck generation indefinitely and saturate a core with no code activity
+        # (ctxrs/ctx#1030). Manual mode forbids the persistent daemon, so a timer
+        # runs one finite Core worker instead; searches only read its output.
+        TimeoutStartSec = "30min";
+        # Never restart: a wedged refresh must not become a retry loop, and the
+        # timer already owns the cadence.
+        Restart = "no";
+        CPUQuota = "50%";
+        Nice = 10;
+        IOSchedulingClass = "idle";
       };
       Install.WantedBy = ["default.target"];
     };
