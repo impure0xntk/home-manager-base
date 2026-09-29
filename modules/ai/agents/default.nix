@@ -21,6 +21,7 @@ in
     # CLI agent configurations
     (import ./codex.nix (args // { inherit searchModelByRole; }))
     (import ./goose.nix (args // { inherit searchModelByRole; }))
+    (import ./jcode.nix (args // { inherit searchModelByRole; }))
     (import ./qwen-code.nix (args // { inherit searchModelByRole; }))
     (import ./junie.nix (args // { inherit searchModelByRole; }))
     (import ./copilot-cli.nix (args // { inherit searchModelByRole; }))

@@ -71,7 +71,7 @@ would activate it.
 modules/ai/
   default.nix         # options.my.home.ai = { enable, providers, agents }; VS Code user settings
   agents/default.nix  # imports each agent file, threading searchModelByRole through args
-  agents/codex.nix  agents/goose.nix  agents/junie.nix  agents/copilot-cli.nix
+  agents/codex.nix  agents/goose.nix  agents/jcode.nix  agents/qwen-code.nix  agents/junie.nix  agents/copilot-cli.nix
   harness/
     default.nix       # imports core, skills, prompts, tools, mcp, plugins
     core.nix          # my.home.ai.harness.{enable,skillsDir,promptsDir,pluginDir,pluginPackages}
@@ -119,6 +119,34 @@ Key facts a coding agent must not get wrong:
   `codegraph sync` into `SessionStart` and `codegraph prompt-hook` into `UserPromptSubmit`. The
   comment in `core.nix` explains why `plugin.json` deliberately omits `$schema` (Codex only loads
   hooks for legacy-format manifests). Do not "fix" that.
+- **qwen-code gets its harness hooks from `settings.json`, not from a plugin.** It loads Agent
+  Plugins v1 natively, but that manifest ignores `hooks/`, so `agents/qwen-code.nix` restates the
+  same `SessionStart` / `UserPromptSubmit` / `PreToolUse` commands under `hooks` in
+  `settings.json`. Its native tool names (`run_shell_command`, `read_file`, `grep_search`, `glob`,
+  `list_directory`) are the ones the `PreToolUse` matcher names; `redirect-read-grep.sh` lists
+  them too. qwen refuses a request whose selected route declares no readable key even against a
+  local proxy, so every provider gets an `envKey`, defaulting to a placeholder name the wrapper
+  exports rather than to `OPENAI_API_KEY`, which a real key in the environment must keep.
+- **jcode shares none of the other agents' config surfaces, and `agents/jcode.nix` is where each
+  difference is resolved.** It keeps state in `$HOME/.jcode`, and a `JCODE_HOME` that differs from
+  that default marks a *sandboxed* home that stops consulting the system keychain, so the directory
+  stays put and only `home.file` entries inside it are managed. Config is one TOML with named
+  `[providers.<name>]` profiles, so `base_url` must carry the `/v1` segment (jcode appends
+  `/chat/completions`), and a provider with no usable `api-key-env` declares `auth = "none"` —
+  jcode's unauthenticated transport, which is why it needs no placeholder key the way qwen does.
+  "Usable" matters: jcode's `is_safe_env_key_name` accepts only `[A-Z0-9_]+` and an invalid
+  `api_key_env` aborts the whole server at startup, so a qwen-only placeholder like `dummy` is
+  dropped rather than forwarded. MCP
+  servers are a *separate* `~/.jcode/mcp.json` under `mcpServers`; managing it also suppresses
+  jcode's one-time import of `~/.codex/config.toml`. Hooks are `[hooks]` command strings, not the
+  Claude dialect: the deny arrives as `pre_tool` exiting 2 with the reason on stderr, and the rtk
+  rewrite is a `pre_tool_transform` whose stdin/stdout are the tool input itself, bridged by
+  `harness/hooks/jcode-pre-tool*.sh`. jcode has no sub-agent profile format, so `subagents.targets`
+  does not include it. It also self-manages a daemon binary under `$JCODE_HOME/builds` and prefers
+  it over the pinned package once `shared-server` and `stable` agree — on a NixOS machine that
+  downloaded glibc build cannot exec at all, so `JCODE_NO_AUTO_UPDATE`,
+  `features.check_updates = false` and `display.auto_server_reload = false` are all required, and
+  a stale `builds/` tree has to be removed once by hand.
 - **`mcp/` is a module, not an overlay**, because `mcp-server-nix` writes JSON at build time and
   cannot be evaluated as a Home Manager module. `hub.nix` generates
   `mcp-remote-group-<server>` wrapper scripts from `pkgs.my.mcp-server-remote`.
