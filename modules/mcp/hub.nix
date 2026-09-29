@@ -15,7 +15,7 @@ let
   # Generate mcp-remote-group script for each server
   mcp-remote-group-scripts = map (server:
     pkgs.writeShellScriptBin "mcp-remote-group-${server.name}" ''
-      ${pkgs.my.mcp-compressor}/bin/mcp-compressor --compression max -- \
+      ${pkgs.my.mcp-compressor}/bin/mcp-compressor --compression high -- \
         http://${server.host}:${builtins.toString server.port}/v0/groups/''${1:-input group}/mcp \
         -H "Authorization:Bearer dummy"
     ''
