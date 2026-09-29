@@ -1,6 +1,6 @@
 # jcode: RAM-efficient coding agent TUI. https://github.com/1jehuang/jcode
 #
-# jcode differs from codex, goose and qwen-code in five ways that shape this
+# jcode differs from codex, goose and qwen-code in six ways that shape this
 # file, so none of their configuration shapes carry over:
 #
 # 1. It keeps its state in a directory of its own, `$HOME/.jcode`, not in
@@ -31,7 +31,15 @@
 #    applied to `pkgs.jcode` with `overrideAttrs`, and the `settings` below sets
 #    each to false. See the comments there.
 #
-# 5. It manages its own daemon binary under `$JCODE_HOME/builds` and prefers
+# 5. `--model` reaches only a server this process spawns, so against the
+#    persistent daemon it is dropped with a warning. `patches/jcode/
+#    model-override.patch` hands it from the client to the attached session
+#    over the same `Request::SetModel` the in-TUI `/model` command sends, which
+#    also means a route prefix (`openai-api:gpt-5.5`) can switch the provider
+#    from the command line. `--provider` stays server-start only, because the
+#    provider is chosen once at `serve` bootstrap and every session inherits it.
+#
+# 6. It manages its own daemon binary under `$JCODE_HOME/builds` and prefers
 #    that over the executable it was launched from once the `shared-server` and
 #    `stable` channels agree. The Nix package sets `JCODE_RELEASE_BUILD`, so left
 #    alone it downloads a release on first run and re-execs into it, silently
@@ -63,7 +71,10 @@ let
   # `patches` is a `mkDerivation` attribute consumed during `patchPhase`, so the
   # vendor closure -- and therefore `cargoHash` -- is unaffected.
   jcodePkg = pkgs.jcode.overrideAttrs (old: {
-    patches = (old.patches or [ ]) ++ [ ../patches/jcode/ui-toggles.patch ];
+    patches = (old.patches or [ ]) ++ [
+      ../patches/jcode/ui-toggles.patch
+      ../patches/jcode/model-override.patch
+    ];
   });
 
   # The model a profile opens with: the first model declaring the `chat` role,

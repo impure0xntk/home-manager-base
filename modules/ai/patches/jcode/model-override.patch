@@ -1,0 +1,71 @@
+diff --git a/crates/jcode-tui/src/tui/backend.rs b/crates/jcode-tui/src/tui/backend.rs
+--- a/crates/jcode-tui/src/tui/backend.rs
++++ b/crates/jcode-tui/src/tui/backend.rs
+@@ -377,4 +377,24 @@ impl RemoteConnection {
+         conn.next_request_id += 1;
+ 
++        // `jcode --model X` against a daemon that was already running: the flag
++        // was consumed by this client process, not by the server that owns the
++        // session, so the client applies it to the session it just attached to.
++        // Sending it between Subscribe and GetHistory means the first History
++        // already describes the requested model instead of flashing the server
++        // default and correcting it. Reconnect and reload paths run this again,
++        // which is the right repeat: the override describes this launch, not
++        // this connection, and a re-exec'd daemon reloads `config.toml`.
++        if let Some(model) = std::env::var("JCODE_CLIENT_MODEL_OVERRIDE")
++            .ok()
++            .filter(|model| !model.trim().is_empty())
++        {
++            if let Err(error) = conn.set_model(model.trim()).await {
++                crate::logging::error(&format!(
++                    "Client --model override rejected by the server: {}",
++                    error
++                ));
++            }
++        }
++
+         // If resuming a session, the target-aware Subscribe attaches directly to
+         // that session and returns History, so avoid a second bootstrap request.
+diff --git a/src/cli/dispatch.rs b/src/cli/dispatch.rs
+--- a/src/cli/dispatch.rs
++++ b/src/cli/dispatch.rs
+@@ -1018,15 +1018,28 @@ async fn run_default_command(args: Args) -> Result<()> {
+ 
+     if server_running && explicit_provider_or_model {
+-        output::stderr_info(
+-            "Server already running; provider/model flags only apply when starting a new server.",
+-        );
+-        output::stderr_info(format!(
+-            "Current server settings control `/model`. Restart server to apply: --provider {}{}",
+-            args.provider.as_arg_value(),
+-            args.model
+-                .as_ref()
+-                .map(|m| format!(" --model {}", m))
+-                .unwrap_or_default()
+-        ));
++        // The daemon was bootstrapped before this process existed, so `--model`
++        // cannot reach it the way the `serve` spawn below reaches a server this
++        // process starts. It is a per-session setting, though, and the client
++        // already speaks `Request::SetModel` to the session it attaches to --
++        // that is the request the in-TUI `/model` command sends -- so hand it
++        // over instead of dropping it. Route prefixes (`openai-api:gpt-5.5`)
++        // resolve through that same path, which is what lets a bare `--model`
++        // switch provider without a restart.
++        if let Some(model) = args.model.as_deref() {
++            if !model.trim().is_empty() {
++                crate::env::set_var("JCODE_CLIENT_MODEL_OVERRIDE", model.trim());
++                output::stderr_info(format!(
++                    "Server already running; applying --model {} to this session.",
++                    model.trim()
++                ));
++            }
++        }
++        // The provider is server-wide: it is chosen once at `serve` bootstrap
++        // and every attached session inherits it, so it still needs a restart.
++        if args.provider != ProviderChoice::Auto || args.provider_profile.is_some() {
++            output::stderr_info(
++                "Server already running; --provider/--provider-profile only apply when starting a new server. Current server settings control `/model`; restart the server to change the provider.",
++            );
++        }
+     }
+ 
