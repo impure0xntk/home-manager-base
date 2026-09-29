@@ -95,29 +95,34 @@ in
     my.home.ai.jcode.enable = true;
 
     # jcode has no per-subagent profile file, so a role reaches it as a section
-    # of one shared swarm prompt plus the single `[agents]` model/effort pair.
-    # `reviewer` is declared alongside `worker` to pin that the pair comes from
-    # `worker` alone rather than from whichever role is visited first.
-    my.home.ai.jcode.swarm = {
-      enable = true;
-      spawnMode = "inline";
-      stripLayout = "vertical";
-      maxConcurrentAgents = 4;
-      rootEffort = "xhigh";
-      subagents = {
-        worker = {
-          description = "Scoped implementation work.";
-          instructions = "Implement the change. Do not switch scope on your own.";
-          model_role = "edit";
-          reasoning_effort = "high";
-        };
-        reviewer = {
-          description = "Read-only review.";
-          instructions = "Review the diff and report findings. Do not edit files.";
-          model_role = "chat";
-          reasoning_effort = "low";
-        };
+    # of one shared swarm prompt plus the single `[agents]` model/effort pair
+    # derived from the shared subagent schema. `reviewer` is declared alongside
+    # `worker` to pin that the pair comes from `worker` alone rather than from
+    # whichever role is visited first. Everything jcode understands about a
+    # swarm beyond model and effort is not in the shared schema, so it is
+    # declared in `extraSettings` instead of a jcode-specific option.
+    my.home.ai.subagents.profiles = {
+      worker = {
+        description = "Scoped implementation work.";
+        instructions = "Implement the change. Do not switch scope on your own.";
+        model_role = "edit";
+        reasoning_effort = "high";
+        sandbox_mode = "workspace-write";
       };
+      reviewer = {
+        description = "Read-only review.";
+        instructions = "Review the diff and report findings. Do not edit files.";
+        model_role = "chat";
+        reasoning_effort = "low";
+        sandbox_mode = "read-only";
+      };
+    };
+
+    my.home.ai.jcode.extraSettings.agents = {
+      swarm_spawn_mode = "inline";
+      swarm_strip_layout = "vertical";
+      swarm_max_concurrent_agents = 4;
+      swarm_root_effort = "xhigh";
     };
 
     my.home.ai.providers = [

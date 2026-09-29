@@ -32,6 +32,7 @@ let
   agentFormats = [
     "codex"
     "goose"
+    "jcode"
     "opencode"
     "claude"
     "copilot"
@@ -89,8 +90,14 @@ in
 
     targets = lib.mkOption {
       type = lib.types.listOf (lib.types.enum agentFormats);
-      default = [ "codex" "junie" "goose" "copilot" "qwen" ];
-      description = "Agent adapters that receive the common sub-agent profiles.";
+      default = [ "codex" "junie" "goose" "jcode" "copilot" "qwen" ];
+      description = ''
+        Agent adapters that receive the common sub-agent profiles. `jcode` is
+        listed here even though it has no per-agent profile file: it receives
+        the profiles as a `[agents]` model/effort pair and a shared swarm
+        prompt. jcode's own swarm knobs are not in this schema, so they go
+        through `my.home.ai.jcode.extraSettings`.
+      '';
     };
   };
 }

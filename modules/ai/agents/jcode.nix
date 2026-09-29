@@ -301,96 +301,56 @@ let
     enabled = cfg.jcode.baseTools.enabled;
   };
 
-  # jcode has no per-subagent profile format, so the shared
-  # `my.home.ai.subagents` schema cannot reach it the way it reaches codex
-  # (`agents/<name>.toml`) or goose (`recipes/<name>.yaml`). What jcode reads is
-  # one flat `[agents]` table of swarm defaults and one prompt file every worker
-  # shares, so the profile shape lives here, under jcode, rather than widening a
-  # global option with fields only one adapter can honour.
+  # jcode has no per-subagent profile *file*, so the shared
+  # `my.home.ai.subagents` schema reaches it the way it reaches goose rather
+  # than the way it reaches codex: as one `[agents]` table and one prompt file
+  # every worker reads, not as a directory of per-agent configs.
   #
-  # Two shared-schema fields have no counterpart and are dropped rather carried
-  # as dead weight: `description` folds into the prompt file, and `sandbox_mode`
-  # is absent because jcode's permission model is not per-agent. Effort uses
-  # jcode's own vocabulary rather the shared low/medium/high, so a value here is
-  # never silently reinterpreted against a different enum.
-  jcodeEffortLevels = [ "none" "minimal" "low" "medium" "high" "xhigh" "max" ];
-  swarmProfileType = lib.types.submodule {
-    options = {
-      description = lib.mkOption {
-        type = lib.types.str;
-        description = "Short description of the role, shown in the swarm prompt file.";
-      };
-      instructions = lib.mkOption {
-        type = lib.types.lines;
-        default = "";
-        description = "Persistent instructions passed to this swarm worker role.";
-      };
-      model_role = lib.mkOption {
-        type = lib.types.enum [ "chat" "edit" "apply" "autocomplete" ];
-        default = "chat";
-        description = "Logical model role resolved against configured providers.";
-      };
-      reasoning_effort = lib.mkOption {
-        type = lib.types.enum jcodeEffortLevels;
-        default = "medium";
-        description = "Reasoning effort requested from this swarm worker role.";
-      };
-    };
-  };
+  # Only the model and the effort are derived here, because those are the two
+  # things the shared schema states and `[agents]` can carry. Everything else
+  # jcode understands about a swarm -- `swarm_spawn_mode`,
+  # `swarm_strip_layout`, `swarm_max_concurrent_agents`, the root efforts -- is
+  # jcode's own vocabulary with no counterpart in the shared schema, so it
+  # belongs in `extraSettings` rather than in an option of its own. A
+  # `my.home.ai.jcode.swarm` block that only forwarded two keys would be a
+  # second place to look for the rest.
+  #
+  # `sandbox_mode` has no target at all: jcode's permission model is not
+  # per-agent, so there is nowhere for a read-only role to say so.
+  generateSwarm = cfg.subagents.enable && builtins.elem "jcode" cfg.subagents.targets;
+  allSubagentProfiles = cfg.subagents.profiles // cfg.subagents.extraProfiles;
 
-  # A profile whose role no provider declares cannot produce a model string.
-  # Dropping it keeps the emitted table valid; emitting null would serialize as
-  # a bare `swarm_model = ` line jcode cannot parse back.
+  # A profile whose role no provider declares cannot produce a model id, and
+  # emitting null would serialize as a bare `swarm_model = ` line jcode cannot
+  # parse back. Dropping the profile keeps the table valid; the role still
+  # reaches the coordinator as a prompt section, since the prompt needs no model.
   swarmWorkerProfiles = lib.filterAttrs (
     _: profile: searchModelByRole profile.model_role != null
-  ) (lib.optionalAttrs cfg.jcode.swarm.enable cfg.jcode.swarm.subagents);
+  ) (lib.optionalAttrs generateSwarm allSubagentProfiles);
 
-  # One profile wins the single `swarm_model` / `swarm_effort` slot, so the pick
-  # is explicit rather first-wins. `worker` is the natural default: it is the
-  # role whose job is doing scoped work, and the only one a single model
-  # setting can honestly describe.
+  # `swarm_model` and `swarm_effort` are a single pair, not one per role, so
+  # some role has to be chosen and the choice has to be visible. `worker` is
+  # the pick: it is the role whose job is doing scoped work, and the only one a
+  # single model setting can honestly describe. With several roles and no
+  # `worker`, neither key is emitted and every worker inherits the coordinator's
+  # own model, which is jcode's documented default rather than a guess.
   swarmProfile =
     swarmWorkerProfiles.worker or (if builtins.length (builtins.attrNames swarmWorkerProfiles) == 1
       then builtins.head (builtins.attrValues swarmWorkerProfiles)
       else null);
 
-  # `[agents]` is emitted as a merge layer of its own rather than as a key of
-  # the settings set, because an empty `agents` still serializes as a bare
-  # `[agents]` header. A layer that disappears when swarm is off keeps the table
-  # out of the file entirely rather than handing jcode an empty one.
-  swarmSettings = lib.optionalAttrs cfg.jcode.swarm.enable (
-    lib.optionalAttrs (swarmProfile != null) {
-      # jcode wants a bare model id, not the `provider/model` pair the
-      # coordinator resolves, because the worker session picks its own provider
-      # from `providers.<name>.models`.
-      swarm_model = (searchModelByRole swarmProfile.model_role).model;
-      swarm_effort = swarmProfile.reasoning_effort;
-    }
-    // lib.optionalAttrs (cfg.jcode.swarm.rootEffort != null) {
-      swarm_root_effort = cfg.jcode.swarm.rootEffort;
-    }
-    // lib.optionalAttrs (cfg.jcode.swarm.deepRootEffort != null) {
-      swarm_deep_root_effort = cfg.jcode.swarm.deepRootEffort;
-    }
-    // lib.optionalAttrs (cfg.jcode.swarm.maxConcurrentAgents != null) {
-      swarm_max_concurrent_agents = cfg.jcode.swarm.maxConcurrentAgents;
-    }
-    // lib.optionalAttrs (cfg.jcode.swarm.spawnMode != null) {
-      swarm_spawn_mode = cfg.jcode.swarm.spawnMode;
-    }
-    // lib.optionalAttrs (cfg.jcode.swarm.stripLayout != null) {
-      swarm_strip_layout = cfg.jcode.swarm.stripLayout;
-    }
-    // lib.optionalAttrs (cfg.jcode.swarm.galleryMaxPct != null) {
-      swarm_gallery_max_pct = cfg.jcode.swarm.galleryMaxPct;
-    }
-  );
+  # The shared schema's `low | medium | high` is a subset of jcode's, so a
+  # profile's effort passes through untranslated.
+  swarmSettings = lib.optionalAttrs (swarmProfile != null) {
+    swarm_model = (searchModelByRole swarmProfile.model_role).model;
+    swarm_effort = swarmProfile.reasoning_effort;
+  };
 
   # jcode reads the swarm worker prompt from `$JCODE_HOME/swarm-prompt.md`, a
   # single file rather a per-agent directory, so every role's instructions
-  # collapse into one document. Each keeps its name as a heading so a
-  # coordinator can still route by role when it labels a `swarm spawn` call.
-  swarmPrompt = lib.optionalAttrs cfg.jcode.swarm.enable ''
+  # collapse into one document. Each keeps its name as a heading because the
+  # name is what a coordinator passes as the `label` of a `swarm spawn` call.
+  swarmPrompt = lib.optionalAttrs generateSwarm ''
     # Sub-agent roles
 
     These are the worker roles available in this repo. Name one in the `label`
@@ -398,7 +358,7 @@ let
 
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList (
       name: profile: "## ${name}\n\n${profile.instructions}"
-    ) swarmWorkerProfiles)}
+    ) allSubagentProfiles)}
   '';
 
   # `deepMerge` concatenates lists rather than replacing them, so a hook or a
@@ -504,90 +464,14 @@ in
         and *concatenates* lists, so entries added to `hooks` or to
         `providers.<name>.models` are appended to the generated ones rather
         than replacing them.
-      '';
-    };
-    swarm = lib.mkOption {
-      type = lib.types.submodule {
-        options = {
-          enable = lib.mkEnableOption "Emit jcode `[agents]` swarm settings and a swarm prompt";
-          subagents = lib.mkOption {
-            type = lib.types.attrsOf swarmProfileType;
-            default = { };
-            description = ''
-              Swarm worker roles, keyed by the name a coordinator passes as the
-              `label` of a `swarm spawn` call. Each role's `instructions`
-              becomes a section of `jcode/swarm-prompt.md`, which every worker
-              reads, so this is role guidance and not a guarantee that a
-              particular worker ran under it.
-            '';
-            example = lib.literalExpression ''
-              {
-                reviewer = {
-                  description = "Read-only diff review";
-                  instructions = "Review the diff and report findings. Do not edit files.";
-                  model_role = "chat";
-                  reasoning_effort = "high";
-                };
-              }
-            '';
-          };
-          rootEffort = lib.mkOption {
-            type = lib.types.nullOr (lib.types.enum jcodeEffortLevels);
-            default = null;
-            description = ''
-              Effort for a root coordinator. Left unset jcode applies its own
-              default, so this stays null unless a value is wanted
-              deliberately.
-            '';
-          };
-          deepRootEffort = lib.mkOption {
-            type = lib.types.nullOr (lib.types.enum jcodeEffortLevels);
-            default = null;
-            description = "Effort for a coordinator running in `swarm-deep` mode.";
-          };
-          maxConcurrentAgents = lib.mkOption {
-            type = lib.types.nullOr lib.types.ints.positive;
-            default = null;
-            description = "Upper bound on live swarm workers.";
-          };
-          spawnMode = lib.mkOption {
-            type = lib.types.nullOr (lib.types.enum [ "visible" "headless" "inline" "auto" ]);
-            default = null;
-            description = ''
-              How a `swarm spawn` creates its worker. Left unset jcode uses
-              `inline`, which keeps a spawned worker off the desktop's TUI.
-            '';
-          };
-          stripLayout = lib.mkOption {
-            type = lib.types.nullOr (lib.types.enum [ "vertical" "horizontal" ]);
-            default = null;
-            description = "Layout of the inline swarm strip above the status line.";
-          };
-          galleryMaxPct = lib.mkOption {
-            type = lib.types.nullOr (lib.types.ints.between 0 100);
-            default = null;
-            description = "Height of the inline gallery viewport as a percentage of the terminal.";
-          };
-        };
-      };
-      default = { };
-      description = ''
-        jcode `[agents]` swarm configuration, rendered into
-        `jcode/config.toml` plus a `jcode/swarm-prompt.md` worker prompt.
 
-        The profile shape is defined here rather than added to
-        `my.home.ai.subagents` because jcode has no per-agent profile format.
-        Codex and Goose translate the shared schema into a file per agent;
-        jcode reads a single flat `[agents]` table and a single prompt file, so
-        a shared field with no counterpart there (`sandbox_mode`) would exist
-        only to be ignored.
-
-        `swarm_model` and `swarm_effort` are a single pair, not one per role.
-        The role named `worker` supplies them, or the only role if exactly one
-        is configured; with several roles and no `worker`, the two keys are
-        omitted and every worker falls back to the coordinator's own model.
-        Individual roles can still be routed at `swarm spawn` time with an
-        explicit `model` and `effort`, which takes priority over these keys.
+        This is also where jcode's own swarm settings go:
+        `agents.swarm_spawn_mode`, `agents.swarm_strip_layout`,
+        `agents.swarm_max_concurrent_agents`, `agents.swarm_root_effort` and
+        `agents.swarm_deep_root_effort`. Only `swarm_model` and `swarm_effort`
+        are generated, because only those two have a counterpart in
+        `my.home.ai.subagents`. A key set here wins over the generated one,
+        since this is the last merge layer.
       '';
     };
     extraMcpServers = lib.mkOption {
@@ -644,7 +528,7 @@ in
       # configuration instead of in an unmanaged dotfile in the working tree.
       # `force` is needed because a stray `~/.config/jcode/swarm-prompt.md`
       # would otherwise fail the activation.
-      (lib.optionalAttrs cfg.jcode.swarm.enable {
+      (lib.optionalAttrs generateSwarm {
         "jcode/swarm-prompt.md" = {
           source = pkgs.writeText "swarm-prompt.md" swarmPrompt;
           force = true;
