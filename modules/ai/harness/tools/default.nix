@@ -85,12 +85,8 @@ in
             args = [ "serve" "--mcp" ];
           };
         };
-        # pkgs.ctx is a different project: nixpkgs ships a vector-graphics
-        # terminal under that name, and the llm-agents overlay pins ctx 2.0.3
-        # with a stale cargoHash. pkgs.my.ctx is the coding-agent history search
-        # CLI, whose 2.0.4 refresh path no longer burns the CPU (ctxrs/ctx#1030).
         ctx = rec {
-          package = createWrappedPackage pkgs.my.ctx {
+          package = createWrappedPackage pkgs.ctx {
             CTX_DATA_ROOT = "${config.xdg.dataHome}/ctx";
             CTX_ANALYTICS_ENABLED = "false";
             CTX_UPGRADE_AUTO = "off";
