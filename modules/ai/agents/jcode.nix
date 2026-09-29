@@ -36,8 +36,13 @@
 #    model-override.patch` hands it from the client to the attached session
 #    over the same `Request::SetModel` the in-TUI `/model` command sends, which
 #    also means a route prefix (`openai-api:gpt-5.5`) can switch the provider
-#    from the command line. `--provider` stays server-start only, because the
-#    provider is chosen once at `serve` bootstrap and every session inherits it.
+#    from the command line. The client sends it whether or not it also spawned
+#    the daemon, which is what makes the spawn case work: `serve` receives
+#    `--model` and logs `Using model:`, but the server rebuilds its provider per
+#    new session and re-reads `[provider].default_model` from `config.toml` in
+#    the process, so the spawn-time argument alone does not reach the first
+#    turn. `--provider` stays server-start only, because the provider is chosen
+#    once at `serve` bootstrap and every session inherits it.
 #
 # 6. It manages its own daemon binary under `$JCODE_HOME/builds` and prefers
 #    that over the executable it was launched from once the `shared-server` and
@@ -192,11 +197,21 @@ let
       # The rtk rewrite the other agents run as a second PreToolUse hook, but
       # expressed the way jcode wants it: the transformer replaces the tool
       # input before it is validated rather than rejecting the call.
+      #
+      # The same gate is handed over as the second argument because jcode runs
+      # transformers *before* the pre_tool gate. Without it every command rtk
+      # rewrites reaches the gate already rewritten, so the read shapes the gate
+      # exists to deny -- `cat foo.nix` becomes `rtk read foo.nix` -- would be
+      # judged in the one form the gate does not recognise and pass. Consulting
+      # the gate here drops the rewrite instead, which leaves the original
+      # command to reach the gate on its own and be denied with a message that
+      # names the index tools.
       pre_tool_transform = [
-        "${lib.getExe jcodePreToolTransform} ${harness.codingAgentTools.rtk.package}/bin/rtk"
+        "${lib.getExe jcodePreToolTransform} ${harness.codingAgentTools.rtk.package}/bin/rtk ${lib.getExe harness.hooks.retrievalRedirect.package}"
       ];
       # jcode's own default is 500 ms, which is one process spawn; the rewrite
-      # spawns rtk and jq, so it needs more headroom than a pure filter.
+      # spawns rtk and jq and now also the gate, so it needs more headroom than
+      # a pure filter.
       pre_tool_transform_timeout_ms = 2000;
     };
   };

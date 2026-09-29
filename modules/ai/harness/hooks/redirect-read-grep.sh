@@ -132,6 +132,13 @@ readonly READ_VERBS=(
   more
   sed
   awk
+  # What rtk rewrites the verbs above into. Peeling `rtk` off the front is what
+  # keeps the decision stable between the original command and the rewrite, so
+  # the rewrite's own verb has to be judged by the same rules -- otherwise the
+  # gate passes everything rtk touched, which is the majority of shell calls.
+  read
+  # `rtk diff` prints file bodies, the same read shape under a different verb.
+  diff
 )
 
 # Languages codegraph and zvec-grep actually index. Extensions outside this list
@@ -311,7 +318,23 @@ fi
 
 tool=$(jq -r '(.tool_name // "") | tostring | ascii_downcase' <<<"$payload" 2>/dev/null || true)
 if in_list "$tool" "${NATIVE_READ_TOOLS[@]}"; then
-  emit_deny "$READ_MESSAGE"
+  # A native read is judged on the file it names, not on the tool name. Denying
+  # the whole surface would make a lock file, a log and a plain document
+  # unreadable while the index never ingested them -- and jcode's `read` is the
+  # only way to read those at all, since the shell path is itself denied below.
+  # Denying a file the index has no coverage of is the same dead end the shell
+  # path already is, so the extension rule is the only one that can apply here.
+  native_target=$(
+    jq -r '((.tool_input // {}) | if type == "object" then . else {} end) as $i
+           | ([$i.file_path?, $i.path?, $i.filePath?, $i.file?, $i.absolute_path?]
+              | map(select(type == "string")) | .[0] // "")' \
+      <<<"$payload" 2>/dev/null || true
+  )
+  if has_code_operand "$native_target"; then
+    emit_deny "$READ_MESSAGE"
+    exit 0
+  fi
+  emit_pass
   exit 0
 fi
 
