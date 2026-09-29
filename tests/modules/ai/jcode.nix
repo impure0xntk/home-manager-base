@@ -51,6 +51,46 @@ let
   remoteProvider = parsed.providers.jcode-test-remote;
   placeholderProvider = parsed.providers.jcode-test-placeholder;
   serverNames = builtins.attrNames parsedMcp.mcpServers;
+
+  # `[tools]` is the pair that actually decides the exposed surface, and the
+  # pair has to agree: `disable_base_tools` alone drops the MCP tools too, and
+  # `enabled` alone still filters MCP. The default pins the full base inventory
+  # rather than narrowing it, so the assertion is a full list, not a membership
+  # check. Sorted to match the module's list, since a reordering in the module
+  # would otherwise show up as a diff rather than as a name that dropped.
+  tools = parsed.tools or { };
+  baseToolNames = [
+    "agentgrep"
+    "apply_patch"
+    "bash"
+    "batch"
+    "bg"
+    "browser"
+    "compile_remote"
+    "conversation_search"
+    "edit"
+    "gmail"
+    "integration_tools"
+    "invalid"
+    "jcode_docs"
+    "ls"
+    "maintainer_feedback"
+    "mcp"
+    "memory"
+    "open"
+    "panel"
+    "read"
+    "replace"
+    "schedule"
+    "session_search"
+    "side_panel"
+    "skill_manage"
+    "swarm"
+    "todo"
+    "webfetch"
+    "websearch"
+    "write"
+  ];
 in
 {
   config = {
@@ -202,6 +242,14 @@ in
           && parsed.display.show_info_widget == false
           && parsed.display.keybinding_hints == false;
         message = "jcode must disable the onboarding wall, the transcript header, the input turn counter, the margin info widget, and the keybinding nudges.";
+      }
+      {
+        # An empty allow-list is the "MCP tools only" switch, so the two keys
+        # have to be read together: asserting `enabled` alone would pass for a
+        # config that also hides the base tools, and asserting the flag alone
+        # would pass for one that exposes nothing at all.
+        assertion = tools.disable_base_tools == false && tools.enabled == baseToolNames;
+        message = "jcode [tools] must expose the full base tool inventory by default, with disable_base_tools off so MCP tools survive the allow-list.";
       }
       {
         # refresh-index is the SessionStart counterpart, and it is skipped outside

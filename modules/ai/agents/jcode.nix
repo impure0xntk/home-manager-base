@@ -195,11 +195,69 @@ let
     };
   };
 
+  # jcode ships these names, and `[tools].enabled` is matched literally against
+  # them, so the list doubles as the base tool inventory this module knows about.
+  # Measured against jcode 0.88.0: it sends exactly these 30 plus whatever the
+  # MCP registry contributes, so anything jcode adds upstream shows up as a
+  # missing entry here rather than as a silent no-op.
+  baseTools = [
+    # "agentgrep"
+    "apply_patch"
+    "bash"
+    "batch"
+    # "bg"
+    # "browser"
+    # "compile_remote"
+    # "conversation_search"
+    "edit"
+    # "gmail"
+    "integration_tools"
+    "invalid"
+    "jcode_docs"
+    # "ls"
+    # "maintainer_feedback"
+    "mcp"
+    "memory"
+    "open"
+    # "panel"
+    "read"
+    "replace"
+    # "schedule"
+    # "session_search"
+    # "side_panel"
+    # "skill_manage"
+    "swarm"
+    "todo"
+    # "webfetch"
+    # "websearch"
+    "write"
+  ];
+
+  # `[tools]` in `config.toml`. Both keys are load-bearing together:
+  # `disable_base_tools` hides every built-in, MCP included, and `enabled` opts
+  # tools back in by exact name. Neither alone does what it looks like it does,
+  # so the option is expressed as a single pair rather than two flags a caller
+  # has to remember to combine.
+  #
+  # `enabled` filters MCP tools too: with `enabled = ["read"]` the advertised
+  # schema was exactly `read`, MCP excluded. So this list selects the whole
+  # surface, not just the base half of it.
+  # An empty allow-list is what "MCP only" looks like, so it is what flips the
+  # base tool switch. Comparing against `[ ]` rather than negating the list:
+  # `!` on a list leans on Nix truthiness, where any non-empty list is true and
+  # `[]` is false. That happens to give the right answer, but only by accident
+  # of coercion, and a reader cannot tell that from the expression.
+  toolsSettings = {
+    disable_base_tools = cfg.jcode.baseTools.enabled == [ ];
+    enabled = cfg.jcode.baseTools.enabled;
+  };
+
   # `deepMerge` concatenates lists rather than replacing them, so a hook or a
   # model list in `extraSettings` is appended to the generated one instead of
   # overriding it. That is the same trade the other agent modules make.
   settings = lib.my.deepMerge (
     lib.my.deepMerge {
+      tools = toolsSettings;
       # The package is the version manager here, so jcode neither asks GitHub for
       # a newer release nor acts on one. Both would write into `$JCODE_HOME/builds`
       # and re-exec into a binary Nix does not know about.
@@ -250,6 +308,34 @@ in
       type = lib.types.attrsOf lib.types.str;
       default = { };
       description = "Additional environment variables set for jcode.";
+    };
+    baseTools = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enabled = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = baseTools;
+            defaultText = lib.literalExpression ''[ "agentgrep" ... ]'';
+            description = ''
+              Built-in tools to expose, matched literally against the names
+              jcode ships. This is an allow-list over the whole tool surface,
+              MCP tools included, so an entry here that names an MCP tool keeps
+              it and a missing one drops it. The default is the full inventory
+              jcode 0.88.0 advertises, so declaring it pins the surface rather
+              than narrowing it. Set to `[ ]` to expose MCP tools only.
+            '';
+            example = lib.literalExpression ''[ "read" "write" "bash" "mcp" ]'';
+          };
+        };
+      };
+      default = { };
+      defaultText = lib.literalExpression ''{ enabled = [ ...allBaseTools... ]; }'';
+      description = ''
+        Which built-in tools the jcode agent exposes. `enabled` empty means
+        base tools are hidden entirely, which is the point: it is the switch
+        for "MCP-provided tools only", and the generated `[tools].enabled`
+        allow-list is the way to name which of those survive.
+      '';
     };
     extraSettings = lib.mkOption {
       type = lib.types.attrs;
