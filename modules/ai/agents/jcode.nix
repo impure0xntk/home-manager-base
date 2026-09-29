@@ -1,58 +1,4 @@
 # jcode: RAM-efficient coding agent TUI. https://github.com/1jehuang/jcode
-#
-# jcode differs from codex, goose and qwen-code in six ways that shape this
-# file, so none of their configuration shapes carry over:
-#
-# 1. It keeps its state in a directory of its own, `$HOME/.jcode`, not in
-#    `$XDG_CONFIG_HOME`, so the only lever for relocating it is `JCODE_HOME`.
-#    That is the same redirect `CODEX_HOME` and `QWEN_HOME` perform, and it puts
-#    everything under `xdg.configFile` like every other agent module here.
-#    The price is that jcode reads a non-default `JCODE_HOME` as a *sandboxed*
-#    home and moves its `$HOME`-relative lookups (`AGENTS.md`, `.agents/skills`,
-#    `.claude/mcp.json`, `.codex/*`, every other agent's credential store) under
-#    `$JCODE_HOME/external/`. The harness document therefore goes to
-#    `prompt-overlay.md` and the harness skills to `$JCODE_HOME/skills`, both of
-#    which resolve through jcode's own directory and stay unsandboxed.
-#
-# 2. Its config is one TOML file with a different table layout, not the
-#    per-agent manifest each of the other three writes. Provider selection goes
-#    through named `[providers.<name>]` profiles plus a `[provider]` table of
-#    defaults, and MCP servers live in a *separate* JSON file with a
-#    Claude-Code-shaped `mcpServers` key.
-#
-# 3. Its hooks are not the Claude hook dialect codex, goose and qwen all speak.
-#    Each event is one command string under `[hooks]`, a gate reports through an
-#    exit code instead of JSON on stdout, and the shell rewrite is a
-#    `pre_tool_transform` whose stdin and stdout are the tool input itself. One
-#    adapter per harness script bridges that, so the shared scripts stay shared.
-#
-# 4. The TUI chrome is trimmed by four keys that upstream 0.88.0 does not have.
-#    `patches/jcode/ui-toggles.patch` adds them behind the upstream defaults,
-#    applied to `pkgs.jcode` with `overrideAttrs`, and the `settings` below sets
-#    each to false. See the comments there.
-#
-# 5. `--model` reaches only a server this process spawns, so against the
-#    persistent daemon it is dropped with a warning. `patches/jcode/
-#    model-override.patch` hands it from the client to the attached session
-#    over the same `Request::SetModel` the in-TUI `/model` command sends, which
-#    also means a route prefix (`openai-api:gpt-5.5`) can switch the provider
-#    from the command line. The client sends it whether or not it also spawned
-#    the daemon, which is what makes the spawn case work: `serve` receives
-#    `--model` and logs `Using model:`, but the server rebuilds its provider per
-#    new session and that rebuild carries a CLI selection over only when a
-#    *provider* was named explicitly, so a bare `--model` falls back to
-#    `[provider].default_model`. `--provider` stays server-start only, because
-#    the provider is chosen once at `serve` bootstrap and every session inherits
-#    it.
-#
-# 6. It manages its own daemon binary under `$JCODE_HOME/builds` and prefers
-#    that over the executable it was launched from once the `shared-server` and
-#    `stable` channels agree. The Nix package sets `JCODE_RELEASE_BUILD`, so left
-#    alone it downloads a release on first run and re-execs into it, silently
-#    replacing the pinned version -- and on a NixOS machine failing outright,
-#    because the published release is a glibc build with no
-#    `/lib64/ld-linux-x86-64.so.2` to load it with. Both the updater and the
-#    auto-reload are therefore switched off below.
 {
   config,
   pkgs,
@@ -64,18 +10,8 @@ let
   cfg = config.my.home.ai;
   harness = config.my.home.ai.harness;
 
-  # Everything below is named relative to `xdg.configFile`, and the wrapper
-  # points `JCODE_HOME` at the same directory, so `$XDG_CONFIG_HOME/jcode` is
-  # where jcode looks for all of it.
   chatModel = searchModelByRole "chat";
 
-  # jcode ships no configuration key for some pieces of chrome this machine
-  # does not want, so the keys are added by patch rather than configuration. The
-  # package itself stays `pkgs.jcode`: only the patches are added, which leaves
-  # llm-agents owning the version, the source hash, and the cargo hash, and
-  # leaves every other consumer of the attribute on this machine unpatched.
-  # `patches` is a `mkDerivation` attribute consumed during `patchPhase`, so the
-  # vendor closure -- and therefore `cargoHash` -- is unaffected.
   jcodePkg = pkgs.jcode.overrideAttrs (old: {
     patches = (old.patches or [ ]) ++ [
       ../patches/jcode/ui-toggles.patch
@@ -88,20 +24,8 @@ let
     runtimeInputs = [ jcodePkg ];
     runtimeEnv =
       {
-        # `JCODE_HOME` is the only way to move jcode off `$HOME/.jcode`, and
-        # it has to name the same directory `xdg.configFile` writes into or
-        # jcode reads a config that was never written.
         JCODE_HOME = "${config.xdg.configHome}/jcode";
         JCODE_NO_TELEMETRY = 1;
-        # jcode self-manages a daemon binary under `$JCODE_HOME/builds` and
-        # prefers that over the executable it was launched from whenever the
-        # `shared-server` and `stable` channels agree. The Nix package sets
-        # `JCODE_RELEASE_BUILD`, so without this it downloads a release on
-        # first run and then re-execs into it -- silently replacing the
-        # pinned package version, and on a NixOS machine failing outright,
-        # because the published release is a glibc build and there is no
-        # `/lib64/ld-linux-x86-64.so.2` to load it with. Suppressing the
-        # updater keeps `pkgs.jcode` authoritative.
         JCODE_NO_AUTO_UPDATE = 1;
       }
       // cfg.jcode.environmentVariables;
@@ -110,10 +34,6 @@ let
     '';
   };
 
-  # The model a profile opens with: the first model declaring the `chat` role,
-  # or the profile's first model when none does. jcode keys a model by
-  # (profile, id) rather than by id alone, so two providers exposing the same
-  # model id coexist here without the `custom-<provider>` prefixing codex needs.
   defaultModelOf = provider:
     let
       byRole = builtins.filter (model: builtins.elem "chat" model.roles) provider.models;
@@ -125,13 +45,6 @@ let
     else
       null;
 
-  # jcode aborts a profile whose credential variable name it cannot read: its
-  # `is_safe_env_key_name` accepts `[A-Z0-9_]+` and nothing else, and an
-  # invalid `api_key_env` fails the whole server at startup rather than
-  # degrading. A placeholder that exists only to satisfy another agent -- qwen's
-  # `dummy`, for instance -- is not such a name, and it also points at no
-  # credential, so it renders exactly like a provider that declares no
-  # `api-key-env` at all: jcode's own unauthenticated transport.
   apiKeyEnvOf = provider:
     let
       name = provider.api-key-env;
@@ -167,14 +80,6 @@ let
     )
   ) (lib.listToAttrs (map (provider: lib.nameValuePair provider.name provider) cfg.providers));
 
-  # jcode keeps MCP servers out of `config.toml` and in `$JCODE_HOME/mcp.json`,
-  # under the Claude-Code `mcpServers` key. It speaks stdio only, which is all
-  # the harness registry holds, so every entry translates directly. It also
-  # imports `~/.codex/config.toml` into this file on first run -- but only while
-  # the file is missing, so managing it here also keeps Codex's servers from
-  # being copied in behind the registry. (`~/.codex` is a `$HOME`-relative path
-  # the redirect above sandboxes anyway, so the managed file is the only source
-  # either way.)
   jcodeMcpServers = (lib.mapAttrs (
     name: mcp: {
       inherit (mcp) command args env enabled;
@@ -209,46 +114,19 @@ let
 
   harnessHooks = lib.optionalAttrs harness.enable {
     hooks = {
-      # jcode's SessionStart. An observer, so it is spawned detached and
-      # fire-and-forget, which is the right shape for an index refresh. It runs
-      # in the session's own working directory, which is the directory the marker
-      # check inside refresh-index resolves from.
       session_start = [
         "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet"
         "${harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${harness.codingAgentTools.zg.package}/bin/zg index"
       ];
-      # The gate. jcode blocks a tool call on exit 2 and hands the hook's stderr
-      # back to the model as the tool error, so this is the only channel the
-      # deny message can arrive through.
       pre_tool = [ "${lib.getExe jcodePreTool} ${lib.getExe harness.hooks.retrievalRedirect.package}" ];
       pre_tool_timeout_ms = 5000;
-      # The rtk rewrite the other agents run as a second PreToolUse hook, but
-      # expressed the way jcode wants it: the transformer replaces the tool
-      # input before it is validated rather than rejecting the call.
-      #
-      # The same gate is handed over as the second argument because jcode runs
-      # transformers *before* the pre_tool gate. Without it every command rtk
-      # rewrites reaches the gate already rewritten, so the read shapes the gate
-      # exists to deny -- `cat foo.nix` becomes `rtk read foo.nix` -- would be
-      # judged in the one form the gate does not recognise and pass. Consulting
-      # the gate here drops the rewrite instead, which leaves the original
-      # command to reach the gate on its own and be denied with a message that
-      # names the index tools.
       pre_tool_transform = [
         "${lib.getExe jcodePreToolTransform} ${harness.codingAgentTools.rtk.package}/bin/rtk ${lib.getExe harness.hooks.retrievalRedirect.package}"
       ];
-      # jcode's own default is 500 ms, which is one process spawn; the rewrite
-      # spawns rtk and jq and now also the gate, so it needs more headroom than
-      # a pure filter.
       pre_tool_transform_timeout_ms = 2000;
     };
   };
 
-  # jcode ships these names, and `[tools].enabled` is matched literally against
-  # them, so the list doubles as the base tool inventory this module knows about.
-  # Measured against jcode 0.88.0: it sends exactly these 30 plus whatever the
-  # MCP registry contributes, so anything jcode adds upstream shows up as a
-  # missing entry here rather than as a silent no-op.
   baseTools = [
     # "agentgrep"
     "apply_patch"
@@ -282,66 +160,23 @@ let
     "write"
   ];
 
-  # `[tools]` in `config.toml`. Both keys are load-bearing together:
-  # `disable_base_tools` hides every built-in, MCP included, and `enabled` opts
-  # tools back in by exact name. Neither alone does what it looks like it does,
-  # so the option is expressed as a single pair rather than two flags a caller
-  # has to remember to combine.
-  #
-  # `enabled` filters MCP tools too: with `enabled = ["read"]` the advertised
-  # schema was exactly `read`, MCP excluded. So this list selects the whole
-  # surface, not just the base half of it.
-  # An empty allow-list is what "MCP only" looks like, so it is what flips the
-  # base tool switch. Comparing against `[ ]` rather than negating the list:
-  # `!` on a list leans on Nix truthiness, where any non-empty list is true and
-  # `[]` is false. That happens to give the right answer, but only by accident
-  # of coercion, and a reader cannot tell that from the expression.
+  # `disable_base_tools` and `enabled` can only control tools
   toolsSettings = {
     disable_base_tools = cfg.jcode.baseTools.enabled == [ ];
     enabled = cfg.jcode.baseTools.enabled;
   };
 
-  # jcode has no per-subagent profile *file*, so the shared
-  # `my.home.ai.subagents` schema reaches it the way it reaches goose rather
-  # than the way it reaches codex: as one `[agents]` table and one prompt file
-  # every worker reads, not as a directory of per-agent configs.
-  #
-  # Per-role settings -- the model, the effort, the instructions -- are read
-  # only from the shared schema, so a role is declared once and every adapter
-  # that can honour it does. What is left in `my.home.ai.jcode.swarm` is the
-  # swarm-wide behaviour that has no counterpart there: how a worker session is
-  # presented, how many may run at once, and what effort the coordinator and
-  # a deep-root coordinator ask for. Those are jcode's own vocabulary, and
-  # giving them a typed home is better than leaving them as loose TOML.
-  #
-  # `sandbox_mode` has no target at all: jcode's permission model is not
-  # per-agent, so there is nowhere for a read-only role to say so.
   generateSwarm = cfg.subagents.enable && builtins.elem "jcode" cfg.subagents.targets;
   allSubagentProfiles = cfg.subagents.profiles // cfg.subagents.extraProfiles;
-
-  # A profile whose role no provider declares cannot produce a model id, and
-  # emitting null would serialize as a bare `swarm_model = ` line jcode cannot
-  # parse back. Dropping the profile keeps the table valid; the role still
-  # reaches the coordinator as a prompt section, since the prompt needs no model.
   swarmWorkerProfiles = lib.filterAttrs (
     _: profile: searchModelByRole profile.model_role != null
   ) (lib.optionalAttrs generateSwarm allSubagentProfiles);
 
-  # `swarm_model` and `swarm_effort` are a single pair, not one per role, so
-  # some role has to be chosen and the choice has to be visible. `worker` is
-  # the pick: it is the role whose job is doing scoped work, and the only one a
-  # single model setting can honestly describe. With several roles and no
-  # `worker`, neither key is emitted and every worker inherits the coordinator's
-  # own model, which is jcode's documented default rather than a guess.
   swarmProfile =
     swarmWorkerProfiles.worker or (if builtins.length (builtins.attrNames swarmWorkerProfiles) == 1
       then builtins.head (builtins.attrValues swarmWorkerProfiles)
       else null);
 
-  # The shared schema's `low | medium | high` is a subset of jcode's, so a
-  # profile's effort passes through untranslated. Each key below is omitted
-  # unless set, so a jcode default stays in charge rather than being pinned to
-  # whatever this module guesses.
   swarmSettings =
     (lib.optionalAttrs (swarmProfile != null) {
       swarm_model = (searchModelByRole swarmProfile.model_role).model;
@@ -349,10 +184,6 @@ let
       swarm_spawn_mode = "inline"; # visible, that spawns with tmux does not work on tmux
     }) // cfg.jcode.swarm;
 
-  # jcode reads the swarm worker prompt from `$JCODE_HOME/swarm-prompt.md`, a
-  # single file rather a per-agent directory, so every role's instructions
-  # collapse into one document. Each keeps its name as a heading because the
-  # name is what a coordinator passes as the `label` of a `swarm spawn` call.
   swarmPrompt = lib.optionalAttrs generateSwarm ''
     # Sub-agent roles
 
@@ -364,22 +195,11 @@ let
     ) allSubagentProfiles)}
   '';
 
-  # `deepMerge` concatenates lists rather than replacing them, so a hook or a
-  # model list in `extraSettings` is appended to the generated one instead of
-  # overriding it. That is the same trade the other agent modules make.
-  #
-  # `agents` is merged as a layer of its own rather than as a key of the set
-  # below, because an empty `agents` still serializes as a bare `[agents]`
-  # header. Keeping it in a layer that disappears when swarm is off leaves the
-  # table out of the file entirely rather than giving jcode an empty one.
   settings = lib.my.deepMerge
     (lib.my.deepMerge
       (lib.my.deepMerge {
         tools = toolsSettings;
         features.swarm = true;
-        # The package is the version manager here, so jcode neither asks GitHub for
-        # a newer release nor acts on one. Both would write into `$JCODE_HOME/builds`
-        # and re-exec into a binary Nix does not know about.
         features.check_updates = false;
         display.auto_server_reload = false;
 
@@ -506,19 +326,8 @@ in
 
     xdg.configFile = lib.mkMerge [
       {
-        # `source` rather than `text`: the generated TOML names the harness tool
-        # store paths, and a `text` value is a string that may not carry a store
-        # path. `lib.my.toToml` returns a derivation, so `text` would have to read
-        # it back with a context attached, which is exactly what that check
-        # rejects.
         "jcode/config.toml".source = lib.my.toToml settings;
         "jcode/mcp.json".source = pkgs.writeText "mcp.json" (builtins.toJSON { mcpServers = jcodeMcpServers; });
-        # jcode's own global skills directory, resolved through `JCODE_HOME` and
-        # therefore not sandboxed. It has to be populated here because the shared
-        # `~/.agents/skills` is one of the `$HOME`-relative lookups `JCODE_HOME`
-        # moves under `external/`, and its presence also stops jcode from doing a
-        # one-time import of Claude Code and Codex skills into a directory we
-        # manage.
         "jcode/skills" = lib.optionalAttrs harness.enable {
           source = config.lib.file.mkOutOfStoreSymlink harness.skillsDir;
           force = true;
@@ -527,22 +336,8 @@ in
       (lib.optionalAttrs
         (harness.enable && (harness.agentsMd.source != null || harness.agentsMd.text != ""))
         {
-          # jcode assembles its system prompt from a base prompt, `./AGENTS.md`
-          # and `~/AGENTS.md`, then an overlay from `./.jcode/` and
-          # `$JCODE_HOME/`. The harness document belongs in the global overlay: it
-          # is guidance appended to every session, and claiming `~/AGENTS.md` for
-          # a file every other agent on the machine also reads would make the
-          # harness document a cross-tool side effect. The overlay also resolves
-          # through `JCODE_HOME`, so the redirect above cannot hide it.
           "jcode/prompt-overlay.md".source = harness.agentsMd.source or (pkgs.writeText "prompt-overlay.md" harness.agentsMd.text);
         })
-
-      # jcode reads worker guidance from `$JCODE_HOME/swarm-prompt.md` and falls
-      # back to `./.jcode/swarm-prompt.md` for a repo. Both live inside the
-      # config home here, so the roles stay next to the rest of the jcode
-      # configuration instead of in an unmanaged dotfile in the working tree.
-      # `force` is needed because a stray `~/.config/jcode/swarm-prompt.md`
-      # would otherwise fail the activation.
       (lib.optionalAttrs generateSwarm {
         "jcode/swarm-prompt.md" = {
           source = pkgs.writeText "swarm-prompt.md" swarmPrompt;
