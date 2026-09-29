@@ -83,6 +83,33 @@ let
     ];
   });
 
+  jcode = pkgs.writeShellApplication {
+    name = "jcode";
+    runtimeInputs = [ jcodePkg ];
+    runtimeEnv =
+      {
+        # `JCODE_HOME` is the only way to move jcode off `$HOME/.jcode`, and
+        # it has to name the same directory `xdg.configFile` writes into or
+        # jcode reads a config that was never written.
+        JCODE_HOME = "${config.xdg.configHome}/jcode";
+        JCODE_NO_TELEMETRY = 1;
+        # jcode self-manages a daemon binary under `$JCODE_HOME/builds` and
+        # prefers that over the executable it was launched from whenever the
+        # `shared-server` and `stable` channels agree. The Nix package sets
+        # `JCODE_RELEASE_BUILD`, so without this it downloads a release on
+        # first run and then re-execs into it -- silently replacing the
+        # pinned package version, and on a NixOS machine failing outright,
+        # because the published release is a glibc build and there is no
+        # `/lib64/ld-linux-x86-64.so.2` to load it with. Suppressing the
+        # updater keeps `pkgs.jcode` authoritative.
+        JCODE_NO_AUTO_UPDATE = 1;
+      }
+      // cfg.jcode.environmentVariables;
+    text = ''
+      exec ${lib.getExe jcodePkg} "$@"
+    '';
+  };
+
   # The model a profile opens with: the first model declaring the `chat` role,
   # or the profile's first model when none does. jcode keys a model by
   # (profile, id) rather than by id alone, so two providers exposing the same
@@ -148,7 +175,7 @@ let
   # being copied in behind the registry. (`~/.codex` is a `$HOME`-relative path
   # the redirect above sandboxes anyway, so the managed file is the only source
   # either way.)
-  jcodeMcpServers = lib.mapAttrs (
+  jcodeMcpServers = (lib.mapAttrs (
     name: mcp: {
       inherit (mcp) command args env enabled;
       # The registry holds a single `mcp-compressor` process, a stateless
@@ -158,7 +185,7 @@ let
       # value to milliseconds.
       timeout_secs = mcp.timeout;
     }
-  ) harness.mcpServers;
+  ) harness.mcpServers) // cfg.jcode.extraMcpServers;
 
   jcodePreTool = pkgs.writeShellApplication {
     name = "jcode-pre-tool";
@@ -371,38 +398,19 @@ in
         than replacing them.
       '';
     };
+    extraMcpServers = lib.mkOption {
+      type = lib.types.attrs;
+      default = { };
+      description = ''
+        Extra jcode `mcp.json` content, merged last.
+      '';
+    };
+
   };
 
   config = lib.mkIf cfg.jcode.enable {
     home.packages = [
-      (
-        pkgs.writeShellApplication {
-          name = "jcode";
-          runtimeInputs = [ jcodePkg ];
-          runtimeEnv =
-            {
-              # `JCODE_HOME` is the only way to move jcode off `$HOME/.jcode`, and
-              # it has to name the same directory `xdg.configFile` writes into or
-              # jcode reads a config that was never written.
-              JCODE_HOME = "${config.xdg.configHome}/jcode";
-              JCODE_NO_TELEMETRY = 1;
-              # jcode self-manages a daemon binary under `$JCODE_HOME/builds` and
-              # prefers that over the executable it was launched from whenever the
-              # `shared-server` and `stable` channels agree. The Nix package sets
-              # `JCODE_RELEASE_BUILD`, so without this it downloads a release on
-              # first run and then re-execs into it -- silently replacing the
-              # pinned package version, and on a NixOS machine failing outright,
-              # because the published release is a glibc build and there is no
-              # `/lib64/ld-linux-x86-64.so.2` to load it with. Suppressing the
-              # updater keeps `pkgs.jcode` authoritative.
-              JCODE_NO_AUTO_UPDATE = 1;
-            }
-            // cfg.jcode.environmentVariables;
-          text = ''
-            exec ${lib.getExe jcodePkg} "$@"
-          '';
-        }
-      )
+      jcode
     ];
 
     xdg.configFile = lib.mkMerge [
