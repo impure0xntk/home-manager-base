@@ -327,7 +327,7 @@ in
 
     xdg.configFile = lib.mkMerge [
       {
-        "jcode/config.toml".source = lib.my.toToml settings;
+        "jcode/config.toml.orig".source = lib.my.toToml settings; # see home.activation
         "jcode/mcp.json".source = pkgs.writeText "mcp.json" (builtins.toJSON { mcpServers = jcodeMcpServers; });
         "jcode/skills" = lib.optionalAttrs harness.enable {
           source = config.lib.file.mkOutOfStoreSymlink harness.skillsDir;
@@ -346,5 +346,11 @@ in
         };
       })
     ];
+
+    # To use OAUTH provider
+    home.activation."copy-jcode-config" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      rm -f ${config.xdg.configHome}/jcode/config.toml
+      install -m 644 -D ${config.xdg.configHome}/jcode/config.toml{.orig,}
+    '';
   };
 }
