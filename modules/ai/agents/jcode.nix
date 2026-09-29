@@ -39,10 +39,11 @@
 #    from the command line. The client sends it whether or not it also spawned
 #    the daemon, which is what makes the spawn case work: `serve` receives
 #    `--model` and logs `Using model:`, but the server rebuilds its provider per
-#    new session and re-reads `[provider].default_model` from `config.toml` in
-#    the process, so the spawn-time argument alone does not reach the first
-#    turn. `--provider` stays server-start only, because the provider is chosen
-#    once at `serve` bootstrap and every session inherits it.
+#    new session and that rebuild carries a CLI selection over only when a
+#    *provider* was named explicitly, so a bare `--model` falls back to
+#    `[provider].default_model`. `--provider` stays server-start only, because
+#    the provider is chosen once at `serve` bootstrap and every session inherits
+#    it.
 #
 # 6. It manages its own daemon binary under `$JCODE_HOME/builds` and prefers
 #    that over the executable it was launched from once the `shared-server` and
