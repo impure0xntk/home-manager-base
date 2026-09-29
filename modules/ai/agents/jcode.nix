@@ -1,6 +1,6 @@
 # jcode: RAM-efficient coding agent TUI. https://github.com/1jehuang/jcode
 #
-# jcode differs from codex, goose and qwen-code in four ways that shape this
+# jcode differs from codex, goose and qwen-code in five ways that shape this
 # file, so none of their configuration shapes carry over:
 #
 # 1. It keeps its state in a directory of its own, `$HOME/.jcode`, not in
@@ -26,7 +26,12 @@
 #    `pre_tool_transform` whose stdin and stdout are the tool input itself. One
 #    adapter per harness script bridges that, so the shared scripts stay shared.
 #
-# 4. It manages its own daemon binary under `$JCODE_HOME/builds` and prefers
+# 4. The TUI chrome is trimmed by four keys that upstream 0.88.0 does not have.
+#    `patches/jcode/ui-toggles.patch` adds them behind the upstream defaults,
+#    applied to `pkgs.jcode` with `overrideAttrs`, and the `settings` below sets
+#    each to false. See the comments there.
+#
+# 5. It manages its own daemon binary under `$JCODE_HOME/builds` and prefers
 #    that over the executable it was launched from once the `shared-server` and
 #    `stable` channels agree. The Nix package sets `JCODE_RELEASE_BUILD`, so left
 #    alone it downloads a release on first run and re-execs into it, silently
@@ -49,6 +54,17 @@ let
   # points `JCODE_HOME` at the same directory, so `$XDG_CONFIG_HOME/jcode` is
   # where jcode looks for all of it.
   chatModel = searchModelByRole "chat";
+
+  # jcode ships no configuration key for some pieces of chrome this machine
+  # does not want, so the keys are added by patch rather than configuration. The
+  # package itself stays `pkgs.jcode`: only the patches are added, which leaves
+  # llm-agents owning the version, the source hash, and the cargo hash, and
+  # leaves every other consumer of the attribute on this machine unpatched.
+  # `patches` is a `mkDerivation` attribute consumed during `patchPhase`, so the
+  # vendor closure -- and therefore `cargoHash` -- is unaffected.
+  jcodePkg = pkgs.jcode.overrideAttrs (old: {
+    patches = (old.patches or [ ]) ++ [ ../patches/jcode/ui-toggles.patch ];
+  });
 
   # The model a profile opens with: the first model declaring the `chat` role,
   # or the profile's first model when none does. jcode keys a model by
@@ -178,6 +194,33 @@ let
       # and re-exec into a binary Nix does not know about.
       features.check_updates = false;
       display.auto_server_reload = false;
+      # Chrome this machine's TUI does not want. jcode 0.88.0 hard-wires all
+      # three; the patch adds the keys behind the upstream defaults, so this is
+      # the only place that has to be revisited on a version bump.
+      #   features.onboarding          - the telemetry notice plus the guided
+      #                                  login walkthrough, which on a machine
+      #                                  whose providers are all `auth = "none"`
+      #                                  is a startup wall, not guidance.
+      #   display.show_header          - everything above the transcript: the
+      #                                  `jcode` / `server:` / `client:` identity
+      #                                  lines with their version labels, the
+      #                                  provider + model line, and the
+      #                                  `/login to add provider` inventory with
+      #                                  one dot per unconfigured provider.
+      #   display.show_prompt_numbers  - the `1> ` turn counter on the input line.
+      #   display.show_info_widget     - the model / provider / session / token
+      #                                  / spend / git box docked in the right
+      #                                  transcript margin. This one only sets the
+      #                                  launch state: `info_widget_toggle`
+      #                                  (Alt+I) still brings it back.
+      # `keybinding_hints` is upstream, not from the patch: it silences the
+      # "learn this keybinding" nudges and the periodic status tips, which are
+      # the same class of unsolicited line.
+      features.onboarding = false;
+      display.show_header = false;
+      display.show_prompt_numbers = false;
+      display.show_info_widget = false;
+      display.keybinding_hints = false;
       # `[provider]` holds the session defaults; `[providers.<name>]` holds the
       # profiles they select from.
       provider = lib.optionalAttrs (chatModel != null) {
@@ -214,7 +257,7 @@ in
       (
         pkgs.writeShellApplication {
           name = "jcode";
-          runtimeInputs = [ pkgs.jcode ];
+          runtimeInputs = [ jcodePkg ];
           runtimeEnv =
             {
               # `JCODE_HOME` is the only way to move jcode off `$HOME/.jcode`, and
@@ -235,7 +278,7 @@ in
             }
             // cfg.jcode.environmentVariables;
           text = ''
-            exec ${lib.getExe pkgs.jcode} "$@"
+            exec ${lib.getExe jcodePkg} "$@"
           '';
         }
       )

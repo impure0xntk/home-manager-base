@@ -1,6 +1,6 @@
 # jcode writes none of its configuration through a home-manager module, so the
 # generated files are the only thing that can be asserted. What is worth pinning
-# is the four places jcode diverges from codex, goose and qwen-code:
+# is the five places jcode diverges from codex, goose and qwen-code:
 #
 #   - everything lives in `$XDG_CONFIG_HOME/jcode`, reached through `JCODE_HOME`,
 #     not in `$HOME/.jcode`, and the wrapper has to point at the same directory
@@ -12,6 +12,8 @@
 #     TOML and not under jcode's historical `servers` key.
 #   - hooks are `[hooks]` command strings, so the retrieval deny and the rtk
 #     rewrite have to arrive there through their adapters.
+#   - the TUI chrome is trimmed through keys this repo adds by patch, so the
+#     generated TOML is the only place that decision is observable.
 {
   config,
   lib,
@@ -188,6 +190,18 @@ in
       {
         assertion = runsRtkTransform;
         message = "the jcode pre_tool_transform must run rtk through its adapter.";
+      }
+      {
+        # jcode 0.88.0 has no key for any of these; the patch adds them behind
+        # the upstream defaults and this module is what turns them off. A silent
+        # rename upstream would turn them back on rather than fail, so the
+        # assertion is that the generated TOML says what the module decided.
+        assertion = parsed.features.onboarding == false
+          && parsed.display.show_header == false
+          && parsed.display.show_prompt_numbers == false
+          && parsed.display.show_info_widget == false
+          && parsed.display.keybinding_hints == false;
+        message = "jcode must disable the onboarding wall, the transcript header, the input turn counter, the margin info widget, and the keybinding nudges.";
       }
       {
         # refresh-index is the SessionStart counterpart, and it is skipped outside

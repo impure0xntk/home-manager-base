@@ -1,0 +1,171 @@
+diff --git a/crates/jcode-config-types/src/display.rs b/crates/jcode-config-types/src/display.rs
+index 57942f4..c29d3a5 100644
+--- a/crates/jcode-config-types/src/display.rs
++++ b/crates/jcode-config-types/src/display.rs
+@@ -96,2 +96,19 @@ pub struct DisplayConfig {
+     pub keybinding_hints: bool,
++    /// Render the persistent header above the transcript: the `jcode` /
++    /// `server:` / `client:` identity lines carrying the client and server
++    /// versions, plus the provider + model line (default: true). Set false to
++    /// start the transcript directly with the first message.
++    #[serde(default = "default_true")]
++    pub show_header: bool,
++    /// Prefix the input line with the running turn count, rendering `1> `
++    /// instead of a bare `> ` (default: true). Set false to drop the number and
++    /// reclaim its columns on the input line.
++    #[serde(default = "default_true")]
++    pub show_prompt_numbers: bool,
++    /// Show the info widget docked in the transcript margin: model and provider,
++    /// session and token counts, spend, and git status (default: true). Set
++    /// false to start with the margin empty; the in-TUI toggle still works, so
++    /// the widget remains reachable for the rest of the session.
++    #[serde(default = "default_true")]
++    pub show_info_widget: bool,
+     /// Color theme: "auto" (detect terminal background), "dark", or "light".
+@@ -159,2 +176,5 @@ impl Default for DisplayConfig {
+             keybinding_hints: true,
++            show_header: true,
++            show_prompt_numbers: true,
++            show_info_widget: true,
+             theme: String::new(),
+diff --git a/crates/jcode-config-types/src/lib.rs b/crates/jcode-config-types/src/lib.rs
+index ffefea0..45b9f82 100644
+--- a/crates/jcode-config-types/src/lib.rs
++++ b/crates/jcode-config-types/src/lib.rs
+@@ -1192,2 +1192,8 @@ pub struct FeatureConfig {
+     pub update_channel: UpdateChannel,
++    /// Show the guided first-run onboarding screen (telemetry notice, welcome
++    /// title, and the login/model walkthrough) on a fresh install (default:
++    /// true). Set false for a machine whose `config.toml` already names a
++    /// provider, where the walkthrough is a startup wall rather than guidance.
++    #[serde(default = "default_true")]
++    pub onboarding: bool,
+ }
+@@ -1206,2 +1212,3 @@ impl Default for FeatureConfig {
+             update_channel: UpdateChannel::default(),
++            onboarding: true,
+         }
+diff --git a/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs b/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs
+index 10946da..f5f8d57 100644
+--- a/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs
++++ b/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs
+@@ -76,2 +76,7 @@ impl App {
+     pub(super) fn maybe_begin_onboarding_flow_after_login(&mut self) {
++        // `[features] onboarding = false`, same as on the startup path: a login
++        // must not drag an opted-out install into the guided flow either.
++        if !crate::config::config().features.onboarding {
++            return;
++        }
+         // If the flow is already running, a successful login means we should
+@@ -107,2 +112,12 @@ impl App {
+         }
++        // `[features] onboarding = false`. Gating only the welcome screen still
++        // leaves the flow to run, and a running flow pushes its own Login notice
++        // into the status line and the transcript. Skipping the flow here is what
++        // keeps the launch completely free of onboarding output; the screen
++        // itself is gated separately, because it has a second, independent cause
++        // in the suggestion cards on an empty screen.
++        if !crate::config::config().features.onboarding {
++            self.onboarding_startup_checked = true;
++            return;
++        }
+         // Don't hijack a session that already has real activity (resume,
+diff --git a/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs b/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs
+index a322f4c..fd088a9 100644
+--- a/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs
++++ b/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs
+@@ -1397,2 +1397,10 @@ impl App {
+         }
++        // `[features] onboarding = false`. This is the one predicate the renderer
++        // asks, and it is true from two independent causes -- an active guided
++        // flow, or starter suggestion cards on an empty screen -- so gating it
++        // here is what actually keeps the telemetry notice, the welcome title,
++        // and the login walkthrough off the launch, rather than just the flow.
++        if !crate::config::config().features.onboarding {
++            return false;
++        }
+         if self.onboarding_preview_mode {
+@@ -1509,2 +1517,9 @@ impl App {
+         }
++        // `[features] onboarding = false`. The suggestion cards are the third
++        // onboarding surface: they render in the transcript itself, so hiding the
++        // welcome screen and skipping the flow would still leave the
++        // "Log in to get started" card on an empty launch.
++        if !crate::config::config().features.onboarding {
++            return Vec::new();
++        }
+         let preview_mode = self.onboarding_preview_mode;
+diff --git a/crates/jcode-tui/src/tui/info_widget.rs b/crates/jcode-tui/src/tui/info_widget.rs
+index 750c1d4..51b3340 100644
+--- a/crates/jcode-tui/src/tui/info_widget.rs
++++ b/crates/jcode-tui/src/tui/info_widget.rs
+@@ -883,3 +883,6 @@ impl Default for WidgetsState {
+         Self {
+-            enabled: true,
++            // `[display] show_info_widget` only sets the starting state. The
++            // Alt+I toggle still flips `enabled` from here, so opting out of the
++            // margin at launch does not take the widget away for the session.
++            enabled: crate::config::config().display.show_info_widget,
+             widget_states: HashMap::new(),
+diff --git a/crates/jcode-tui/src/tui/ui_header.rs b/crates/jcode-tui/src/tui/ui_header.rs
+index 2a31205..3e1d864 100644
+--- a/crates/jcode-tui/src/tui/ui_header.rs
++++ b/crates/jcode-tui/src/tui/ui_header.rs
+@@ -997,2 +997,10 @@ pub(in crate::tui) fn build_header_sections(
+ ) -> (Vec<Line<'static>>, Vec<Line<'static>>) {
++    // `[display] show_header = false`. Gating here rather than on either half
++    // covers both sections at once: the persistent `jcode` / `server:` /
++    // `client:` identity lines and the secondary inventory, which is the
++    // `/login to add provider` heading, one dim dot per unconfigured provider,
++    // and the `mcp:` / `skills:` / working-directory lines.
++    if !crate::config::config().display.show_header {
++        return (Vec::new(), Vec::new());
++    }
+     let auth = app.auth_status();
+diff --git a/crates/jcode-tui/src/tui/ui_input.rs b/crates/jcode-tui/src/tui/ui_input.rs
+index e7c2af2..e6ac022 100644
+--- a/crates/jcode-tui/src/tui/ui_input.rs
++++ b/crates/jcode-tui/src/tui/ui_input.rs
+@@ -429,3 +429,14 @@ pub(crate) fn input_prompt_len(app: &dyn TuiState, next_prompt: usize) -> usize
+     let (prompt_char, _) = input_prompt(app);
+-    next_prompt.to_string().chars().count() + prompt_char.chars().count()
++    prompt_number_label(next_prompt).chars().count() + prompt_char.chars().count()
++}
++
++/// The number drawn ahead of the input prompt. Empty when
++/// `[display] show_prompt_numbers = false`, so the input line renders a bare
++/// `> ` and `input_prompt_len` reclaims the columns the digits occupied.
++pub(crate) fn prompt_number_label(next_prompt: usize) -> String {
++    if crate::config::config().display.show_prompt_numbers {
++        next_prompt.to_string()
++    } else {
++        String::new()
++    }
+ }
+@@ -448,3 +459,3 @@ pub(super) fn wrapped_input_line_count(
+ 
+-    let num_str = next_prompt.to_string();
++    let num_str = prompt_number_label(next_prompt);
+     let (prompt_char, caret_color) = input_prompt(app);
+@@ -2989,3 +3000,3 @@ pub(super) fn draw_input(
+     let (prompt_char, caret_color) = input_prompt(app);
+-    let num_str = format!("{}", next_prompt);
++    let num_str = prompt_number_label(next_prompt);
+     let prompt_len = input_prompt_len(app, next_prompt);
+diff --git a/crates/jcode-tui/src/tui/ui_prepare.rs b/crates/jcode-tui/src/tui/ui_prepare.rs
+index 4b3b425..6c14564 100644
+--- a/crates/jcode-tui/src/tui/ui_prepare.rs
++++ b/crates/jcode-tui/src/tui/ui_prepare.rs
+@@ -740,3 +740,12 @@ pub(super) fn prepare_messages(
+ /// keeping the header from jumping when the first prompt is sent.
++///
++/// Zero for an empty header. The whole value is "space to centre the header
++/// in", so with nothing to centre it would leave half the chat area blank at
++/// the top -- which is what `[display] show_header = false` produces. Keyed on
++/// the height rather than the flag, so any other route to an empty header
++/// collapses the gap too.
+ fn initial_header_pad_top(height: u16, header_lines: usize) -> usize {
++    if header_lines == 0 {
++        return 0;
++    }
+     let input_reserve = 4;
