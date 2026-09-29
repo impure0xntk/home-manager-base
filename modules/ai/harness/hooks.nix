@@ -66,7 +66,10 @@
         default = pkgs.writeShellApplication {
           name = "translate-prompt";
           text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./hooks/translate-prompt.sh);
-          runtimeInputs = [ pkgs.jq ];
+          runtimeInputs = [
+            pkgs.jq
+            pkgs.translate-shell
+          ];
         };
         defaultText = lib.literalExpression ''pkgs.writeShellApplication { name = "translate-prompt"; ... }'';
         description = ''
