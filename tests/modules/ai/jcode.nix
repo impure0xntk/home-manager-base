@@ -98,9 +98,8 @@ in
     # of one shared swarm prompt plus the single `[agents]` model/effort pair
     # derived from the shared subagent schema. `reviewer` is declared alongside
     # `worker` to pin that the pair comes from `worker` alone rather than from
-    # whichever role is visited first. Everything jcode understands about a
-    # swarm beyond model and effort is not in the shared schema, so it is
-    # declared in `extraSettings` instead of a jcode-specific option.
+    # whichever role is visited first. The swarm-wide knobs below have no
+    # counterpart in the shared schema, so they stay in jcode's own option.
     my.home.ai.subagents.profiles = {
       worker = {
         description = "Scoped implementation work.";
@@ -118,11 +117,11 @@ in
       };
     };
 
-    my.home.ai.jcode.extraSettings.agents = {
-      swarm_spawn_mode = "inline";
-      swarm_strip_layout = "vertical";
-      swarm_max_concurrent_agents = 4;
-      swarm_root_effort = "xhigh";
+    my.home.ai.jcode.swarm = {
+      spawnMode = "inline";
+      stripLayout = "vertical";
+      maxConcurrentAgents = 4;
+      rootEffort = "xhigh";
     };
 
     my.home.ai.providers = [
