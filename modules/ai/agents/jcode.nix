@@ -118,8 +118,9 @@ let
         "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet"
         "${harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${harness.codingAgentTools.zg.package}/bin/zg index"
       ];
-      pre_tool = [ "${lib.getExe jcodePreTool} ${lib.getExe harness.hooks.retrievalRedirect.package}" ];
-      pre_tool_timeout_ms = 5000;
+      # Disable PreToolUse hook: too strict
+      # pre_tool = [ "${lib.getExe jcodePreTool} ${lib.getExe harness.hooks.retrievalRedirect.package}" ];
+      # pre_tool_timeout_ms = 5000;
       pre_tool_transform = [
         "${lib.getExe jcodePreToolTransform} ${harness.codingAgentTools.rtk.package}/bin/rtk ${lib.getExe harness.hooks.retrievalRedirect.package}"
       ];

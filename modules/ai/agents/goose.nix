@@ -220,21 +220,21 @@ in
       "hooks/hooks.json" = {
         hooks = {
           PreToolUse = [
-            {
-              # codegraph and zvec-grep are registered as MCP servers, so a
-              # raw cat/rg spends context on a weaker answer than the index
-              # already holds. Deny it and name the tools to call instead.
-              # The tree tool is the native form of the same walk, and goose is
-              # the only agent here that ships one.
-              matcher = "^(shell|tree)$";
-              hooks = [
-                (lib.optionalAttrs config.my.home.ai.harness.enable {
-                  type = "command";
-                  command = lib.getExe config.my.home.ai.harness.hooks.retrievalRedirect.package;
-                  timeout = 5;
-                })
-              ];
-            }
+            # {
+            #   # codegraph and zvec-grep are registered as MCP servers, so a
+            #   # raw cat/rg spends context on a weaker answer than the index
+            #   # already holds. Deny it and name the tools to call instead.
+            #   # The tree tool is the native form of the same walk, and goose is
+            #   # the only agent here that ships one.
+            #   matcher = "^(shell|tree)$";
+            #   hooks = [
+            #     (lib.optionalAttrs config.my.home.ai.harness.enable {
+            #       type = "command";
+            #       command = lib.getExe config.my.home.ai.harness.hooks.retrievalRedirect.package;
+            #       timeout = 5;
+            #     })
+            #   ];
+            # }
             {
               # Shell tool is exposed unprefixed by the developer extension.
               matcher = "^shell$";

@@ -121,16 +121,16 @@ let
       # read/search/structure calls spend context on a weaker answer than the
       # index gives back. The names are qwen's own; the script judges the
       # leading command fragment, not the tool.
-      {
-        matcher = "^(run_shell_command|list_directory|glob|read_file|grep_search)$";
-        hooks = [
-          {
-            type = "command";
-            command = lib.getExe harness.hooks.retrievalRedirect.package;
-            timeout = 5;
-          }
-        ];
-      }
+      # {
+      #   matcher = "^(run_shell_command|list_directory|glob|read_file|grep_search)$";
+      #   hooks = [
+      #     {
+      #       type = "command";
+      #       command = lib.getExe harness.hooks.retrievalRedirect.package;
+      #       timeout = 5;
+      #     }
+      #   ];
+      # }
       {
         # Shell tool is the only surface `rtk` can rewrite into the command.
         matcher = "^run_shell_command$";
