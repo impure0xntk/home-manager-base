@@ -156,13 +156,19 @@ let
 
   jcodePreTool = pkgs.writeShellApplication {
     name = "jcode-pre-tool";
-    runtimeInputs = [ pkgs.jq ];
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.coreutils
+    ];
     text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ../harness/hooks/jcode-pre-tool.sh);
   };
 
   jcodePreToolTransform = pkgs.writeShellApplication {
     name = "jcode-pre-tool-transform";
-    runtimeInputs = [ pkgs.jq ];
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.coreutils
+    ];
     text =
       lib.removePrefix "#!/usr/bin/env bash\n"
         (builtins.readFile ../harness/hooks/jcode-pre-tool-transform.sh);

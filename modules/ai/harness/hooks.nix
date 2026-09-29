@@ -30,7 +30,10 @@
         default = pkgs.writeShellApplication {
           name = "retrieval-redirect";
           text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./hooks/redirect-read-grep.sh);
-          runtimeInputs = [ pkgs.jq ];
+          runtimeInputs = [
+            pkgs.jq
+            pkgs.coreutils
+          ];
         };
         defaultText = lib.literalExpression ''pkgs.writeShellApplication { name = "retrieval-redirect"; ... }'';
         description = ''
@@ -50,6 +53,7 @@
         default = pkgs.writeShellApplication {
           name = "refresh-index";
           text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./hooks/refresh-index.sh);
+          runtimeInputs = [ pkgs.coreutils ];
         };
         defaultText = lib.literalExpression ''pkgs.writeShellApplication { name = "refresh-index"; ... }'';
         description = ''
