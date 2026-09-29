@@ -285,6 +285,8 @@ let
       # and re-exec into a binary Nix does not know about.
       features.check_updates = false;
       display.auto_server_reload = false;
+
+      memory.embeddings = false; # Use harness instead.
       # Chrome this machine's TUI does not want. jcode 0.88.0 hard-wires all
       # three; the patch adds the keys behind the upstream defaults, so this is
       # the only place that has to be revisited on a version bump.
