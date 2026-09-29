@@ -19,16 +19,16 @@ in
     my.home.ai.harness.enable = true;
     my.home.ai.codex.enable = true;
     my.home.ai.goose.enable = true;
-  };
 
-  assertions = [
-    {
-      assertion = lib.elem redirect (hookCommands goosePreToolUse);
-      message = "goose must deny raw read/grep shell calls in favour of the codegraph and zvec-grep MCP tools.";
-    }
-    {
-      assertion = lib.elem redirect (hookCommands codexPreToolUse);
-      message = "codex must deny raw read/grep shell calls in favour of the codegraph and zvec-grep MCP tools.";
-    }
-  ];
+    assertions = [
+      {
+        assertion = lib.elem redirect (hookCommands goosePreToolUse);
+        message = "goose must deny raw read/grep shell calls in favour of the codegraph and zvec-grep MCP tools.";
+      }
+      {
+        assertion = lib.elem redirect (hookCommands codexPreToolUse);
+        message = "codex must deny raw read/grep shell calls in favour of the codegraph and zvec-grep MCP tools.";
+      }
+    ];
+  };
 }

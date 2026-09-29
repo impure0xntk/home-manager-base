@@ -301,54 +301,162 @@ let
     enabled = cfg.jcode.baseTools.enabled;
   };
 
+  # jcode has no per-subagent profile format, so the shared
+  # `my.home.ai.subagents` schema cannot reach it the way it reaches codex
+  # (`agents/<name>.toml`) or goose (`recipes/<name>.yaml`). What jcode reads is
+  # one flat `[agents]` table of swarm defaults and one prompt file every worker
+  # shares, so the profile shape lives here, under jcode, rather than widening a
+  # global option with fields only one adapter can honour.
+  #
+  # Two shared-schema fields have no counterpart and are dropped rather carried
+  # as dead weight: `description` folds into the prompt file, and `sandbox_mode`
+  # is absent because jcode's permission model is not per-agent. Effort uses
+  # jcode's own vocabulary rather the shared low/medium/high, so a value here is
+  # never silently reinterpreted against a different enum.
+  jcodeEffortLevels = [ "none" "minimal" "low" "medium" "high" "xhigh" "max" ];
+  swarmProfileType = lib.types.submodule {
+    options = {
+      description = lib.mkOption {
+        type = lib.types.str;
+        description = "Short description of the role, shown in the swarm prompt file.";
+      };
+      instructions = lib.mkOption {
+        type = lib.types.lines;
+        default = "";
+        description = "Persistent instructions passed to this swarm worker role.";
+      };
+      model_role = lib.mkOption {
+        type = lib.types.enum [ "chat" "edit" "apply" "autocomplete" ];
+        default = "chat";
+        description = "Logical model role resolved against configured providers.";
+      };
+      reasoning_effort = lib.mkOption {
+        type = lib.types.enum jcodeEffortLevels;
+        default = "medium";
+        description = "Reasoning effort requested from this swarm worker role.";
+      };
+    };
+  };
+
+  # A profile whose role no provider declares cannot produce a model string.
+  # Dropping it keeps the emitted table valid; emitting null would serialize as
+  # a bare `swarm_model = ` line jcode cannot parse back.
+  swarmWorkerProfiles = lib.filterAttrs (
+    _: profile: searchModelByRole profile.model_role != null
+  ) (lib.optionalAttrs cfg.jcode.swarm.enable cfg.jcode.swarm.subagents);
+
+  # One profile wins the single `swarm_model` / `swarm_effort` slot, so the pick
+  # is explicit rather first-wins. `worker` is the natural default: it is the
+  # role whose job is doing scoped work, and the only one a single model
+  # setting can honestly describe.
+  swarmProfile =
+    swarmWorkerProfiles.worker or (if builtins.length (builtins.attrNames swarmWorkerProfiles) == 1
+      then builtins.head (builtins.attrValues swarmWorkerProfiles)
+      else null);
+
+  # `[agents]` is emitted as a merge layer of its own rather than as a key of
+  # the settings set, because an empty `agents` still serializes as a bare
+  # `[agents]` header. A layer that disappears when swarm is off keeps the table
+  # out of the file entirely rather than handing jcode an empty one.
+  swarmSettings = lib.optionalAttrs cfg.jcode.swarm.enable (
+    lib.optionalAttrs (swarmProfile != null) {
+      # jcode wants a bare model id, not the `provider/model` pair the
+      # coordinator resolves, because the worker session picks its own provider
+      # from `providers.<name>.models`.
+      swarm_model = (searchModelByRole swarmProfile.model_role).model;
+      swarm_effort = swarmProfile.reasoning_effort;
+    }
+    // lib.optionalAttrs (cfg.jcode.swarm.rootEffort != null) {
+      swarm_root_effort = cfg.jcode.swarm.rootEffort;
+    }
+    // lib.optionalAttrs (cfg.jcode.swarm.deepRootEffort != null) {
+      swarm_deep_root_effort = cfg.jcode.swarm.deepRootEffort;
+    }
+    // lib.optionalAttrs (cfg.jcode.swarm.maxConcurrentAgents != null) {
+      swarm_max_concurrent_agents = cfg.jcode.swarm.maxConcurrentAgents;
+    }
+    // lib.optionalAttrs (cfg.jcode.swarm.spawnMode != null) {
+      swarm_spawn_mode = cfg.jcode.swarm.spawnMode;
+    }
+    // lib.optionalAttrs (cfg.jcode.swarm.stripLayout != null) {
+      swarm_strip_layout = cfg.jcode.swarm.stripLayout;
+    }
+    // lib.optionalAttrs (cfg.jcode.swarm.galleryMaxPct != null) {
+      swarm_gallery_max_pct = cfg.jcode.swarm.galleryMaxPct;
+    }
+  );
+
+  # jcode reads the swarm worker prompt from `$JCODE_HOME/swarm-prompt.md`, a
+  # single file rather a per-agent directory, so every role's instructions
+  # collapse into one document. Each keeps its name as a heading so a
+  # coordinator can still route by role when it labels a `swarm spawn` call.
+  swarmPrompt = lib.optionalAttrs cfg.jcode.swarm.enable ''
+    # Sub-agent roles
+
+    These are the worker roles available in this repo. Name one in the `label`
+    of a `swarm spawn` call so the coordinator can route by role.
+
+    ${lib.concatStringsSep "\n" (lib.mapAttrsToList (
+      name: profile: "## ${name}\n\n${profile.instructions}"
+    ) swarmWorkerProfiles)}
+  '';
+
   # `deepMerge` concatenates lists rather than replacing them, so a hook or a
   # model list in `extraSettings` is appended to the generated one instead of
   # overriding it. That is the same trade the other agent modules make.
-  settings = lib.my.deepMerge (
-    lib.my.deepMerge {
-      tools = toolsSettings;
-      # The package is the version manager here, so jcode neither asks GitHub for
-      # a newer release nor acts on one. Both would write into `$JCODE_HOME/builds`
-      # and re-exec into a binary Nix does not know about.
-      features.check_updates = false;
-      display.auto_server_reload = false;
+  #
+  # `agents` is merged as a layer of its own rather than as a key of the set
+  # below, because an empty `agents` still serializes as a bare `[agents]`
+  # header. Keeping it in a layer that disappears when swarm is off leaves the
+  # table out of the file entirely rather than giving jcode an empty one.
+  settings = lib.my.deepMerge
+    (lib.my.deepMerge
+      (lib.my.deepMerge {
+        tools = toolsSettings;
+        # The package is the version manager here, so jcode neither asks GitHub for
+        # a newer release nor acts on one. Both would write into `$JCODE_HOME/builds`
+        # and re-exec into a binary Nix does not know about.
+        features.check_updates = false;
+        display.auto_server_reload = false;
 
-      memory.embeddings = false; # Use harness instead.
-      # Chrome this machine's TUI does not want. jcode 0.88.0 hard-wires all
-      # three; the patch adds the keys behind the upstream defaults, so this is
-      # the only place that has to be revisited on a version bump.
-      #   features.onboarding          - the telemetry notice plus the guided
-      #                                  login walkthrough, which on a machine
-      #                                  whose providers are all `auth = "none"`
-      #                                  is a startup wall, not guidance.
-      #   display.show_header          - everything above the transcript: the
-      #                                  `jcode` / `server:` / `client:` identity
-      #                                  lines with their version labels, the
-      #                                  provider + model line, and the
-      #                                  `/login to add provider` inventory with
-      #                                  one dot per unconfigured provider.
-      #   display.show_prompt_numbers  - the `1> ` turn counter on the input line.
-      #   display.show_info_widget     - the model / provider / session / token
-      #                                  / spend / git box docked in the right
-      #                                  transcript margin. This one only sets the
-      #                                  launch state: `info_widget_toggle`
-      #                                  (Alt+I) still brings it back.
-      # `keybinding_hints` is upstream, not from the patch: it silences the
-      # "learn this keybinding" nudges and the periodic status tips, which are
-      # the same class of unsolicited line.
-      features.onboarding = false;
-      display.show_header = false;
-      display.show_prompt_numbers = false;
-      display.show_info_widget = false;
-      display.keybinding_hints = false;
-      # `[provider]` holds the session defaults; `[providers.<name>]` holds the
-      # profiles they select from.
-      provider = lib.optionalAttrs (chatModel != null) {
-        default_provider = chatModel.provider;
-        default_model = chatModel.model;
-      };
-      providers = jcodeProviders;
-    }
+        memory.embeddings = false; # Use harness instead.
+        # Chrome this machine's TUI does not want. jcode 0.88.0 hard-wires all
+        # three; the patch adds the keys behind the upstream defaults, so this is
+        # the only place that has to be revisited on a version bump.
+        #   features.onboarding          - the telemetry notice plus the guided
+        #                                  login walkthrough, which on a machine
+        #                                  whose providers are all `auth = "none"`
+        #                                  is a startup wall, not guidance.
+        #   display.show_header          - everything above the transcript: the
+        #                                  `jcode` / `server:` / `client:` identity
+        #                                  lines with their version labels, the
+        #                                  provider + model line, and the
+        #                                  `/login to add provider` inventory with
+        #                                  one dot per unconfigured provider.
+        #   display.show_prompt_numbers  - the `1> ` turn counter on the input line.
+        #   display.show_info_widget     - the model / provider / session / token
+        #                                  / spend / git box docked in the right
+        #                                  transcript margin. This one only sets the
+        #                                  launch state: `info_widget_toggle`
+        #                                  (Alt+I) still brings it back.
+        # `keybinding_hints` is upstream, not from the patch: it silences the
+        # "learn this keybinding" nudges and the periodic status tips, which are
+        # the same class of unsolicited line.
+        features.onboarding = false;
+        display.show_header = false;
+        display.show_prompt_numbers = false;
+        display.show_info_widget = false;
+        display.keybinding_hints = false;
+        # `[provider]` holds the session defaults; `[providers.<name>]` holds the
+        # profiles they select from.
+        provider = lib.optionalAttrs (chatModel != null) {
+          default_provider = chatModel.provider;
+          default_model = chatModel.model;
+        };
+        providers = jcodeProviders;
+      }
+      (lib.optionalAttrs (swarmSettings != { }) { agents = swarmSettings; })
+    )
     harnessHooks
   ) cfg.jcode.extraSettings;
 in
@@ -398,6 +506,90 @@ in
         than replacing them.
       '';
     };
+    swarm = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkEnableOption "Emit jcode `[agents]` swarm settings and a swarm prompt";
+          subagents = lib.mkOption {
+            type = lib.types.attrsOf swarmProfileType;
+            default = { };
+            description = ''
+              Swarm worker roles, keyed by the name a coordinator passes as the
+              `label` of a `swarm spawn` call. Each role's `instructions`
+              becomes a section of `jcode/swarm-prompt.md`, which every worker
+              reads, so this is role guidance and not a guarantee that a
+              particular worker ran under it.
+            '';
+            example = lib.literalExpression ''
+              {
+                reviewer = {
+                  description = "Read-only diff review";
+                  instructions = "Review the diff and report findings. Do not edit files.";
+                  model_role = "chat";
+                  reasoning_effort = "high";
+                };
+              }
+            '';
+          };
+          rootEffort = lib.mkOption {
+            type = lib.types.nullOr (lib.types.enum jcodeEffortLevels);
+            default = null;
+            description = ''
+              Effort for a root coordinator. Left unset jcode applies its own
+              default, so this stays null unless a value is wanted
+              deliberately.
+            '';
+          };
+          deepRootEffort = lib.mkOption {
+            type = lib.types.nullOr (lib.types.enum jcodeEffortLevels);
+            default = null;
+            description = "Effort for a coordinator running in `swarm-deep` mode.";
+          };
+          maxConcurrentAgents = lib.mkOption {
+            type = lib.types.nullOr lib.types.ints.positive;
+            default = null;
+            description = "Upper bound on live swarm workers.";
+          };
+          spawnMode = lib.mkOption {
+            type = lib.types.nullOr (lib.types.enum [ "visible" "headless" "inline" "auto" ]);
+            default = null;
+            description = ''
+              How a `swarm spawn` creates its worker. Left unset jcode uses
+              `inline`, which keeps a spawned worker off the desktop's TUI.
+            '';
+          };
+          stripLayout = lib.mkOption {
+            type = lib.types.nullOr (lib.types.enum [ "vertical" "horizontal" ]);
+            default = null;
+            description = "Layout of the inline swarm strip above the status line.";
+          };
+          galleryMaxPct = lib.mkOption {
+            type = lib.types.nullOr (lib.types.ints.between 0 100);
+            default = null;
+            description = "Height of the inline gallery viewport as a percentage of the terminal.";
+          };
+        };
+      };
+      default = { };
+      description = ''
+        jcode `[agents]` swarm configuration, rendered into
+        `jcode/config.toml` plus a `jcode/swarm-prompt.md` worker prompt.
+
+        The profile shape is defined here rather than added to
+        `my.home.ai.subagents` because jcode has no per-agent profile format.
+        Codex and Goose translate the shared schema into a file per agent;
+        jcode reads a single flat `[agents]` table and a single prompt file, so
+        a shared field with no counterpart there (`sandbox_mode`) would exist
+        only to be ignored.
+
+        `swarm_model` and `swarm_effort` are a single pair, not one per role.
+        The role named `worker` supplies them, or the only role if exactly one
+        is configured; with several roles and no `worker`, the two keys are
+        omitted and every worker falls back to the coordinator's own model.
+        Individual roles can still be routed at `swarm spawn` time with an
+        explicit `model` and `effort`, which takes priority over these keys.
+      '';
+    };
     extraMcpServers = lib.mkOption {
       type = lib.types.attrs;
       default = { };
@@ -445,6 +637,19 @@ in
           # through `JCODE_HOME`, so the redirect above cannot hide it.
           "jcode/prompt-overlay.md".source = harness.agentsMd.source or (pkgs.writeText "prompt-overlay.md" harness.agentsMd.text);
         })
+
+      # jcode reads worker guidance from `$JCODE_HOME/swarm-prompt.md` and falls
+      # back to `./.jcode/swarm-prompt.md` for a repo. Both live inside the
+      # config home here, so the roles stay next to the rest of the jcode
+      # configuration instead of in an unmanaged dotfile in the working tree.
+      # `force` is needed because a stray `~/.config/jcode/swarm-prompt.md`
+      # would otherwise fail the activation.
+      (lib.optionalAttrs cfg.jcode.swarm.enable {
+        "jcode/swarm-prompt.md" = {
+          source = pkgs.writeText "swarm-prompt.md" swarmPrompt;
+          force = true;
+        };
+      })
     ];
   };
 }

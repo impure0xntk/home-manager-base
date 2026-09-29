@@ -52,43 +52,40 @@ let
   placeholderProvider = parsed.providers.jcode-test-placeholder;
   serverNames = builtins.attrNames parsedMcp.mcpServers;
 
+  # The `[agents]` table and the swarm prompt are the only two places jcode can
+  # read a role out of, so both are asserted from their generated content.
+  # `worker` takes the `edit` role on purpose: the emitted `swarm_model` is then
+  # the edit model rather than the chat one the session opens on, so a module
+  # that quietly fell back to the session default produces a different string.
+  agents = parsed.agents or { };
+  swarmPrompt = read config.xdg.configFile."jcode/swarm-prompt.md".source;
+
   # `[tools]` is the pair that actually decides the exposed surface, and the
   # pair has to agree: `disable_base_tools` alone drops the MCP tools too, and
-  # `enabled` alone still filters MCP. The default pins the full base inventory
-  # rather than narrowing it, so the assertion is a full list, not a membership
-  # check. Sorted to match the module's list, since a reordering in the module
-  # would otherwise show up as a diff rather than as a name that dropped.
+  # `enabled` alone still filters MCP. The default pins the module's own
+  # inventory rather than narrowing it, so the assertion is a full list, not a
+  # membership check. Sorted to match the module's list, since a reordering
+  # there would otherwise show up as a diff rather than as a name that dropped.
+  #
+  # This is jcode 0.89.0's inventory, which is smaller than 0.88.0's: the tools
+  # upstream removed are absent rather than named, because an `enabled` entry
+  # for a tool the binary does not have is a name that silently does nothing.
   tools = parsed.tools or { };
   baseToolNames = [
-    "agentgrep"
     "apply_patch"
     "bash"
     "batch"
-    "bg"
-    "browser"
-    "compile_remote"
-    "conversation_search"
     "edit"
-    "gmail"
     "integration_tools"
     "invalid"
     "jcode_docs"
-    "ls"
-    "maintainer_feedback"
     "mcp"
     "memory"
     "open"
-    "panel"
     "read"
     "replace"
-    "schedule"
-    "session_search"
-    "side_panel"
-    "skill_manage"
     "swarm"
     "todo"
-    "webfetch"
-    "websearch"
     "write"
   ];
 in
@@ -96,6 +93,32 @@ in
   config = {
     my.home.ai.harness.enable = true;
     my.home.ai.jcode.enable = true;
+
+    # jcode has no per-subagent profile file, so a role reaches it as a section
+    # of one shared swarm prompt plus the single `[agents]` model/effort pair.
+    # `reviewer` is declared alongside `worker` to pin that the pair comes from
+    # `worker` alone rather than from whichever role is visited first.
+    my.home.ai.jcode.swarm = {
+      enable = true;
+      spawnMode = "inline";
+      stripLayout = "vertical";
+      maxConcurrentAgents = 4;
+      rootEffort = "xhigh";
+      subagents = {
+        worker = {
+          description = "Scoped implementation work.";
+          instructions = "Implement the change. Do not switch scope on your own.";
+          model_role = "edit";
+          reasoning_effort = "high";
+        };
+        reviewer = {
+          description = "Read-only review.";
+          instructions = "Review the diff and report findings. Do not edit files.";
+          model_role = "chat";
+          reasoning_effort = "low";
+        };
+      };
+    };
 
     my.home.ai.providers = [
       {
@@ -206,8 +229,59 @@ in
         message = "jcode [provider].default_model must come from the chat role.";
       }
       {
-        assertion = !(parsed ? agents);
-        message = "jcode has no per-sub-agent profile format; the generated config must not invent one.";
+        # jcode has no per-subagent profile *file*, but it does have a swarm
+        # table, so the assertion is that nothing per-agent appears in it: a
+        # `reviewer = { ... }` entry would be a profile format jcode cannot
+        # read. What must be there is the flat pair plus the scalar knobs.
+        assertion = builtins.attrNames agents == [
+          "swarm_effort"
+          "swarm_max_concurrent_agents"
+          "swarm_model"
+          "swarm_root_effort"
+          "swarm_spawn_mode"
+          "swarm_strip_layout"
+        ];
+        message = "jcode [agents] must carry only the flat swarm keys jcode reads, never a per-agent profile entry.";
+      }
+      {
+        # `worker` takes the `edit` role, so the model that lands in the single
+        # `swarm_model` slot is the `edit` model, not the chat one the session
+        # opens on. That difference is what makes the assertion able to fail.
+        assertion = agents.swarm_model == "edit-model";
+        message = "the jcode swarm model must come from the `worker` role's model_role, not from the chat session default.";
+      }
+      {
+        # The pair is single-valued, so `reviewer`'s low effort must not win
+        # the slot. A module that picked the first role it visited would read
+        # "low" here.
+        assertion = agents.swarm_effort == "high";
+        message = "the jcode swarm effort must come from the `worker` role, not from whichever role is visited first.";
+      }
+      {
+        assertion = agents.swarm_spawn_mode == "inline"
+          && agents.swarm_strip_layout == "vertical"
+          && agents.swarm_max_concurrent_agents == 4
+          && agents.swarm_root_effort == "xhigh";
+        message = "the jcode swarm scalar knobs must be passed through to [agents] under jcode's own key names.";
+      }
+      {
+        assertion = hasJcodeConfigFile "jcode/swarm-prompt.md";
+        message = "jcode must receive the swarm worker prompt at JCODE_HOME/swarm-prompt.md, the one path a JCODE_HOME redirect leaves reachable.";
+      }
+      {
+        # Every configured role has to reach the coordinator, and the role names
+        # have to survive as headings, since the name is what a coordinator
+        # passes as the `label` of a `swarm spawn` call.
+        assertion = lib.all (name: lib.hasInfix "## ${name}" swarmPrompt) [
+          "worker"
+          "reviewer"
+        ];
+        message = "every configured jcode swarm role must appear in the swarm prompt as its own section.";
+      }
+      {
+        assertion = lib.hasInfix "Implement the change. Do not switch scope on your own." swarmPrompt
+          && lib.hasInfix "Review the diff and report findings. Do not edit files." swarmPrompt;
+        message = "the jcode swarm prompt must carry each role's instructions, not only its name.";
       }
       {
         assertion = builtins.hasAttr "mcpServers" parsedMcp && !builtins.hasAttr "servers" parsedMcp;
