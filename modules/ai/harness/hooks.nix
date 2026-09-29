@@ -12,9 +12,12 @@
 # only where the index already governs the working directory the session was
 # started in.
 #
-# The scripts live under hooks/ rather than inline so they stay readable and
-# can be run directly against sample payloads; they are packaged here so both
-# agent modules point at a single store path.
+# The scripts under hooks/ are packaged here so both agent modules point at a
+# single store path. `writeShellApplication` prepends its runtimeInputs to an
+# inherited PATH, so anything a script shells out to has to be declared there:
+# a hook that finds its own tools only by luck of the launching agent's
+# environment works in a login shell and drops the prompt or the tool input in
+# a hook process, which is the only shape a hook is ever run in.
 
 { lib, pkgs, ... }:
 
@@ -68,6 +71,7 @@
           text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./hooks/translate-prompt.sh);
           runtimeInputs = [
             pkgs.jq
+            pkgs.coreutils
             pkgs.translate-shell
           ];
         };
