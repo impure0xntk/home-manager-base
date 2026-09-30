@@ -12,6 +12,9 @@
 #     upstream takes, and it belongs to the unit rather than the session.
 #   - the unit must be wired into `default.target`, otherwise enabling the option
 #     installs a package and a unit that never start.
+#   - `ExecStart` must be gated on a completed login. Upstream starts a browser
+#     consent flow and waits for a loopback redirect when no token exists, so an
+#     unguarded `proxy start` leaves the unit pending forever rather than failing.
 {
   config,
   lib,
@@ -34,6 +37,10 @@ let
   centralBin = "${pkgs.my.jetbrains-central-cli}/bin/central";
   runsProxyStart = service.ExecStart == "${centralBin} proxy start";
   runsProxyStop = service.ExecStop == "${centralBin} proxy stop";
+
+  # One element for `Type=oneshot`; systemd rejects any other arity, so a list
+  # is the shape the unit really has to check.
+  execStartPre = service.ExecStartPre or [ ];
 
   # A package's store name carries its pname, so matching on the name works
   # whether the entry is a derivation or a symlinkJoin without touching
@@ -84,7 +91,7 @@ in
         # Scoping the port to the unit is the difference between a gateway
         # option and a session-wide environment variable, so the session must
         # not see it either.
-        assertion = !(config.environment.variables ? WIRE_PROXY_PORT);
+        assertion = !(config.home.sessionVariables ? WIRE_PROXY_PORT);
         message = "WIRE_PROXY_PORT belongs to the gateway unit, not the session environment.";
       }
       {
@@ -94,6 +101,14 @@ in
       {
         assertion = lib.elem "default.target" unit.Install.WantedBy;
         message = "the gateway must be enabled in default.target, or enabling the option produces a unit that never starts.";
+      }
+      {
+        # Without this the unit starts, finds no token, opens a browser consent
+        # page on a loopback port, and waits for a redirect that a service
+        # manager can never receive, so `systemctl --user start` blocks instead
+        # of reporting that `central login` is required.
+        assertion = execStartPre != [ ];
+        message = "the gateway must gate ExecStart on a completed `central login`; an unguarded `proxy start` hangs waiting for a browser redirect.";
       }
       {
         # The proxy is a per-user listener reached by agents on the same host.
