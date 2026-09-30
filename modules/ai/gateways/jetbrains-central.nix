@@ -17,6 +17,27 @@
 
 let
   cfg = config.my.home.ai.gateways.jetbrainsCentral;
+
+  centralBin = lib.getExe' pkgs.my.jetbrains-central-cli "central";
+
+  # `central proxy start` does not simply fail when no login exists: with tokens
+  # missing it opens a browser consent page on a loopback port and waits for the
+  # redirect, which never arrives under a service manager. A unit that called it
+  # unguarded would hang `systemctl --user start` instead of failing, and the
+  # session would appear to have a stuck unit. The encrypted token file is the
+  # only artifact that exists once login completed, so its absence is the check;
+  # `tokens.enc.lock` is created on every run and cannot stand in for it.
+  loginGuard = pkgs.writeShellApplication {
+    name = "check-central-login";
+    text = ''
+      tokenFile="$HOME/.jetbrains-central/tokens.enc"
+      if [ ! -s "$tokenFile" ]; then
+        echo "jetbrains-central-gateway: not logged in to JetBrains Central." >&2
+        echo "Run 'central login' interactively once; it needs a browser for OAuth 2.0 PKCE." >&2
+        exit 1
+      fi
+    '';
+  };
 in
 {
   options.my.home.ai.gateways.jetbrainsCentral = {
@@ -78,10 +99,12 @@ in
           "WIRE_PROXY_PORT=${toString cfg.port}"
         ] ++ lib.mapAttrsToList (name: value: "${name}=${value}") cfg.extraEnv;
 
-        # Starting a second proxy would race the first for the port and leave an
-        # orphan daemon behind, so make an already-running proxy a no-op.
-        ExecStart = lib.getExe' pkgs.my.jetbrains-central-cli "central" + " proxy start";
-        ExecStop = lib.getExe' pkgs.my.jetbrains-central-cli "central" + " proxy stop";
+        # Fail fast and legibly when login has not happened yet, instead of
+        # leaving the unit pending on a browser callback that cannot arrive.
+        ExecStartPre = lib.getExe loginGuard;
+
+        ExecStart = centralBin + " proxy start";
+        ExecStop = centralBin + " proxy stop";
 
         # Stopping must never wedge the user session on an upstream hang.
         TimeoutStopSec = "30";
