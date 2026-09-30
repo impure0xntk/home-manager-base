@@ -41,6 +41,9 @@ in
     (import ./agents (args // { inherit searchModelByRole; }))
 
     ./orchestration
+
+    # Model gateways that sit between agents and an upstream provider
+    ./gateways
   ];
 
   options.my.home.ai =
