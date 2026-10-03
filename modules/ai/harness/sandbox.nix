@@ -11,9 +11,6 @@ let
     default = {
       default = true;
       settings = {
-        # network = {
-        #   allowLocalOutbound = true;
-        # };
         filesystem = {
           allowWrite = ["." "/tmp"];
         };
@@ -25,7 +22,12 @@ let
   # coreutils command such as `chroot` would also block `cat`, `head` and every
   # other alias sharing the same binary. Accepting every coreutils command
   # keeps the deny rule preflight-only instead of masking the shared binary.
-  coreutilsCommands = lib.filterAttrs (_name: node: node.type == "regular" || node.type == "symlink") (builtins.readDir "${pkgs.coreutils}/bin");
+  # Both variants ship because PATH inside the sandbox may pick either one.
+  coreutilsCommands = lib.unique (
+    lib.concatMap
+      (pkg: builtins.attrNames (builtins.readDir "${pkg}/bin"))
+      [ pkgs.coreutils-full ]
+  );
 
   # Baseline every profile gets: the Nix-provided binaries must stay readable
   # and runnable inside the sandbox.
@@ -35,7 +37,7 @@ let
       allowRead = ["/nix/store"];
       allowExecute = ["/nix/store"];
     };
-    command.acceptSharedBinaryCannotRuntimeDeny = builtins.attrNames coreutilsCommands;
+    command.acceptSharedBinaryCannotRuntimeDeny = coreutilsCommands;
   };
 
   finalProfiles = lib.mapAttrs' (name: entry: {
@@ -43,9 +45,6 @@ let
     value = lib.my.deepMerge entry { settings = settingsForNixEnv; };
   }) cfg.harness.sandbox.profiles;
 
-  # The profile flagged `default` becomes the user config Fence auto-loads from
-  # $XDG_CONFIG_HOME/fence/fence.json. Exactly one profile may claim it, so the
-  # result never depends on which profile happened to be evaluated first.
   defaultProfileNames = lib.attrNames (lib.filterAttrs (_name: entry: entry.default) finalProfiles);
 in
 {
