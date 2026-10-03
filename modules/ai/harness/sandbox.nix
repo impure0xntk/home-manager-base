@@ -81,19 +81,23 @@ let
 
   # Every profile reaches the AI backends the harness itself is configured with,
   # so the allow rules are derived from `my.home.ai.providers` rather than listed
-  # per profile. Fence denies outbound traffic matching no rule, and an empty
-  # `allowedDomains` is itself a deny-all, so the whole block is omitted unless a
-  # provider needs it and a profile without providers stays as restrictive as
-  # before.
+  # per profile. Fence denies outbound traffic matching no rule, so a machine with
+  # no provider gets no network block at all and stays as unrestricted as before.
+  # `network` is assembled as one nested attrset because `//` merges shallowly
+  # and would otherwise drop the sibling keys.
   settingsForProviders =
-    {
-      network.allowedDomains = remoteHosts;
-    }
-    // lib.optionalAttrs (localPorts != [ ]) {
-      network.allowLocalOutbound = true;
-      network.allowLocalOutboundPorts = localPorts;
-    }
-    // lib.optionalAttrs (remoteHosts == [ ] && localPorts == [ ]) { };
+    if remoteHosts == [ ] && localPorts == [ ] then
+      { }
+    else
+      {
+        network = {
+          allowedDomains = remoteHosts;
+        }
+        // lib.optionalAttrs (localPorts != [ ]) {
+          allowLocalOutbound = true;
+          allowLocalOutboundPorts = localPorts;
+        };
+      };
 
   defaultProfiles = {
     default = {
