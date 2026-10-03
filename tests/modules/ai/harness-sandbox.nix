@@ -44,7 +44,9 @@ let
 
   isLoopback = host: lib.elem host [ "localhost" "[::1]" "::1" ] || lib.hasPrefix "127." host;
 
-  configuredHosts = lib.unique (lib.filter (provider: !(isLoopback (hostOf provider.url))) (map (provider: hostOf provider.url) config.my.home.ai.providers));
+  hostsOfProviders = map (provider: hostOf provider.url) config.my.home.ai.providers;
+
+  configuredHosts = lib.unique (lib.filter (host: !(isLoopback host)) hostsOfProviders);
 
   # Set below to decide which shape the generated config has to have.
   expectLocalPort = 11434;
