@@ -116,56 +116,35 @@ let
         };
       };
 
-  # An agent inside the sandbox is a separate process with its own state: it
-  # persists sessions, caches models and stores tool history under the XDG
-  # roots the harness points it at. Those roots are not under the working
-  # directory, so a profile that only allows the workspace leaves every one of
-  # them on a read-only bind and the agent fails to start with EROFS on its
-  # first write. Each root is derived from the same option that points the agent
-  # or tool at it, so enabling one is what adds its state directory and nothing
-  # has to be restated per profile. The roots come from the XDG options rather
-  # than a literal `~`, because `~` is the wrong string the moment a machine
-  # relocates `xdg.configHome`, and Fence resolves the literal against its own
-  # sandbox home.
-  agentStateRoots =
+  # fence does NOT support multi extends, so concat via nix
+  templates =
     let
-      enabled = condition: paths: lib.optionals condition paths;
-    in
-    lib.unique (
-      enabled cfg.jcode.enable [
-        # `JCODE_HOME`, plus the `~/.cache/jcode` LaTeX and Mermaid caches the
-        # transcript renderer writes next to it.
-        "${config.xdg.configHome}/jcode"
-        "${config.xdg.cacheHome}/jcode"
-      ]
-      ++ enabled cfg.codex.enable [ "${config.xdg.configHome}/codex" ]
-      ++ enabled cfg.copilot-cli.enable [ "${config.xdg.configHome}/copilot" ]
-      ++ enabled cfg.goose.enable [ "${config.xdg.configHome}/goose" ]
-      ++ enabled cfg.qwen-code.enable [ "${config.xdg.configHome}/qwen" ]
-      ++ enabled cfg.junie.enable [ "${config.xdg.dataHome}/junie" ]
-      # A tool declares the root it writes through the env var its wrapper sets
-      # (`CTX_DATA_ROOT`, `ZVEC_GREP_HOME`, `ZVEC_GREP_MODEL_CACHE`), so the
-      # wrapper being part of the registry is the signal to allow the root it
-      # names. `mcpServer` is what puts the tool in front of the agent; `rtk` has
-      # no MCP surface and runs as a command wrapper instead.
-      ++ enabled (cfg.harness.codingAgentTools.ctx.mcpServer != null) [
-        "${config.xdg.dataHome}/ctx"
-        "${config.xdg.stateHome}/ctx"
-      ]
-      ++ enabled (cfg.harness.codingAgentTools.zg.mcpServer != null) [
-        "${config.xdg.configHome}/zvec-grep"
-        "${config.xdg.dataHome}/zvec-grep"
-      ]
-      ++ enabled (cfg.harness.codingAgentTools.rtk.package != null) [ "${config.xdg.dataHome}/rtk" ]
-    );
-
+      # jsonc to json
+      toPureJsonFile = name: file: pkgs.runCommand "${name}-clean-json" { nativeBuildInputs = [ pkgs.gnused ]; } ''
+        sed -E 's|^[[:space:]]*//.*||g; s|//.*||g' ${file} > $out
+      '';
+      toSettingsFromDrv = name: drv: builtins.fromJSON (builtins.readFile (toPureJsonFile name drv));
+    in {
+      disableTelemetry = toSettingsFromDrv "disable-telemetry" (pkgs.fetchurl {
+        url = "https://raw.githubusercontent.com/fencesandbox/fence/refs/tags/v0.1.67/internal/templates/disable-telemetry.json";
+        hash = "sha256-GHL7/GjioaCTvl0NUyC2E+nqO3BBL7QfI8WrKX9vacE=";
+      });
+      gitReadOnly = toSettingsFromDrv "git-readonly" (pkgs.fetchurl {
+        url = "https://raw.githubusercontent.com/fencesandbox/fence/refs/tags/v0.1.67/internal/templates/git-readonly.json";
+        hash = "sha256-CggaCxO6Du65zLvJH+3y3KS3I8aNTrjI4soFd95RIkk=";
+      });
+    };
   defaultProfiles = {
+    yolo = {
+      settings = lib.my.deepMerge {
+        extends = "code"; # https://github.com/fencesandbox/fence/blob/main/internal/templates/code.json
+      } templates.disableTelemetry;
+    };
+
     default = {
       default = true;
       settings = {
-        filesystem = {
-          allowWrite = ["." "/tmp"];
-        };
+        extends = "./yolo.json";
       };
     };
   };
@@ -190,7 +169,6 @@ let
     filesystem = {
       allowRead = ["/nix/store"];
       allowExecute = ["/nix/store"];
-      allowWrite = agentStateRoots;
     };
     command.acceptSharedBinaryCannotRuntimeDeny = coreutilsCommands;
   }
