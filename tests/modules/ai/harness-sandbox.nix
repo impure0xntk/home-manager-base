@@ -12,6 +12,12 @@
 #   - both keys have to survive together. `//` merges shallowly, so composing the
 #     two as separate dotted keys silently drops one of them and produces a
 #     config that reads as valid while the agent loses its remote provider.
+#
+# The `fence-<profile>` aliases are asserted the same way: the alias is the only
+# thing that makes a profile launchable without typing a store-dependent path, so
+# the assertion checks that the alias set is exactly one `fence-` prefixed name
+# per profile and that each value names the profile's own rendered file under
+# `xdg.configHome` rather than some other path.
 {
   config,
   lib,
@@ -50,11 +56,35 @@ let
 
   # Set below to decide which shape the generated config has to have.
   expectLocalPort = 11434;
+
+  sandboxProfiles = config.my.home.ai.harness.sandbox.profiles;
+
+  profileNames = lib.attrNames sandboxProfiles;
+
+  # One alias per profile, generated from the evaluated profile names so the
+  # assertion does not care how many profiles the machine configures.
+  expectedAliasNames = map (name: "fence-${name}") profileNames;
+
+  expectedAliases = lib.listToAttrs (map (
+    name: {
+      name = "fence-${name}";
+      value = "fence --settings ${config.xdg.configHome}/fence/${name}.json";
+    }
+  ) profileNames);
+
+  # The shell module sets the same attrset on fish, so an alias that exists for
+  # bash but not fish is only half deployed.
+  fenceAliases =
+    lib.filterAttrs (name: _: lib.hasPrefix "fence-" name) config.programs.bash.shellAliases;
 in
 {
   config = {
     my.home.ai.harness.enable = true;
     my.home.ai.harness.sandbox.enable = true;
+
+    my.home.ai.harness.sandbox.profiles = {
+      default = { };
+    };
 
     my.home.ai.providers = [
       {
@@ -116,6 +146,18 @@ in
         # result is still a valid config that happens to allow nothing useful.
         assertion = builtins.hasAttr "allowedDomains" network && builtins.hasAttr "allowLocalOutboundPorts" network;
         message = "network.allowedDomains and network.allowLocalOutboundPorts must survive the same merge; a shallow one drops one of them and leaves the agent unable to reach any provider.";
+      }
+      {
+        assertion = lib.sort (a: b: a < b) (lib.attrNames fenceAliases) == lib.sort (a: b: a < b) expectedAliasNames;
+        message = "there must be exactly one fence-<profile> alias per configured sandbox profile; a missing alias leaves the profile unreachable and a stale one points at a profile that no longer exists.";
+      }
+      {
+        assertion = lib.attrByPath [ "fence-default" ] null fenceAliases == expectedAliases."fence-default";
+        message = "the fence-<profile> alias must run fence against the profile's own rendered settings file under xdg.configHome, not against a name, a different profile, or a path fence cannot read.";
+      }
+      {
+        assertion = lib.attrByPath [ "fence-default" ] null config.programs.fish.shellAbbrs == expectedAliases."fence-default";
+        message = "the fence-<profile> alias must reach fish as well as bash, otherwise the primary shell on this system cannot start a sandbox profile.";
       }
     ];
   };

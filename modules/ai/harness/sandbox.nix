@@ -122,6 +122,16 @@ let
     value = lib.my.deepMerge entry { settings = settingsForNixEnv; };
   }) cfg.harness.sandbox.profiles;
 
+  # Every profile is reachable without a typed path: the alias points at the
+  # rendered file by its XDG path rather than by profile name, because `--settings`
+  # takes a path and the profile name alone does not tell Fence which file to read.
+  # The long flag is spelled out because the alias is read far more often than it
+  # is written, and it is the only place `--settings` appears in the shell.
+  profileAliases = lib.mapAttrs' (name: _: {
+    name = "fence-${name}";
+    value = "fence --settings ${config.xdg.configHome}/fence/${name}.json";
+  }) cfg.harness.sandbox.profiles;
+
   defaultProfileNames = lib.attrNames (lib.filterAttrs (_name: entry: entry.default) finalProfiles);
 in
 {
@@ -138,6 +148,10 @@ in
               the providers in `my.home.ai.providers`). Rendered as JSON for
               Fence, see
               https://github.com/fencesandbox/fence/blob/main/docs/configuration.md
+
+              Each profile also gets a `fence-<name>` shell alias running
+              `fence --settings <configHome>/fence/<name>.json`, so the profile can
+              be started without typing the path.
             '';
           };
           default = mkEnableOption ''
@@ -154,6 +168,9 @@ in
         `fence/<name>.json`, and the single profile with `default = true` is
         copied to `fence/fence.json`, the config Fence loads when it finds no
         project-local config. Without one, `fence/fence.json` is not written.
+
+        One `fence-<name>` alias is added per profile, so `fence-default` starts
+        Fence with that profile's settings file.
       '';
     };
   };
@@ -161,6 +178,10 @@ in
     home.packages = with pkgs; [
       fence
     ];
+
+    programs.bash.shellAliases = profileAliases;
+
+    programs.fish.shellAbbrs = profileAliases;
 
     xdg.configFile = lib.mkMerge [
       (lib.mapAttrs' (name: entry: {
