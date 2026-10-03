@@ -68,11 +68,23 @@ let
   # request is ever made. Deriving the rules from that list too keeps the
   # sandbox in step with the servers the machine actually configures, instead
   # of repeating a hostname that a profile edit can drift away from.
-  mcpHubEndpoints = map (
-    server: {
-      inherit (server) host port;
-    }
-  ) config.my.home.mcp.hub.client.servers;
+  #
+  # `servers` has a default, so the option has a value before a machine
+  # configures any, and that default is a loopback address on port 3001. A
+  # disabled client is what keeps it from being an endpoint: nothing generates a
+  # wrapper for it and nothing connects, so bridging the port on a machine that
+  # never enabled the client would forward a real host port for no reason. The
+  # gate is on `enable` rather than on the default's value, because that value
+  # is a legitimate loopback host a machine can genuinely configure.
+  mcpHubEndpoints =
+    if config.my.home.mcp.hub.client.enable then
+      map (
+        server: {
+          inherit (server) host port;
+        }
+      ) config.my.home.mcp.hub.client.servers
+    else
+      [ ];
 
   mcpHubHosts = lib.unique (lib.filter (host: !(isLoopbackHost host)) (map (endpoint: endpoint.host) mcpHubEndpoints));
 
