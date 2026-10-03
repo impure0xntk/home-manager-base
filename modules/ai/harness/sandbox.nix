@@ -36,13 +36,10 @@ let
     value = lib.my.deepMerge entry { settings = settingsForNixEnv; };
   }) cfg.harness.sandbox.profiles;
 
-  # Profiles flagged `default` compose the user config Fence auto-loads from
-  # $XDG_CONFIG_HOME/fence/fence.json. Several defaults are deep-merged, and
-  # attrsOf iterates in name order, so the result stays deterministic.
-  defaultSettings = lib.foldl'
-    (acc: entry: lib.my.deepMerge acc entry.settings)
-    { }
-    (lib.attrValues (lib.filterAttrs (_name: entry: entry.default) finalProfiles));
+  # The profile flagged `default` becomes the user config Fence auto-loads from
+  # $XDG_CONFIG_HOME/fence/fence.json. Exactly one profile may claim it, so the
+  # result never depends on which profile happened to be evaluated first.
+  defaultProfileNames = lib.attrNames (lib.filterAttrs (_name: entry: entry.default) finalProfiles);
 in
 {
   options.my.home.ai.harness.sandbox = with lib; with lib.types; {
@@ -59,15 +56,20 @@ in
               https://github.com/fencesandbox/fence/blob/main/docs/configuration.md
             '';
           };
-          default = mkEnableOption "Whether to use this profile as the default profile (fence.json) for the AI harness sandbox.";
+          default = mkEnableOption ''
+            Whether to use this profile as the default profile of the AI
+            harness sandbox. Its settings become `fence/fence.json`, the config
+            Fence loads when it finds no project-local config. At most one
+            profile may set this.
+          '';
         };
       });
       default = defaultProfiles;
       description = ''
         Fence sandbox profiles. Each profile is written to
-        `fence/<name>.json`, and the profiles with `default = true` are merged
-        into `fence/fence.json`, the config Fence loads when it finds no
-        project-local config.
+        `fence/<name>.json`, and the single profile with `default = true` is
+        copied to `fence/fence.json`, the config Fence loads when it finds no
+        project-local config. Without one, `fence/fence.json` is not written.
       '';
     };
   };
@@ -81,9 +83,16 @@ in
         name = "fence/${name}.json";
         value.text = builtins.toJSON entry.settings + "\n";
       }) finalProfiles)
-      (lib.optionalAttrs (defaultSettings != { }) {
-        "fence/fence.json".text = builtins.toJSON defaultSettings + "\n";
+      (lib.optionalAttrs (defaultProfileNames != [ ]) {
+        "fence/fence.json".text = builtins.toJSON finalProfiles.${lib.head defaultProfileNames}.settings + "\n";
       })
+    ];
+
+    assertions = [
+      {
+        assertion = builtins.length defaultProfileNames <= 1;
+        message = "my.home.ai.harness.sandbox.profiles: at most one profile may set default = true, but found: ${lib.concatStringsSep ", " defaultProfileNames}";
+      }
     ];
   };
 }
