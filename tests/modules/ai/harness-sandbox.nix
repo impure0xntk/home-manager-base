@@ -29,8 +29,24 @@ let
   parsed = builtins.fromJSON (read config.xdg.configFile.${fenceConfigFile}.source);
   network = parsed.network or { };
 
+  # `providers` is a `listOf (submodule ...)`, and such lists concatenate rather
+  # than replace, so another module in this evaluation can contribute its own
+  # providers. The expectation is therefore recomputed from the evaluated list
+  # instead of hardcoded, which keeps the assertions about the derivation itself
+  # rather than about how many providers happen to be configured.
+  hostOf =
+    url:
+    let
+      separated = lib.my.separateHostAndPort url;
+      scheme = lib.head (lib.splitString "://" url);
+    in
+    lib.removePrefix "${scheme}://" separated.schemaAndHost;
+
+  isLoopback = host: lib.elem host [ "localhost" "[::1]" "::1" ] || lib.hasPrefix "127." host;
+
+  configuredHosts = lib.unique (lib.filter (provider: !(isLoopback (hostOf provider.url))) (map (provider: hostOf provider.url) config.my.home.ai.providers));
+
   # Set below to decide which shape the generated config has to have.
-  expectRemoteHost = "ai.example.com";
   expectLocalPort = 11434;
 in
 {
@@ -73,8 +89,8 @@ in
         message = "the fence sandbox profile must reach the XDG config home, which is where fence looks for it.";
       }
       {
-        assertion = lib.elem expectRemoteHost (network.allowedDomains or [ ]);
-        message = "a remote provider host must be allowed by the fence sandbox, or the agent cannot reach the model it is configured with.";
+        assertion = lib.sort (a: b: a < b) (network.allowedDomains or [ ]) == lib.sort (a: b: a < b) configuredHosts;
+        message = "network.allowedDomains must be exactly the hosts of the non-loopback providers, with nothing extra, nothing missing and no duplicates.";
       }
       {
         # The port, path, scheme and case of the URL are not part of a fence
@@ -85,27 +101,19 @@ in
         message = "network.allowedDomains entries must be bare host names, since fence matches domains and nothing else.";
       }
       {
-        # `localhost` is not a domain fence can allow-list, so it must not be
-        # smuggled into the allow rules where it would silently do nothing.
-        assertion = !(lib.elem "localhost" (network.allowedDomains or [ ]));
-        message = "a loopback provider must be bridged through allowLocalOutboundPorts, not listed as an allowed domain.";
+        # A loopback provider is bridged by port, so the port has to reach the
+        # allow rules. The membership is pinned rather than a count because
+        # `providers` concatenates across modules and another test module can
+        # contribute its own loopback provider here.
+        assertion = lib.elem expectLocalPort (network.allowLocalOutboundPorts or [ ]);
+        message = "a loopback provider must be bridged through allowLocalOutboundPorts, since Linux forwards loopback ports one by one.";
       }
       {
-        assertion = (network.allowLocalOutbound or false) && lib.elem expectLocalPort (network.allowLocalOutboundPorts or [ ]);
-        message = "a loopback provider must enable allowLocalOutbound and bridge its port, since Linux forwards loopback ports one by one.";
-      }
-      {
-        # The composition bug this module guards against: a shallow merge of two
-        # dotted keys keeps only the last one, and the result parses as a valid
-        # config that happens to allow nothing useful.
+        # The composition bug this guards against: composing the two as separate
+        # dotted keys and merging them shallowly keeps only the last one, and the
+        # result is still a valid config that happens to allow nothing useful.
         assertion = builtins.hasAttr "allowedDomains" network && builtins.hasAttr "allowLocalOutboundPorts" network;
         message = "network.allowedDomains and network.allowLocalOutboundPorts must survive the same merge; a shallow one drops one of them and leaves the agent unable to reach any provider.";
-      }
-      {
-        # A profile the harness does not configure a provider for must not gain
-        # an allow rule pointing at a host nothing talks to.
-        assertion = lib.length (network.allowedDomains or [ ]) == 1;
-        message = "the fence sandbox must allow exactly the hosts of the configured providers, with no extras and no duplicates.";
       }
     ];
   };

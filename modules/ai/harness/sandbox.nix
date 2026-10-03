@@ -14,33 +14,12 @@ let
   parseProviderUrl =
     url:
     let
-      schemeParts = lib.splitString "://" url;
-      hasScheme = builtins.length schemeParts > 1;
-      scheme = if hasScheme then lib.head schemeParts else "";
-      withoutScheme = lib.concatStringsSep "://" (if hasScheme then lib.tail schemeParts else [ url ]);
-      # The authority ends at the first path, query or fragment separator, and
-      # any `user:password@` in front of it is not part of the host.
-      authority = lib.removePrefix "${lib.concatStringsSep "@" (lib.init (lib.splitString "@" withoutScheme))}@" (
-        lib.head (lib.splitString "/" (lib.head (lib.splitString "?" (lib.head (lib.splitString "#" withoutScheme)))))
-      );
-      # An IPv6 literal is bracketed in a URL, and the bracket is what separates
-      # the host from the port there, not a colon.
-      isBracketed = lib.hasPrefix "[" authority;
-      segments = lib.splitString (if isBracketed then "]" else ":") authority;
-      portText =
-        if isBracketed then
-          lib.removePrefix ":" (lib.last segments)
-        else if builtins.length segments > 1 then
-          lib.last segments
-        else
-          "";
-      # Only a numeric tail is a port, so a bare `host:anything` authority does
-      # not turn its tail into one.
-      port = if portText != "" && lib.match "[0-9]+" portText != null then lib.toInt portText else null;
+      separated = lib.my.separateHostAndPort url;
+      scheme = lib.head (lib.splitString "://" url);
     in
     {
-      host = lib.toLower (lib.removePrefix "[" (lib.head segments));
-      port = if port != null then port else if scheme == "https" then 443 else if scheme == "http" then 80 else null;
+      host = lib.removePrefix "${scheme}://" separated.schemaAndHost;
+      port = if separated.port != "" then lib.toInt separated.port else if scheme == "https" then 443 else if scheme == "http" then 80 else null;
     };
 
   providerEndpoints = map (provider: parseProviderUrl provider.url) (cfg.providers or [ ]);
@@ -51,8 +30,12 @@ let
   # while reached through a real hostname stays in `allowedDomains`, because the
   # domain filter is what Fence can express for it.
   isLoopbackHost =
-    host: lib.elem host [
+    host:
+    # `separateHostAndPort` keeps an IPv6 literal bracketed, because that is the
+    # form Fence and the proxy match on, so the loopback literal is bracketed too.
+    lib.elem host [
       "localhost"
+      "[::1]"
       "::1"
     ] || lib.hasPrefix "127." host;
 
