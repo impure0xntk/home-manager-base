@@ -23,6 +23,7 @@
     (import ./../modules/ai/main-agent.nix)
     (import ./../modules/ai/harness-mcp-filters.nix)
     (import ./../modules/ai/harness-rtk-filters.nix)
+    (import ./../modules/ai/harness-sandbox.nix)
     (import ./../modules/ai/jetbrains-central.nix)
     # (import ./../modules/ide/jetbrains-remote.nix args)
     # (import ./../modules/languages/java.nix args)
