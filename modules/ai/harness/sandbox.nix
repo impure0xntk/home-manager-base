@@ -21,6 +21,12 @@ let
     };
   };
 
+  # Fence masks a whole executable path for a runtime deny, so denying one
+  # coreutils command such as `chroot` would also block `cat`, `head` and every
+  # other alias sharing the same binary. Accepting every coreutils command
+  # keeps the deny rule preflight-only instead of masking the shared binary.
+  coreutilsCommands = lib.filterAttrs (_name: node: node.type == "regular" || node.type == "symlink") (builtins.readDir "${pkgs.coreutils}/bin");
+
   # Baseline every profile gets: the Nix-provided binaries must stay readable
   # and runnable inside the sandbox.
   settingsForNixEnv = {
@@ -29,6 +35,7 @@ let
       allowRead = ["/nix/store"];
       allowExecute = ["/nix/store"];
     };
+    command.acceptSharedBinaryCannotRuntimeDeny = builtins.attrNames coreutilsCommands;
   };
 
   finalProfiles = lib.mapAttrs' (name: entry: {
