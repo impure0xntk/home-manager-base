@@ -7,10 +7,11 @@
 let
   cfg = config.my.home.ai;
 
-  # Fence matches `network.allowedDomains` by host name, so a provider URL only
-  # becomes an allow rule once reduced to host and port. The scheme supplies the
-  # default port, because a loopback provider reached on its implicit port still
-  # needs its own bridge on Linux.
+  # srt matches `network.allowedDomains` by host name, so a provider URL only
+  # becomes an allow rule once reduced to a host. The scheme supplies the port,
+  # because the rule is scoped to the port the endpoint is actually reached on:
+  # an entry without one matches every port, which would let a sandboxed agent
+  # reach an unrelated service on the same host.
   parseProviderUrl =
     url:
     let
@@ -19,231 +20,249 @@ let
     in
     {
       host = lib.removePrefix "${scheme}://" separated.schemaAndHost;
-      port = if separated.port != "" then lib.toInt separated.port else if scheme == "https" then 443 else if scheme == "http" then 80 else null;
+      port =
+        if separated.port != "" then
+          lib.toInt separated.port
+        else if scheme == "https" then
+          443
+        else if scheme == "http" then
+          80
+        else
+          null;
     };
 
   providerEndpoints = map (provider: parseProviderUrl provider.url) (cfg.providers or [ ]);
 
-  # A loopback endpoint is not a domain Fence can allow-list: loopback traffic is
-  # gated by `allowLocalOutbound` instead, and on Linux every host port needs its
-  # own bridge through `allowLocalOutboundPorts`. A provider marked `isLocal`
-  # while reached through a real hostname stays in `allowedDomains`, because the
-  # domain filter is what Fence can express for it.
-  isLoopbackHost =
-    host:
-    # `separateHostAndPort` keeps an IPv6 literal bracketed, because that is the
-    # form Fence and the proxy match on, so the loopback literal is bracketed too.
-    lib.elem host [
-      "localhost"
-      "[::1]"
-      "::1"
-    ] || lib.hasPrefix "127." host;
-
-  remoteHosts = lib.unique (lib.filter (host: !(isLoopbackHost host)) (map (endpoint: endpoint.host) providerEndpoints));
-
-  localPorts =
-    let
-      ports = map (endpoint: endpoint.port) (builtins.filter (endpoint: isLoopbackHost endpoint.host) providerEndpoints);
-    in
-    lib.unique (lib.filter (port: port != null) ports);
-
-  # A provider URL with neither an explicit port nor a scheme to default it
-  # from leaves nothing for the loopback bridge to forward, so the agent could
-  # never reach it.
-  localProvidersWithoutPort = map (
-    provider: provider.name
-  ) (
-    builtins.filter (
-      provider:
-      let
-        endpoint = parseProviderUrl provider.url;
-      in
-      isLoopbackHost endpoint.host && endpoint.port == null
-    ) (cfg.providers or [ ])
-  );
-
   # The AI providers are not the only endpoints a harness session talks to:
   # every agent here also dials the MCP hub servers in `my.home.mcp.hub.client`,
-  # and a host fence has no rule for is denied with a proxy 403 before the
-  # request is ever made. Deriving the rules from that list too keeps the
-  # sandbox in step with the servers the machine actually configures, instead
-  # of repeating a hostname that a profile edit can drift away from.
+  # and a host srt has no rule for is denied with a proxy 403 before the request
+  # is ever made. Deriving the rules from that list too keeps the sandbox in
+  # step with the servers the machine actually configures.
   #
   # `servers` has a default, so the option has a value before a machine
   # configures any, and that default is a loopback address on port 3001. A
   # disabled client is what keeps it from being an endpoint: nothing generates a
-  # wrapper for it and nothing connects, so bridging the port on a machine that
-  # never enabled the client would forward a real host port for no reason. The
-  # gate is on `enable` rather than on the default's value, because that value
-  # is a legitimate loopback host a machine can genuinely configure.
+  # wrapper for it and nothing connects, so allow-listing the port on a machine
+  # that never enabled the client would open a real host port for no reason. The
+  # gate is on `enable` rather than on the default's value, because that value is
+  # a legitimate loopback host a machine can genuinely configure.
   mcpHubEndpoints =
     if config.my.home.mcp.hub.client.enable then
-      map (
-        server: {
-          inherit (server) host port;
-        }
-      ) config.my.home.mcp.hub.client.servers
+      map (server: {
+        inherit (server) host port;
+      }) config.my.home.mcp.hub.client.servers
     else
       [ ];
 
-  mcpHubHosts = lib.unique (lib.filter (host: !(isLoopbackHost host)) (map (endpoint: endpoint.host) mcpHubEndpoints));
+  harnessEndpoints = providerEndpoints ++ mcpHubEndpoints;
 
-  mcpHubPorts = lib.unique (map (endpoint: endpoint.port) (builtins.filter (endpoint: isLoopbackHost endpoint.host) mcpHubEndpoints));
+  # Every endpoint becomes one `host:port` entry. The port is the point: srt
+  # treats an entry without one as matching every port on that host, so a
+  # portless entry would also open whatever else runs on the same route.
+  #
+  # The host is carried through as `separateHostAndPort` spells it, which is the
+  # form srt matches. It lower-cases, so an uppercase URL cannot produce an entry
+  # that matches nothing, and it keeps an IPv6 literal bracketed, which is the
+  # only form srt's schema accepts (RFC 3986) and the one it canonicalizes a
+  # destination back to before matching. So `localhost:11434`, `127.0.0.1:11434`
+  # and `[::1]:11434` each name the endpoint they were configured as, without a
+  # second pass to re-spell any of them.
+  networkEntries = lib.unique (
+    map (endpoint: "${endpoint.host}:${toString endpoint.port}") harnessEndpoints
+  );
 
   # Every profile reaches the AI backends and the MCP hub servers the harness
   # itself is configured with, so the allow rules are derived from
   # `my.home.ai.providers` and `my.home.mcp.hub.client.servers` rather than
-  # listed per profile. Fence denies outbound traffic matching no rule, so a
-  # machine with no provider gets no network block at all and stays as
-  # unrestricted as before.
-  # `network` is assembled as one nested attrset because `//` merges shallowly
-  # and would otherwise drop the sibling keys.
-  settingsForNetwork =
+  # listed per profile. srt denies outbound traffic matching no rule, so a
+  # machine with no provider and no enabled hub client gets an empty allowlist,
+  # which denies every outbound connection and leaves the sandbox as closed as
+  # it is useful to be.
+  settingsForNetwork = {
+    network = {
+      allowedDomains = networkEntries;
+      deniedDomains = [ ];
+      # srt falls back to asking the user when a destination matches no rule,
+      # and there is nobody to ask inside a `srt-<profile>` alias: the prompt
+      # would read as a hang. The allowlist is the whole policy instead.
+      strictAllowlist = true;
+    };
+  };
+
+  # An agent inside the sandbox is a separate process with its own state: it
+  # persists sessions, caches models and stores tool history under the XDG roots
+  # the harness points it at. Those roots are not under the working directory, so
+  # a profile that only allows the workspace leaves every one of them on the
+  # read-only bind and the agent fails to start with EROFS on its first write.
+  # Each root is derived from the same option that points the agent or tool at
+  # it, so enabling one is what adds its directory and nothing has to be
+  # restated per profile.
+  #
+  # The roots come from the XDG options rather than a literal `~` because `~` is
+  # the wrong string the moment a machine relocates `xdg.configHome`, and srt
+  # resolves a relative entry against the working directory rather than the
+  # user's home.
+  agentStateRoots =
     let
-      remote = lib.unique (remoteHosts ++ mcpHubHosts);
-      local = lib.unique (localPorts ++ mcpHubPorts);
+      enabled = condition: paths: lib.optionals condition paths;
     in
-    if remote == [ ] && local == [ ] then
-      { }
-    else
-      {
-        network = {
-          allowedDomains = remote;
-        }
-        // lib.optionalAttrs (local != [ ]) {
-          allowLocalOutbound = true;
-          allowLocalOutboundPorts = local;
-        };
-      };
+    lib.unique (
+      enabled cfg.jcode.enable [
+        # `JCODE_HOME`, plus `~/.cache/jcode` for the LaTeX and Mermaid caches
+        # and the transcript renderer, which writes next to it.
+        "${config.xdg.configHome}/jcode"
+        "${config.xdg.cacheHome}/jcode"
+      ]
+      ++ enabled cfg.codex.enable [ "${config.xdg.configHome}/codex" ]
+      ++ enabled cfg.copilot-cli.enable [ "${config.xdg.configHome}/copilot" ]
+      ++ enabled cfg.goose.enable [ "${config.xdg.configHome}/goose" ]
+      ++ enabled cfg.qwen-code.enable [ "${config.xdg.configHome}/qwen" ]
+      ++ enabled cfg.junie.enable [ "${config.xdg.dataHome}/junie" ]
+      ++ enabled (cfg.harness.codingAgentTools.ctx.mcpServer != null) [
+        "${config.xdg.dataHome}/ctx"
+        "${config.xdg.stateHome}/ctx"
+      ]
+      ++ enabled (cfg.harness.codingAgentTools.zg.mcpServer != null) [
+        "${config.xdg.configHome}/zvec-grep"
+        "${config.xdg.dataHome}/zvec-grep"
+      ]
+      ++ enabled (cfg.harness.codingAgentTools.rtk.package != null) [ "${config.xdg.dataHome}/rtk" ]
+    );
 
-  # fence does NOT support multi extends, so concat via nix
-  templates =
-    let
-      # jsonc to json
-      toPureJsonFile = name: file: pkgs.runCommand "${name}-clean-json" { nativeBuildInputs = [ pkgs.gnused ]; } ''
-        sed -E 's|^[[:space:]]*//.*||g; s|//.*||g' ${file} > $out
-      '';
-      toSettingsFromDrv = name: drv: builtins.fromJSON (builtins.readFile (toPureJsonFile name drv));
-    in {
-      gitReadOnly = toSettingsFromDrv "git-readonly" (pkgs.fetchurl {
-        url = "https://raw.githubusercontent.com/fencesandbox/fence/refs/tags/v0.1.67/internal/templates/git-readonly.json";
-        hash = "sha256-CggaCxO6Du65zLvJH+3y3KS3I8aNTrjI4soFd95RIkk=";
-      });
+  # srt denies every write that matches no rule and mounts the rest read-only,
+  # so the state roots are what the profile is actually allowed to write. Its own
+  # `filesystem.allowWrite` is merged over these rather than replaced: the
+  # workspace and `/tmp` the profile asks for belong to the profile, the state
+  # roots belong to every agent the harness enables.
+  settingsForFilesystem = {
+    filesystem = {
+      # Reads are unrestricted by default, so the Nix-provided binaries stay
+      # readable and runnable inside the sandbox without a read allowlist, and
+      # srt has no execute allowlist to keep in step with one.
+      denyRead = [ ];
+      allowWrite = agentStateRoots;
+      denyWrite = [ ];
     };
+  };
+
+  # srt has no profile inheritance, so there is no `extends` entry to name and no
+  # template to fetch. The shipped profiles are therefore spelled out rather than
+  # layered: one that writes only the workspace, and one that writes anywhere,
+  # which is what an agent that runs commands on its own needs. `yolo` is the
+  # conventional name for the latter.
   defaultProfiles = {
-    yolo = {
-      settings = lib.my.deepMerge {
-        extends = "code"; # https://github.com/fencesandbox/fence/blob/main/internal/templates/code.json
-      } templates.disableTelemetry;
-    };
-
-    default = {
+    cautious = {
       default = true;
       settings = {
-        extends = "./yolo.json";
+        filesystem.allowWrite = [
+          "."
+          "/tmp"
+        ];
+      };
+    };
+
+    yolo = {
+      settings = {
+        filesystem.allowWrite = [
+          "."
+          "/tmp"
+          "~"
+        ];
       };
     };
   };
 
-  # Fence masks a whole executable path for a runtime deny, so denying one
-  # coreutils command such as `chroot` would also block `cat`, `head` and every
-  # other alias sharing the same binary. Accepting every coreutils command
-  # keeps the deny rule preflight-only instead of masking the shared binary.
-  # Both variants ship because PATH inside the sandbox may pick either one.
-  coreutilsCommands = lib.unique (
-    lib.concatMap
-      (pkg: builtins.attrNames (builtins.readDir "${pkg}/bin"))
-      [ pkgs.coreutils-full ]
-  );
-
-  # Baseline every profile gets: the Nix-provided binaries must stay readable
-  # and runnable inside the sandbox, the state directories the agents and tools
-  # write must stay writable, and the AI providers plus MCP hub servers the
-  # harness is configured with must stay reachable.
-  settingsForNixEnv = let
-    fs = [ # https://github.com/nolabs-ai/nono/blob/e1f84a33bdfecad82490285ea65058fdabe2028a/crates/nono-cli/data/policy.json#L560
-      "~/.nix-profile"
-      "~/.local/state/nix/profile"
-      "~/.local/state/nix/profiles"
-      "~/.nix-defexpr"
-      "~/.local/state/nix/defexpr"
-      "/run/current-system/sw"
-      "/etc/profiles/per-user"
-      "/nix/var/nix/profiles"
-      "/nix/store"
-    ];
-  in {
-    "$schema" = "https://raw.githubusercontent.com/fencesandbox/fence/main/docs/schema/fence.schema.json";
-    filesystem = {
-      allowRead = fs;
-      allowExecute = fs;
-    };
-    command.acceptSharedBinaryCannotRuntimeDeny = coreutilsCommands;
-  }
-  // settingsForNetwork;
-
+  # `default` is kept alongside the merged settings rather than being read back
+  # out of them: it is a flag on the profile, not an srt setting, so folding it
+  # into the settings object would put a key in the rendered JSON that srt's
+  # schema rejects.
   finalProfiles = lib.mapAttrs' (name: entry: {
     inherit name;
-    value = lib.my.deepMerge entry { settings = settingsForNixEnv; };
+    value = {
+      isDefault = entry.default or false;
+      settings = lib.my.deepMerge {
+        network = settingsForNetwork.network;
+        filesystem = settingsForFilesystem.filesystem;
+      } entry.settings;
+    };
   }) cfg.harness.sandbox.profiles;
 
   # Every profile is reachable without a typed path: the alias points at the
-  # rendered file by its XDG path rather than by profile name, because `--settings`
-  # takes a path and the profile name alone does not tell Fence which file to read.
-  # The long flag is spelled out because the alias is read far more often than it
-  # is written, and it is the only place `--settings` appears in the shell.
+  # rendered file by its XDG path rather than by profile name, because
+  # `--settings` takes a path and the profile name alone does not tell srt which
+  # file to read. The long flag is spelled out because the alias is read far more
+  # often than it is written, and it is the only place `--settings` appears in
+  # the shell.
   profileAliases = lib.mapAttrs' (name: _: {
-    name = "fence-${name}";
-    value = "fence --settings ${config.xdg.configHome}/fence/${name}.json";
+    name = "srt-${name}";
+    value = "srt --settings ${config.xdg.configHome}/sandbox-runtime/${name}.json";
   }) cfg.harness.sandbox.profiles;
 
-  defaultProfileNames = lib.attrNames (lib.filterAttrs (_name: entry: entry.default) finalProfiles);
+  defaultProfileNames = lib.attrNames (lib.filterAttrs (_name: entry: entry.isDefault) finalProfiles);
+
+  # A provider URL with neither an explicit port nor a scheme to default it
+  # from leaves nothing for the `:port` allow entry to name, and srt rejects the
+  # whole settings file over it, so the mistake has to surface at evaluation
+  # time rather than as an agent that cannot reach its provider.
+  providersWithoutPort = map (provider: provider.name) (
+    builtins.filter (provider: (parseProviderUrl provider.url).port == null) (cfg.providers or [ ])
+  );
 in
 {
-  options.my.home.ai.harness.sandbox = with lib; with lib.types; {
-    enable = mkEnableOption "Whether to enable the AI harness sandbox";
-    profiles = mkOption {
-      type = attrsOf (submodule {
-        options = {
-          settings = mkOption {
-            type = attrs;
-            description = ''
-              Settings for the sandbox profile, merged with the settings every
-              profile needs: the schema URL, read and execute access to
-              `/nix/store`, write access to the state directories the enabled
-              agents and harness tools keep, and network access to the providers
-              in `my.home.ai.providers` plus the servers in
-              `my.home.mcp.hub.client.servers`. Rendered as JSON for Fence, see
-              https://github.com/fencesandbox/fence/blob/main/docs/configuration.md
+  options.my.home.ai.harness.sandbox =
+    with lib;
+    with lib.types;
+    {
+      enable = mkEnableOption "Whether to enable the AI harness sandbox";
+      profiles = mkOption {
+        type = attrsOf (submodule {
+          options = {
+            settings = mkOption {
+              type = attrs;
+              default = { };
+              description = ''
+                Settings for the sandbox profile, an srt configuration as
+                documented in https://github.com/anthropics/sandbox-runtime#configuration
 
-              Each profile also gets a `fence-<name>` shell alias running
-              `fence --settings <configHome>/fence/<name>.json`, so the profile can
-              be started without typing the path.
+                Both `network` and `filesystem` are required by srt's schema, so
+                the module contributes both and this option is where the values
+                that are not derived go. The network allow rules are derived rather
+                than listed here: `network.allowedDomains` is built from
+                `my.home.ai.providers` and `my.home.mcp.hub.client.servers`, so a
+                host a profile adds is merged in but never replaces the endpoints
+                the harness is actually configured with.
+
+                `filesystem.allowWrite` is merged with the state directories of the
+                enabled agents and harness tools, which every profile needs, so a
+                profile's own entries are what it adds on top: `.` is the working
+                directory and `/tmp` the scratch the agent is expected to have.
+              '';
+            };
+            default = mkEnableOption ''
+              Whether to use this profile as the default profile of the AI
+              harness sandbox. Its settings are additionally written to
+              `sandbox-runtime/srt-settings.json`, the file srt reads when it is
+              started without `--settings` and the one a shell alias points at when
+              the profile is started by name. At most one profile may set this.
             '';
           };
-          default = mkEnableOption ''
-            Whether to use this profile as the default profile of the AI
-            harness sandbox. Its settings become `fence/fence.json`, the config
-            Fence loads when it finds no project-local config. At most one
-            profile may set this.
-          '';
-        };
-      });
-      default = defaultProfiles;
-      description = ''
-        Fence sandbox profiles. Each profile is written to
-        `fence/<name>.json`, and the single profile with `default = true` is
-        copied to `fence/fence.json`, the config Fence loads when it finds no
-        project-local config. Without one, `fence/fence.json` is not written.
+        });
+        default = defaultProfiles;
+        description = ''
+          Sandbox runtime profiles. Each profile is written to
+          `sandbox-runtime/<name>.json`, and the single profile with
+          `default = true` is additionally written to
+          `sandbox-runtime/srt-settings.json`, the file srt reads when no
+          `--settings` is given.
 
-        One `fence-<name>` alias is added per profile, so `fence-default` starts
-        Fence with that profile's settings file.
-      '';
+          One `srt-<name>` alias is added per profile, so `srt-cautious` starts
+          sandbox runtime with that profile's settings file.
+        '';
+      };
     };
-  };
   config = lib.mkIf (cfg.harness.enable && cfg.harness.sandbox.enable) {
-    home.packages = with pkgs; [
-      fence
+    home.packages = [
+      pkgs.sandbox-runtime
     ];
 
     programs.bash.shellAliases = profileAliases;
@@ -252,11 +271,12 @@ in
 
     xdg.configFile = lib.mkMerge [
       (lib.mapAttrs' (name: entry: {
-        name = "fence/${name}.json";
+        name = "sandbox-runtime/${name}.json";
         value.text = builtins.toJSON entry.settings + "\n";
       }) finalProfiles)
       (lib.optionalAttrs (defaultProfileNames != [ ]) {
-        "fence/fence.json".text = builtins.toJSON finalProfiles.${lib.head defaultProfileNames}.settings + "\n";
+        "sandbox-runtime/srt-settings.json".text =
+          builtins.toJSON finalProfiles.${lib.head defaultProfileNames}.settings + "\n";
       })
     ];
 
@@ -266,8 +286,8 @@ in
         message = "my.home.ai.harness.sandbox.profiles: at most one profile may set default = true, but found: ${lib.concatStringsSep ", " defaultProfileNames}";
       }
       {
-        assertion = localProvidersWithoutPort == [ ];
-        message = "my.home.ai.providers: a loopback provider URL needs an explicit port, or a scheme to default the port from, for Fence to bridge it: ${lib.concatStringsSep ", " localProvidersWithoutPort}";
+        assertion = providersWithoutPort == [ ];
+        message = "my.home.ai.providers: a provider URL needs an explicit port, or a scheme to default the port from, for srt to allow-list it by host and port: ${lib.concatStringsSep ", " providersWithoutPort}";
       }
     ];
   };

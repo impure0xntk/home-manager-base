@@ -1,32 +1,41 @@
-# The fence sandbox denies every outbound connection that matches no network
-# rule, so the endpoints the harness is configured with are exactly what the
-# agent cannot reach unless the module derives the rules from those lists. A
-# harness session dials more than the AI backends: every agent here also talks to
-# the MCP hub servers, and deriving from those too is what keeps a remote hub
-# reachable. The generated JSON is the only place the derivation is observable,
-# so the assertions pin the parsed content rather than the Nix attributes:
+# The srt sandbox denies every outbound connection that matches no network rule,
+# so the endpoints the harness is configured with are exactly what the agent
+# cannot reach unless the module derives the rules from those lists. A harness
+# session dials more than the AI backends: every agent here also talks to the MCP
+# hub servers, and deriving from those too is what keeps a remote hub reachable.
+# The generated JSON is the only place the derivation is observable, so the
+# assertions pin the parsed content rather than the Nix attributes:
 #
-#   - a remote provider or hub host lands in `network.allowedDomains`, reduced to
-#     a bare host name, because that is the form fence matches on.
-#   - a loopback provider cannot be expressed as a domain at all. It is bridged
-#     through `allowLocalOutbound` / `allowLocalOutboundPorts` instead, and the
-#     port has to come out of the URL rather than out of `isLocal`.
-#   - both keys have to survive together. `//` merges shallowly, so composing the
-#     two as separate dotted keys silently drops one of them and produces a
-#     config that reads as valid while the agent loses its remote provider.
+#   - a provider or hub host lands in `network.allowedDomains` as `host:port`.
+#     The port is part of the rule because srt reads an entry without one as
+#     matching every port on that host, so a portless entry would also open
+#     whatever else the agent's own route to that host can reach. The scheme
+#     supplies the port when the URL has none.
+#   - a loopback provider is an entry in the same list, not a separate key.
+#     Whether it needs the name or the literal depends on which one the URL
+#     spells, so the assertion is recomputed from the URL rather than from
+#     `isLocal`, which says nothing about the spelling.
+#   - the scheme, the path and the case of the URL are not part of an allow rule,
+#     and a leftover of any of them makes the rule match nothing at all.
+#
+# srt's schema requires both `network` and `filesystem`, with `deniedDomains`,
+# `denyRead`, `allowWrite` and `denyWrite` all mandatory inside them. That is
+# asserted rather than assumed: a settings file missing any of them is refused
+# whole by `srt --settings`, so the profile would be a file that silently runs
+# with no policy at all instead of the policy it was rendered to express.
 #
 # The filesystem rules are asserted the same way. An agent keeps its sessions,
-# caches and tool history outside the working directory, and a profile that only
-# allows the workspace leaves those on a read-only bind, so the agent fails to
-# start with EROFS on its first write. The state roots are derived from the
-# options that point the agent or tool at them, so enabling one is what adds its
-# directory, and the assertion is recomputed from the evaluated configuration
-# rather than hardcoded.
+# caches and tool history outside the working directory, and srt mounts every
+# write that matches no rule read-only, so a profile that only allows the
+# workspace leaves those behind and the agent fails to start with EROFS on its
+# first write. The state roots are derived from the options that point the agent
+# or tool at them, so enabling one is what adds its directory, and the assertion
+# is recomputed from the evaluated configuration rather than hardcoded.
 #
-# The `fence-<profile>` aliases are asserted the same way: the alias is the only
+# The `srt-<profile>` aliases are asserted the same way: the alias is the only
 # thing that makes a profile launchable without typing a store-dependent path, so
-# the assertion checks that the alias set is exactly one `fence-` prefixed name
-# per profile and that each value names the profile's own rendered file under
+# the assertion checks that the alias set is exactly one `srt-` prefixed name per
+# profile and that each value names the profile's own rendered file under
 # `xdg.configHome` rather than some other path.
 {
   config,
@@ -35,41 +44,59 @@
 }:
 
 let
-  fenceConfigFile = "fence/default.json";
+  srtConfigFile = "sandbox-runtime/default.json";
 
   # The store paths inside the generated file come back as string context, which
   # `fromJSON` refuses; the assertion is about the content, so the context is
   # dropped.
   read = path: builtins.unsafeDiscardStringContext (builtins.readFile path);
 
-  parsed = builtins.fromJSON (read config.xdg.configFile.${fenceConfigFile}.source);
+  parsed = builtins.fromJSON (read config.xdg.configFile.${srtConfigFile}.source);
   network = parsed.network or { };
-  allowWrite = parsed.filesystem.allowWrite or [ ];
+  filesystem = parsed.filesystem or { };
+  allowWrite = filesystem.allowWrite or [ ];
 
   # `providers` is a `listOf (submodule ...)`, and such lists concatenate rather
   # than replace, so another module in this evaluation can contribute its own
   # providers. The expectation is therefore recomputed from the evaluated list
   # instead of hardcoded, which keeps the assertions about the derivation itself
   # rather than about how many providers happen to be configured.
-  hostOf =
+  endpointOf =
     url:
     let
       separated = lib.my.separateHostAndPort url;
       scheme = lib.head (lib.splitString "://" url);
     in
-    lib.removePrefix "${scheme}://" separated.schemaAndHost;
-
-  isLoopback = host: lib.elem host [ "localhost" "[::1]" "::1" ] || lib.hasPrefix "127." host;
-
-  hostsOfProviders = map (provider: hostOf provider.url) config.my.home.ai.providers;
+    {
+      host = lib.removePrefix "${scheme}://" separated.schemaAndHost;
+      port =
+        if separated.port != "" then
+          lib.toInt separated.port
+        else if scheme == "https" then
+          443
+        else if scheme == "http" then
+          80
+        else
+          null;
+    };
 
   # The MCP hub servers carry host and port as separate options, so there is no
-  # URL to reduce and no loopback scheme to strip.
-  hostsOfHubServers = map (server: server.host) config.my.home.mcp.hub.client.servers;
+  # URL to reduce and no scheme to strip a port from.
+  providerEntries = map (
+    provider:
+    let
+      endpoint = endpointOf provider.url;
+    in
+    "${endpoint.host}:${toString endpoint.port}"
+  ) config.my.home.ai.providers;
 
-  configuredHosts = lib.unique (
-    lib.filter (host: !(isLoopback host)) (hostsOfProviders ++ hostsOfHubServers)
-  );
+  hubEntries =
+    if config.my.home.mcp.hub.client.enable then
+      map (server: "${server.host}:${toString server.port}") config.my.home.mcp.hub.client.servers
+    else
+      [ ];
+
+  configuredEntries = lib.unique (providerEntries ++ hubEntries);
 
   # Set below to decide which shape the generated config has to have.
   expectLocalPort = 11434;
@@ -79,34 +106,33 @@ let
   # options the module reads rather than restated as a literal list.
   cfg = config.my.home.ai;
 
-  expectStateRoots =
-    lib.unique (
-      lib.optionals cfg.jcode.enable [
-        "${config.xdg.configHome}/jcode"
-        "${config.xdg.cacheHome}/jcode"
-      ]
-      ++ lib.optionals cfg.codex.enable [ "${config.xdg.configHome}/codex" ]
-      ++ lib.optionals cfg.goose.enable [ "${config.xdg.configHome}/goose" ]
-      ++ lib.optionals cfg.qwen-code.enable [ "${config.xdg.configHome}/qwen" ]
-      ++ lib.optionals cfg.copilot-cli.enable [ "${config.xdg.configHome}/copilot" ]
-      ++ lib.optionals cfg.junie.enable [ "${config.xdg.dataHome}/junie" ]
-      ++ lib.optionals (cfg.harness.codingAgentTools.ctx.mcpServer != null) [
-        "${config.xdg.dataHome}/ctx"
-        "${config.xdg.stateHome}/ctx"
-      ]
-      ++ lib.optionals (cfg.harness.codingAgentTools.zg.mcpServer != null) [
-        "${config.xdg.configHome}/zvec-grep"
-        "${config.xdg.dataHome}/zvec-grep"
-      ]
-      ++ lib.optionals (cfg.harness.codingAgentTools.rtk.package != null) [ "${config.xdg.dataHome}/rtk" ]
-    );
+  expectStateRoots = lib.unique (
+    lib.optionals cfg.jcode.enable [
+      "${config.xdg.configHome}/jcode"
+      "${config.xdg.cacheHome}/jcode"
+    ]
+    ++ lib.optionals cfg.codex.enable [ "${config.xdg.configHome}/codex" ]
+    ++ lib.optionals cfg.goose.enable [ "${config.xdg.configHome}/goose" ]
+    ++ lib.optionals cfg.qwen-code.enable [ "${config.xdg.configHome}/qwen" ]
+    ++ lib.optionals cfg.copilot-cli.enable [ "${config.xdg.configHome}/copilot" ]
+    ++ lib.optionals cfg.junie.enable [ "${config.xdg.dataHome}/junie" ]
+    ++ lib.optionals (cfg.harness.codingAgentTools.ctx.mcpServer != null) [
+      "${config.xdg.dataHome}/ctx"
+      "${config.xdg.stateHome}/ctx"
+    ]
+    ++ lib.optionals (cfg.harness.codingAgentTools.zg.mcpServer != null) [
+      "${config.xdg.configHome}/zvec-grep"
+      "${config.xdg.dataHome}/zvec-grep"
+    ]
+    ++ lib.optionals (cfg.harness.codingAgentTools.rtk.package != null) [ "${config.xdg.dataHome}/rtk" ]
+  );
 
   # The module derives the state roots, so the expectation cannot simply mirror
   # the derivation and stay honest. What is pinned instead is that the roots it
-  # adds are absolute paths: a literal `~` resolves against the sandbox home
-  # rather than the user's, and a bare relative name resolves against the working
-  # directory, so either form silently allows nothing. The profile's own entries
-  # are exempt because `.` is how a profile names the working directory.
+  # adds are absolute paths: srt resolves a relative entry against the working
+  # directory rather than the user's home, so a bare relative name silently
+  # allows nothing. The profile's own entries are exempt because `.` is how a
+  # profile names the working directory.
   stateRootsAbsolute = builtins.all (path: lib.hasPrefix "/" path) expectStateRoots;
 
   sandboxProfiles = config.my.home.ai.harness.sandbox.profiles;
@@ -115,19 +141,23 @@ let
 
   # One alias per profile, generated from the evaluated profile names so the
   # assertion does not care how many profiles the machine configures.
-  expectedAliasNames = map (name: "fence-${name}") profileNames;
+  expectedAliasNames = map (name: "srt-${name}") profileNames;
 
-  expectedAliases = lib.listToAttrs (map (
-    name: {
-      name = "fence-${name}";
-      value = "fence --settings ${config.xdg.configHome}/fence/${name}.json";
-    }
-  ) profileNames);
+  expectedAliases = lib.listToAttrs (
+    map (name: {
+      name = "srt-${name}";
+      value = "srt --settings ${config.xdg.configHome}/sandbox-runtime/${name}.json";
+    }) profileNames
+  );
 
   # The shell module sets the same attrset on fish, so an alias that exists for
   # bash but not fish is only half deployed.
-  fenceAliases =
-    lib.filterAttrs (name: _: lib.hasPrefix "fence-" name) config.programs.bash.shellAliases;
+  srtAliases = lib.filterAttrs (name: _: lib.hasPrefix "srt-" name) config.programs.bash.shellAliases;
+
+  # srt reads these settings with `--settings`; nothing else reads them, so an
+  # alias pointing anywhere else is the one thing that makes a profile
+  # unreachable.
+  defaultProfileIsAliasTarget = lib.any (name: name == "default") profileNames;
 in
 {
   config = {
@@ -165,8 +195,9 @@ in
     my.home.ai.providers = [
       {
         name = "sandbox-test-remote";
-        # A path and an uppercase host, neither of which may leak into the allow
-        # rule: fence matches bare host names.
+        # A path, an uppercase host and no port, none of which may leak into the
+        # allow entry: srt matches `host:port`, and the https scheme supplies the
+        # port the URL leaves out.
         url = "https://AI.example.com/openai/v1";
         api-key-env = "SANDBOX_TEST_API_KEY";
         models = [
@@ -178,8 +209,9 @@ in
       }
       {
         name = "sandbox-test-local";
-        # A local provider is reached over loopback, which no allow rule can
-        # express, so only the port is recoverable from this URL.
+        # A local provider is reached over loopback, which the resolved-address
+        # check refuses unless the address itself is allow-listed, so the entry
+        # has to carry the literal and the port both.
         url = "http://localhost:11434";
         isLocal = true;
         models = [
@@ -193,41 +225,65 @@ in
 
     assertions = [
       {
-        assertion = builtins.hasAttr fenceConfigFile config.xdg.configFile;
-        message = "the fence sandbox profile must reach the XDG config home, which is where fence looks for it.";
+        assertion = builtins.hasAttr srtConfigFile config.xdg.configFile;
+        message = "the srt sandbox profile must reach the XDG config home, which is where the srt-<profile> alias looks for it.";
       }
       {
-        assertion = lib.sort (a: b: a < b) (network.allowedDomains or [ ]) == lib.sort (a: b: a < b) configuredHosts;
-        message = "network.allowedDomains must be exactly the hosts of the non-loopback providers and MCP hub servers, with nothing extra, nothing missing and no duplicates.";
+        # The whole point of the derivation: every endpoint the harness is
+        # configured with, scoped to the port it is reached on, and nothing else.
+        assertion =
+          lib.sort (a: b: a < b) (network.allowedDomains or [ ]) == lib.sort (a: b: a < b) configuredEntries;
+        message = "network.allowedDomains must be exactly the host:port of every provider and MCP hub server, with nothing extra, nothing missing and no duplicates.";
       }
       {
         # The MCP hub server is not an AI provider, so deriving the rules from
         # the providers alone leaves it denied.
-        assertion = lib.elem "hub.example.net" (network.allowedDomains or [ ]);
+        assertion = lib.elem "hub.example.net:3001" (network.allowedDomains or [ ]);
         message = "a remote MCP hub server must land in network.allowedDomains; the agent reaches the hub through the same network rules as the providers, and a host with no rule is denied with a 403 before the request is made.";
       }
       {
-        # The port, path, scheme and case of the URL are not part of a fence
-        # allow rule, and a leftover of any of them makes the rule match nothing.
-        assertion = !(lib.any (
-          entry: builtins.match ".*[/:].*" entry != null
-        ) (network.allowedDomains or [ ]));
-        message = "network.allowedDomains entries must be bare host names, since fence matches domains and nothing else.";
+        # The scheme, the path and the case of the URL are not part of an srt
+        # allow entry, and a leftover of any of them makes it match nothing.
+        assertion =
+          !(lib.any (entry: builtins.match ".*[/?].*" entry != null) (network.allowedDomains or [ ]));
+        message = "network.allowedDomains entries must be a host and a port only, since srt matches a domain pattern and nothing else; a leftover scheme, path or slash matches no destination.";
       }
       {
-        # A loopback provider is bridged by port, so the port has to reach the
-        # allow rules. The membership is pinned rather than a count because
-        # `providers` concatenates across modules and another test module can
-        # contribute its own loopback provider here.
-        assertion = lib.elem expectLocalPort (network.allowLocalOutboundPorts or [ ]);
-        message = "a loopback provider must be bridged through allowLocalOutboundPorts, since Linux forwards loopback ports one by one.";
+        # An entry with no port matches every port on that host, so an entry that
+        # lost its port is not a weaker rule, it is a much broader one.
+        assertion = lib.all (entry: builtins.match ".*:[0-9]+$" entry != null) (
+          network.allowedDomains or [ ]
+        );
+        message = "every network.allowedDomains entry must carry the port it is scoped to; srt reads an entry without one as matching every port on that host, so dropping it opens unrelated services rather than narrowing the rule.";
       }
       {
-        # The composition bug this guards against: composing the two as separate
-        # dotted keys and merging them shallowly keeps only the last one, and the
-        # result is still a valid config that happens to allow nothing useful.
-        assertion = builtins.hasAttr "allowedDomains" network && builtins.hasAttr "allowLocalOutboundPorts" network;
-        message = "network.allowedDomains and network.allowLocalOutboundPorts must survive the same merge; a shallow one drops one of them and leaves the agent unable to reach any provider.";
+        # A loopback endpoint is refused by the resolved-address check unless
+        # the address is itself allow-listed, so the entry has to name it.
+        assertion = lib.elem "localhost:${toString expectLocalPort}" (network.allowedDomains or [ ]);
+        message = "a loopback provider must be allow-listed by name and port; srt refuses to dial a hostname that resolves to a loopback address unless the address is on the allowlist itself.";
+      }
+      {
+        # `network` and `filesystem` are both required by srt's schema, so a
+        # profile missing either is refused whole and runs with no policy.
+        assertion = builtins.isAttrs network && builtins.isAttrs filesystem;
+        message = "the rendered profile must carry both network and filesystem; srt requires both, and refuses a settings file missing either rather than applying the half it can parse.";
+      }
+      {
+        # The keys inside them are required too: `filesystem` alone does not make
+        # a config valid if `allowWrite` is absent from it.
+        assertion = builtins.all (key: builtins.isList filesystem.${key} or null) [
+          "denyRead"
+          "allowWrite"
+          "denyWrite"
+        ];
+        message = "filesystem must carry denyRead, allowWrite and denyWrite; srt requires each of them, so a missing one is a settings file srt refuses to load.";
+      }
+      {
+        assertion = builtins.all (key: builtins.isList network.${key} or null) [
+          "allowedDomains"
+          "deniedDomains"
+        ];
+        message = "network must carry allowedDomains and deniedDomains; srt requires both, so a missing one is a settings file srt refuses to load.";
       }
       {
         # The workspace and /tmp are what the profile sets itself; the agent
@@ -239,27 +295,34 @@ in
       }
       {
         assertion = lib.all (path: lib.elem path allowWrite) expectStateRoots;
-        message = "every state root of an enabled agent or harness tool must be writable; the agent keeps its sessions, caches and tool history there, and a read-only bind there makes it fail to start with EROFS.";
+        message = "every state root of an enabled agent or harness tool must be writable; the agent keeps its sessions, caches and tool history there, and srt mounts every other write read-only, so it fails to start with EROFS.";
       }
       {
         assertion = stateRootsAbsolute;
-        message = "the state roots the module adds to filesystem.allowWrite must be absolute; a literal ~ resolves against the sandbox home and a bare relative name against the working directory, so either allows nothing useful.";
+        message = "the state roots the module adds to filesystem.allowWrite must be absolute; srt resolves a relative entry against the working directory rather than the user's home, so a bare relative name allows nothing useful.";
       }
       {
         assertion = !(lib.elem "~" allowWrite) && !(lib.elem "~/.config/jcode" allowWrite);
-        message = "filesystem.allowWrite must not carry a literal ~; fence resolves it against its own sandbox home rather than the user's, so the agent state stays read-only.";
+        message = "the state roots filesystem.allowWrite carries must not be spelled with a literal ~; the module derives them from the XDG options precisely so that relocating xdg.configHome keeps them pointing at the right directory.";
       }
       {
-        assertion = lib.sort (a: b: a < b) (lib.attrNames fenceAliases) == lib.sort (a: b: a < b) expectedAliasNames;
-        message = "there must be exactly one fence-<profile> alias per configured sandbox profile; a missing alias leaves the profile unreachable and a stale one points at a profile that no longer exists.";
+        assertion =
+          lib.sort (a: b: a < b) (lib.attrNames srtAliases) == lib.sort (a: b: a < b) expectedAliasNames;
+        message = "there must be exactly one srt-<profile> alias per configured sandbox profile; a missing alias leaves the profile unreachable and a stale one points at a profile that no longer exists.";
       }
       {
-        assertion = lib.attrByPath [ "fence-default" ] null fenceAliases == expectedAliases."fence-default";
-        message = "the fence-<profile> alias must run fence against the profile's own rendered settings file under xdg.configHome, not against a name, a different profile, or a path fence cannot read.";
+        assertion = defaultProfileIsAliasTarget;
+        message = "this test configures a profile named `default`, so its srt-default alias must exist and the assertion below can check what it points at.";
       }
       {
-        assertion = lib.attrByPath [ "fence-default" ] null config.programs.fish.shellAbbrs == expectedAliases."fence-default";
-        message = "the fence-<profile> alias must reach fish as well as bash, otherwise the primary shell on this system cannot start a sandbox profile.";
+        assertion = lib.attrByPath [ "srt-default" ] null srtAliases == expectedAliases."srt-default";
+        message = "the srt-<profile> alias must run srt against the profile's own rendered settings file under xdg.configHome, not against a name, a different profile, or a path srt cannot read.";
+      }
+      {
+        assertion =
+          lib.attrByPath [ "srt-default" ] null config.programs.fish.shellAbbrs
+          == expectedAliases."srt-default";
+        message = "the srt-<profile> alias must reach fish as well as bash, otherwise the primary shell on this system cannot start a sandbox profile.";
       }
     ];
   };
