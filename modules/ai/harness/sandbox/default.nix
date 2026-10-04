@@ -105,20 +105,90 @@ let
         hash = "sha256-CggaCxO6Du65zLvJH+3y3KS3I8aNTrjI4soFd95RIkk=";
       });
     };
-  defaultProfiles = {
-    yolo = {
-      settings = {
-        extends = "code"; # https://github.com/fencesandbox/fence/blob/main/internal/templates/code.json
-      };
-    };
+  defaultProfiles =
+    let
+      gitReadOnlyStrictCommand = [
+        "git commit"
+        "git stash"
+      ];
+      dangerousCommand = [
+        # https://github.com/nolabs-ai/nono/blob/e1f84a33bdfecad82490285ea65058fdabe2028a/crates/nono-cli/data/policy.json#L595
+        "rm"
+        "rmdir"
+        "dd"
+        "chmod"
+        "chown"
+        "chgrp"
+        "mv"
+        "cp"
+        "truncate"
+        "scp"
+        "rsync"
+        "sftp"
+        "ftp"
+        "xargs"
+        "sudo"
+        "su"
+        "doas"
+        "pip"
+        "npm"
+        "kill"
+        "killall"
+        "pkill"
+        "shutdown"
+        "reboot"
+        "halt"
+        "poweroff"
 
-    default = {
-      default = true;
-      settings = {
-        extends = "./yolo.json";
+        # https://github.com/nolabs-ai/nono/blob/e1f84a33bdfecad82490285ea65058fdabe2028a/crates/nono-cli/data/policy.json#L639
+        "shred"
+        "mkfs"
+        "mkfs.ext4"
+        "mkfs.xfs"
+        "mkfs.btrfs"
+        "mkswap"
+        "fdisk"
+        "parted"
+        "gdisk"
+        "wipefs"
+        "chattr"
+        "init"
+        "systemctl"
+        "apt"
+        "apt-get"
+        "dpkg"
+        "yum"
+        "dnf"
+        "pacman"
+        "pkexec"
+
+        # nix
+        "switch-to-configuration"
+        "nixos-rebuild switch"
+        "nixos-rebuild boot"
+        "nixos-rebuild test"
+        "nixos-install"
+        "nixos-enter"
+        "nix-env -p /nix/var/nix/profiles/system"
+        "nix-env --profile /nix/var/nix/profiles/system"
+      ];
+    in {
+      yolo = {
+        settings = {
+          extends = "code-relaxed"; # https://github.com/fencesandbox/fence/blob/main/internal/templates/code.json
+        };
+      };
+
+      default = {
+        default = true;
+        settings = {
+          extends = "code-strict";
+          command = {
+            deny = gitReadOnlyStrictCommand ++ dangerousCommand;
+          };
+        };
       };
     };
-  };
 
   # Fence masks a whole executable path for a runtime deny, so denying one
   # coreutils command such as `chroot` would also block `cat`, `head` and every
