@@ -24,15 +24,8 @@ let
 
   providerEndpoints = map (provider: parseProviderUrl provider.url) (cfg.providers or [ ]);
 
-  # A loopback endpoint is not a domain Fence can allow-list: loopback traffic is
-  # gated by `allowLocalOutbound` instead, and on Linux every host port needs its
-  # own bridge through `allowLocalOutboundPorts`. A provider marked `isLocal`
-  # while reached through a real hostname stays in `allowedDomains`, because the
-  # domain filter is what Fence can express for it.
   isLoopbackHost =
     host:
-    # `separateHostAndPort` keeps an IPv6 literal bracketed, because that is the
-    # form Fence and the proxy match on, so the loopback literal is bracketed too.
     lib.elem host [
       "localhost"
       "[::1]"
@@ -68,14 +61,6 @@ let
   # request is ever made. Deriving the rules from that list too keeps the
   # sandbox in step with the servers the machine actually configures, instead
   # of repeating a hostname that a profile edit can drift away from.
-  #
-  # `servers` has a default, so the option has a value before a machine
-  # configures any, and that default is a loopback address on port 3001. A
-  # disabled client is what keeps it from being an endpoint: nothing generates a
-  # wrapper for it and nothing connects, so bridging the port on a machine that
-  # never enabled the client would forward a real host port for no reason. The
-  # gate is on `enable` rather than on the default's value, because that value
-  # is a legitimate loopback host a machine can genuinely configure.
   mcpHubEndpoints =
     if config.my.home.mcp.hub.client.enable then
       map (
@@ -85,19 +70,9 @@ let
       ) config.my.home.mcp.hub.client.servers
     else
       [ ];
-
   mcpHubHosts = lib.unique (lib.filter (host: !(isLoopbackHost host)) (map (endpoint: endpoint.host) mcpHubEndpoints));
-
   mcpHubPorts = lib.unique (map (endpoint: endpoint.port) (builtins.filter (endpoint: isLoopbackHost endpoint.host) mcpHubEndpoints));
 
-  # Every profile reaches the AI backends and the MCP hub servers the harness
-  # itself is configured with, so the allow rules are derived from
-  # `my.home.ai.providers` and `my.home.mcp.hub.client.servers` rather than
-  # listed per profile. Fence denies outbound traffic matching no rule, so a
-  # machine with no provider gets no network block at all and stays as
-  # unrestricted as before.
-  # `network` is assembled as one nested attrset because `//` merges shallowly
-  # and would otherwise drop the sibling keys.
   settingsForNetwork =
     let
       remote = lib.unique (remoteHosts ++ mcpHubHosts);
@@ -132,9 +107,9 @@ let
     };
   defaultProfiles = {
     yolo = {
-      settings = lib.my.deepMerge {
+      settings = {
         extends = "code"; # https://github.com/fencesandbox/fence/blob/main/internal/templates/code.json
-      } templates.disableTelemetry;
+      };
     };
 
     default = {
@@ -187,11 +162,6 @@ let
     value = lib.my.deepMerge entry { settings = settingsForNixEnv; };
   }) cfg.harness.sandbox.profiles;
 
-  # Every profile is reachable without a typed path: the alias points at the
-  # rendered file by its XDG path rather than by profile name, because `--settings`
-  # takes a path and the profile name alone does not tell Fence which file to read.
-  # The long flag is spelled out because the alias is read far more often than it
-  # is written, and it is the only place `--settings` appears in the shell.
   profileAliases = lib.mapAttrs' (name: _: {
     name = "fence-${name}";
     value = "fence --settings ${config.xdg.configHome}/fence/${name}.json";
