@@ -125,10 +125,6 @@ let
       '';
       toSettingsFromDrv = name: drv: builtins.fromJSON (builtins.readFile (toPureJsonFile name drv));
     in {
-      disableTelemetry = toSettingsFromDrv "disable-telemetry" (pkgs.fetchurl {
-        url = "https://raw.githubusercontent.com/fencesandbox/fence/refs/tags/v0.1.67/internal/templates/disable-telemetry.json";
-        hash = "sha256-GHL7/GjioaCTvl0NUyC2E+nqO3BBL7QfI8WrKX9vacE=";
-      });
       gitReadOnly = toSettingsFromDrv "git-readonly" (pkgs.fetchurl {
         url = "https://raw.githubusercontent.com/fencesandbox/fence/refs/tags/v0.1.67/internal/templates/git-readonly.json";
         hash = "sha256-CggaCxO6Du65zLvJH+3y3KS3I8aNTrjI4soFd95RIkk=";
@@ -164,11 +160,23 @@ let
   # and runnable inside the sandbox, the state directories the agents and tools
   # write must stay writable, and the AI providers plus MCP hub servers the
   # harness is configured with must stay reachable.
-  settingsForNixEnv = {
+  settingsForNixEnv = let
+    fs = [ # https://github.com/nolabs-ai/nono/blob/e1f84a33bdfecad82490285ea65058fdabe2028a/crates/nono-cli/data/policy.json#L560
+      "~/.nix-profile"
+      "~/.local/state/nix/profile"
+      "~/.local/state/nix/profiles"
+      "~/.nix-defexpr"
+      "~/.local/state/nix/defexpr"
+      "/run/current-system/sw"
+      "/etc/profiles/per-user"
+      "/nix/var/nix/profiles"
+      "/nix/store"
+    ];
+  in {
     "$schema" = "https://raw.githubusercontent.com/fencesandbox/fence/main/docs/schema/fence.schema.json";
     filesystem = {
-      allowRead = ["/nix/store"];
-      allowExecute = ["/nix/store"];
+      allowRead = fs;
+      allowExecute = fs;
     };
     command.acceptSharedBinaryCannotRuntimeDeny = coreutilsCommands;
   }

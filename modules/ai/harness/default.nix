@@ -8,6 +8,6 @@
     ./mcp.nix
     ./plugins.nix
     ./hooks.nix
-    ./sandbox.nix
+    ./sandbox
   ];
 }
