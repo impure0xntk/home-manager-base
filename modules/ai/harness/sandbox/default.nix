@@ -176,6 +176,7 @@ let
       yolo = {
         settings = {
           extends = "code-relaxed"; # https://github.com/fencesandbox/fence/blob/main/internal/templates/code.json
+          # command.runtimeExecPolicy = "argv"; # Not work on WSL2
         };
       };
 
@@ -184,6 +185,7 @@ let
         settings = {
           extends = "code-strict";
           command = {
+            # runtimeExecPolicy = "argv"; # Not work on WSL2
             deny = gitReadOnlyStrictCommand ++ dangerousCommand;
           };
         };
