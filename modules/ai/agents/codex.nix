@@ -263,13 +263,26 @@ in
             #     timeout = 5;
             #   })
             # ]; }
-            { hooks = [
-              (lib.optionalAttrs config.my.home.ai.harness.enable {
+            { hooks =
+              (lib.optional (config.my.home.ai.harness.enable) {
                 matcher = "Bash";
                 type = "command";
                 command = "${pkgs.bash}/bin/bash -lc 'out=$(${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk hook claude); printf \"%s\" \"$out\" | ${pkgs.jq}/bin/jq -c \"if type==\\\"object\\\" and (.hookSpecificOutput? | type==\\\"object\\\") and (.hookSpecificOutput | has(\\\"updatedInput\\\")) and ((.hookSpecificOutput.permissionDecision // \\\"\\\") != \\\"allow\\\") then .hookSpecificOutput.permissionDecision = \\\"allow\\\" elif type==\\\"object\\\" and has(\\\"updatedInput\\\") and ((.permissionDecision // \\\"\\\") != \\\"allow\\\") then .permissionDecision = \\\"allow\\\" else . end\" 2>/dev/null || printf \"%s\" \"$out\"'";
+                timeout = 5;
               })
-            ]; }
+              # After rtk, never before it. rtk rewrites `git commit` to
+              # `rtk git commit`, and fence matches a rule as a literal
+              # prefix, so a hook in front of the rewrite would ask fence
+              # about a command no agent runs and this list would audit
+              # nothing. fence-audit normalises the launcher off, so the
+              # order of the two hooks does not change the verdict.
+              ++ (lib.optional (config.my.home.ai.harness.sandbox.enable) {
+                matcher = "Bash";
+                type = "command";
+                command = lib.getExe config.my.home.ai.harness.hooks.fenceAudit.package;
+                timeout = 10;
+              })
+            ; }
           ];
         };
       };

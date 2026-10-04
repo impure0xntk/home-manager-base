@@ -48,9 +48,17 @@ in
     with lib;
     with lib.types;
     mkOption {
-      description = ''Plugins'';
+      description = ''
+        Agent plugin file sets, keyed by plugin name. Each value maps a
+        plugin-relative file name to its JSON or TOML content, and every
+        agent module contributes its own entry here.
+
+        Empty by default: the modules that define plugins set what they need,
+        so a machine enabling the harness without any agent gets no plugin
+        tree rather than a reference to a set this module never builds.
+      '';
       type = attrs;
-      default = defaultPlugins;
+      default = { };
     };
 
   config = lib.mkIf cfg.harness.enable {

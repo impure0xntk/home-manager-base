@@ -66,6 +66,36 @@
       };
     };
 
+    fenceAudit = {
+      package = lib.mkOption {
+        type = lib.types.package;
+        readOnly = true;
+        default = pkgs.writeShellApplication {
+          name = "fence-audit";
+          text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./hooks/fence-audit.sh);
+          runtimeInputs = [
+            pkgs.jq
+            pkgs.coreutils
+            pkgs.fence
+          ];
+        };
+        defaultText = lib.literalExpression ''pkgs.writeShellApplication { name = "fence-audit"; ... }'';
+        description = ''
+          PreToolUse hook asks fence the same command question its
+          sandbox profile already answers at runtime, so an agent that
+          never enters a fence session still meets the command deny
+          list. The command is normalised first: fence matches a rule
+          as a literal prefix, so `rtk`, `rtk proxy`, `RTK_DISABLED=1`,
+          `env`, `command` and `exec` are peeled off or the harness
+          becomes a bypass of the policy it enforces.
+
+          Deny answers carry fence's own reason. A fence that cannot be
+          run, or whose settings do not load, is answered allow: this
+          hook must not become the reason a session stalls.
+        '';
+      };
+    };
+
     translatePrompt = {
       package = lib.mkOption {
         type = lib.types.package;
