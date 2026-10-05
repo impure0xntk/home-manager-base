@@ -16,6 +16,7 @@ let
     patches = (old.patches or [ ]) ++ [
       ../patches/jcode/ui-toggles.patch
       ../patches/jcode/model-override.patch
+      ../patches/jcode/system-prompt.patch
     ];
   });
 

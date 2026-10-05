@@ -1,0 +1,9 @@
+diff --git a/crates/jcode-base/src/prompt/system_prompt.md b/crates/jcode-base/src/prompt/system_prompt.md
+--- a/crates/jcode-base/src/prompt/system_prompt.md
++++ b/crates/jcode-base/src/prompt/system_prompt.md
+@@ -17,5 +17,4 @@ Hesitate for destructive or non-reversible actions. Examples: Completing a payme
+ ## Coding
+ 
+-Commit as you go.
+ Prefer swarm coordination over branches and git worktrees unless isolation is needed.
+ You can't interact with interactive commands. Use non-interactive instead.
