@@ -73,9 +73,13 @@ let
 
       theme = {
         mode = "dark";
-        # dark = "GitHub Dark Dimmed";
         light = "One Light";
-        dark = "One Dark";
+        dark = "GitHub Dark Dimmed";
+      };
+      icon_theme = {
+        mode = "dark";
+        light = "VSCode Icons for Zed (Light Official Icons)";
+        dark = "VSCode Icons for Zed (Dark Official Icons)";
       };
     };
 
