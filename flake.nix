@@ -12,6 +12,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vscode-server.url = "github:nix-community/nixos-vscode-server";
+    zed-extensions = {
+      url = "github:SwornSystems/nix-zed-extensions";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
@@ -47,6 +51,7 @@
       flake-utils,
       home-manager,
       nix4vscode,
+      zed-extensions,
       vscode-server,
       llm-agents,
       sops-nix,
@@ -69,6 +74,7 @@
         imports = [
           vscode-server.homeModules.default
           sops-nix.homeManagerModules.sops
+          zed-extensions.homeManagerModules.default
         ] ++ (lib.flatten (
           lib.forEach [ ./modules ] (path: lib.my.listDefaultNixDirs { inherit path; })
         ));
@@ -81,6 +87,7 @@
       overlays = [
         nix-pkgs.overlays.${system}
         nix4vscode.overlays.forVscode
+        zed-extensions.overlays.default
         # Add 3rd-party packages as overlays because no overlays are provided.
         (final: prev: llm-agents.packages.${system})
       ];

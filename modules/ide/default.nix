@@ -10,5 +10,6 @@
     ./vscode-remote
     ./vscode-wsl
     ./jetbrains-remote
+    ./zed
   ];
 }
