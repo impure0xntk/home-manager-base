@@ -253,7 +253,7 @@ index e240d8c..d8b3eec 100755
       fi
 
       # Boot tmux
-      if test -z "$VSCODE_IPC_HOOK_CLI"; then
+      if [[ -t 0 && -t 1 && -t 2 && -z "$VSCODE_IPC_HOOK_CLI" ]]; then
         \${pkgs.tmux}/bin/tmux new
         EXITSTATUS=$?
         echo -e $NC
