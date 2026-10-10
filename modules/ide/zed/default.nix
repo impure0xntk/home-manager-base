@@ -62,6 +62,7 @@ let
       diagnostics.inline.enabled = true;
       soft_wrap = "none";
       format_on_save = "modifications";
+      show_completions_on_input = true;
 
       active_pane_modifiers = {
         border_size = 1.0;
@@ -104,6 +105,8 @@ let
 
       proxy = lib.optionalString config.my.home.networks.proxy.enable
         config.my.home.networks.proxy.default;
+
+      agent.enabled = false;
     };
 
   # Default keymaps
@@ -123,6 +126,15 @@ let
           value = x.command;
         }) attrs
       ));
+
+    editorPaneKeys = command:
+      lib.genList
+        (i: {
+          key = "ctrl-${toString (i + 1)}";
+          # command = [ "workspace::FocusCenterPane" i ];
+          command = [ "${command}" i ];
+        })
+        9;
   in
   [
     (sameContext "Editor || Terminal" [
@@ -184,6 +196,10 @@ let
         command = "menu::SelectPrevious";
       }
     ])
+    (group "Terminal" {
+      "ctrl-n" = [ "terminal::SendKeystroke" "ctrl-n" ];
+      "ctrl-p" = [ "terminal::SendKeystroke" "ctrl-p" ];
+    })
 
     (sameContext "BufferSearchBar" [
       {
@@ -191,6 +207,32 @@ let
         command = "search::ToggleReplace";
       }
     ])
+
+    (sameContext "ProjectPanel || GitPanel || OutlinePanel" [
+      {
+        key = "ctrl-b";
+        command = "workspace::ToggleRightDock";
+      }
+    ])
+
+    (group "Editor" {
+      "ctrl-:" = "editor::Hover";
+    })
+
+    # Incremental selection
+    (sameContext "Editor && VimControl && !VimWaiting && !menu" [
+      {
+        key = "enter";
+        command = "editor::SelectLargerSyntaxNode";
+      }
+      {
+        key = "shift-enter";
+        command = "editor::SelectSmallerSyntaxNode";
+      }
+    ])
+  ] ++ [
+    (sameContext "Workspace" (editorPaneKeys "workspace::ActivatePane"))
+    (sameContext "Terminal || ProjectPanel || GitPanel || OutlinePanel" (editorPaneKeys "workspace::FocusCenterPane"))
   ];
 
   defaultExtensions = with pkgs.zed-extensions; [
