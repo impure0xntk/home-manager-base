@@ -52,7 +52,7 @@ let
       chmod +w ${target} || true
       cp ${first} ${target}
     fi
-    ! test -w && chmod +w ${target}
+    ! test -w && chmod a+w ${target}
   '';
 
   mergeObjectJsonScriptSnip =
@@ -124,9 +124,9 @@ in
 
     # Zed manages its own extensions in only Windows, so we need to copy them
     home.activation."zed-copy-extensions" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      rm -rf ${cfg.windowsDataDir}/extensions/installed || true
       mkdir -p ${cfg.windowsDataDir}/extensions
-      rm -rf ${config.xdg.dataHome}/zed/extensions/installed
-      cp -rLf ${config.xdg.dataHome}/zed/extensions/installed ${cfg.windowsDataDir}/ || true
+      cp -rLf ${config.xdg.dataHome}/zed/extensions/installed ${cfg.windowsDataDir}/extensions/ || true
     '';
   };
 }

@@ -48,12 +48,18 @@ let
 
       # Editor behavior
       auto_indent = "syntax_aware";
+      indent_guides = {
+        enabled = true;
+        coloring = "indent_aware";
+        background_coloring = "indent_aware";
+      };
       colorize_brackets = true;
       linked_edits = true;
       use_auto_surround = true;
       inlay_hints = {
         enabled = true;
       };
+      diagnostics.inline.enabled = true;
       soft_wrap = "none";
       format_on_save = "modifications";
 
@@ -81,6 +87,23 @@ let
         light = "VSCode Icons for Zed (Light Official Icons)";
         dark = "VSCode Icons for Zed (Dark Official Icons)";
       };
+
+      semantic_tokens = "combined";
+      lsp = {
+        typos.binary.path = lib.getExe pkgs.unstable.typos-lsp;
+        harper-ls.binary.path = lib.getExe pkgs.unstable.harper;
+        tombi.binary = {
+          path = lib.getExe pkgs.unstable.tombi;
+          arguments = [ "lsp" ];
+        };
+        codebook.binary = {
+          path = lib.getExe pkgs.unstable.codebook;
+          arguments = [ "serve" ];
+        };
+      };
+
+      proxy = lib.optionalString config.my.home.networks.proxy.enable
+        config.my.home.networks.proxy.default;
     };
 
   # Default keymaps
@@ -172,9 +195,15 @@ let
 
   defaultExtensions = with pkgs.zed-extensions; [
     github-theme
-    git-firefly
     vscode-icons
+
+    git-firefly
     log
+    todo-highlight-language-server
+
+    typos harper codebook
+    xml
+    toml tombi
   ];
 
   mergedSettings = defaultSettings // cfg.userSettings;
@@ -185,7 +214,7 @@ in
   options.my.home.ide.zed = {
     enable = lib.mkEnableOption "Zed editor";
 
-    package = lib.mkPackageOption pkgs "zed" { };
+    package = lib.mkPackageOption pkgs.unstable "zed-editor" { };
 
     # Main settings - flexible attrset like upstream
     userSettings = lib.mkOption {

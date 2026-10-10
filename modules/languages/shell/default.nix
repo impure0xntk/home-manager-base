@@ -53,6 +53,26 @@ in
         };
       };
     };
+    programs.zed-editor = {
+      extraPackages = with pkgs.unstable; [
+        shellcheck # is depended by bash-language-server
+      ];
+      userSettings = {
+        lsp = {
+          bash-language-server = {
+            binary = {
+              path = lib.getExe pkgs.unstable.bash-language-server;
+              arguments = [ "start" ];
+            };
+          };
+        };
+        languages."Shell Script" = {
+          formatter.external = {
+            command = lib.getExe pkgs.unstable.shfmt;
+          };
+        };
+      };
+    };
   };
 
 }

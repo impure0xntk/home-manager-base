@@ -201,5 +201,32 @@ in {
         ];
       };
     };
+    programs.zed-editor = {
+      userSettings = {
+        lsp.jdtls = {
+          binary.path = lib.getExe pkgs.unstable.jdt-language-server;
+          settings = {
+            java_home = "${pkgs.jdk}";
+            vmargs = lib.concatStringsSep " " tunedJavaArgs;
+            "initialization_options" = {
+              telemetry = false;
+              diagnostic.nullAnalysis = {
+                mode = "automatic";
+                nonnull = [ "jakarta.annotation.Nonnull" "org.jspecify.annotations.NonNull" ];
+                nullable = [ "jakarta.annotation.Nullable" "org.jspecify.annotations.Nullable" ];
+                nonnullbydefault = [ "org.jspecify.annotations.NullMarked" ];
+              };
+              format.onType.enabled = false;
+              inlayHints.parameterNames.enabled = "all";
+            };
+          };
+        };
+      };
+    };
+    programs.zed-editor-extensions = {
+      packages = with pkgs.zed-extensions; [
+        java
+      ];
+    };
   };
 }

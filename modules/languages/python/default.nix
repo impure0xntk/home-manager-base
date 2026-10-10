@@ -9,6 +9,23 @@ with lib;
 
 let
   cfg = config.my.home.languages.python;
+
+  ruffConfiguration = fromTOML (builtins.readFile ./ruff.toml)
+    // {
+      lint.enable = true;
+      organizeImports = true;
+      fixAll = true;
+      codeAction = {
+        fixViolation = {
+          enable = true;
+          _flattenIgnore = true;
+        };
+        disableRuleComment = {
+          enable = true;
+          _flattenIgnore = true;
+        };
+      };
+    };
 in
 {
   options.my.home.languages.python = {
@@ -75,24 +92,49 @@ in
           ruff = {
             enable = true;
             nativeServer = "on";
-            path = [ (lib.getExe pkgs.ruff) ];
-            configuration = ./ruff.toml;
-
-            lint.enable = true;
-            organizeImports = true;
-            fixAll = true;
-            codeAction = {
-              fixViolation = {
-                enable = true;
-                _flattenIgnore = true;
-              };
-              disableRuleComment = {
-                enable = true;
-                _flattenIgnore = true;
+            path = [ (lib.getExe pkgs.unstable.ruff) ];
+            configuration = ruffConfiguration;
+          };
+        });
+    };
+    programs.zed-editor = {
+      userSettings = {
+        languages = {
+          Python = {
+            language_servers = [
+              "ty"
+              "ruff"
+              "!basedpyright"
+            ];
+          };
+        };
+        lsp = {
+          ty = {
+            binary = {
+              path = lib.getExe pkgs.unstable.ty;
+              arguments = [ "server" ];
+            };
+          };
+          ruff = {
+            binary = {
+              path = lib.getExe pkgs.unstable.ruff;
+              arguments = [ "server" ];
+            };
+            "initialization_options" = {
+              settings = {
+                configuration = ruffConfiguration;
               };
             };
           };
-        });
+        };
+      };
+    };
+    programs.zed-editor-extensions = {
+      packages = with pkgs.zed-extensions; [
+        # ruff is supported by default
+        ty
+        python-autodoc-lsp
+      ];
     };
   };
 }

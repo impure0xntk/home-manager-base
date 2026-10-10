@@ -68,6 +68,35 @@ in
         };
       };
     };
+    programs.zed-editor = {
+      userSettings = {
+        lsp = {
+          rumdl = {
+            binary = {
+              path = lib.getExe pkgs.unstable.rumdl;
+              arguments = [ "server" ];
+            };
+            settings = {
+              enableAutoFix = true;
+            };
+          };
+          marksman.binary.path = lib.getExe pkgs.unstable.marksman;
+          # mpls.binary.path = lib.getExe pkgs.unstable.mpls;
+          panache-language-server.binary = {
+            path = lib.getExe pkgs.unstable.panache;
+            arguments = [ "lsp" ];
+          };
+        };
+      };
+    };
+    programs.zed-editor-extensions = {
+      packages = with pkgs.zed-extensions; [
+        rumdl
+        marksman
+        # mpls
+        panache-language-server
+      ];
+    };
   };
 
 }

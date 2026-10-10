@@ -107,5 +107,22 @@ in
         };
       };
     };
+    programs.zed-editor = {
+      userSettings = {
+        languages.Nix.language_servers = [
+          "nixd"
+          "!nil"
+        ];
+        lsp.nixd = {
+          binary.path = lib.getExe pkgs.unstable.nixd;
+          settings = serverSettings."nixd";
+        };
+      };
+    };
+    programs.zed-editor-extensions = {
+      packages = with pkgs.zed-extensions; [
+        nix
+      ];
+    };
   };
 }
