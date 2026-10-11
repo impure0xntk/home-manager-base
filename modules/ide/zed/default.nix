@@ -101,6 +101,7 @@ let
           path = lib.getExe pkgs.unstable.codebook;
           arguments = [ "serve" ];
         };
+        codespell-lsp.settings.codespell.path = lib.getExe pkgs.unstable.codespell;
 
         lemminx.binary.path = lib.getExe pkgs.unstable.lemminx;
       };
@@ -245,7 +246,7 @@ let
     log
     todo-highlight-language-server
 
-    typos harper codebook
+    typos harper codebook pkgs.my.zed-extension-codespell-language-server
     xml
     toml tombi
 
