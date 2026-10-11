@@ -180,8 +180,7 @@ let
         };
       };
 
-      default = {
-        default = true;
+      fence = { # fence.json is the `fence` command default settings
         settings = {
           extends = "code-strict";
           command = {
@@ -229,17 +228,17 @@ let
   }
   // settingsForNetwork;
 
+  mergedProfiles = lib.my.deepMerge defaultProfiles cfg.harness.sandbox.profiles;
+
   finalProfiles = lib.mapAttrs' (name: entry: {
     inherit name;
     value = lib.my.deepMerge entry { settings = settingsForNixEnv; };
-  }) cfg.harness.sandbox.profiles;
+  }) mergedProfiles;
 
   profileAliases = lib.mapAttrs' (name: _: {
     name = "fence-${name}";
     value = "fence --settings ${config.xdg.configHome}/fence/${name}.json";
-  }) cfg.harness.sandbox.profiles;
-
-  defaultProfileNames = lib.attrNames (lib.filterAttrs (_name: entry: entry.default) finalProfiles);
+  }) (lib.filterAttrs (name: _: name != "fence") finalProfiles);
 in
 {
   options.my.home.ai.harness.sandbox = with lib; with lib.types; {
@@ -263,15 +262,9 @@ in
               be started without typing the path.
             '';
           };
-          default = mkEnableOption ''
-            Whether to use this profile as the default profile of the AI
-            harness sandbox. Its settings become `fence/fence.json`, the config
-            Fence loads when it finds no project-local config. At most one
-            profile may set this.
-          '';
         };
       });
-      default = defaultProfiles;
+      default = {};
       description = ''
         Fence sandbox profiles. Each profile is written to
         `fence/<name>.json`, and the single profile with `default = true` is
@@ -297,16 +290,9 @@ in
         name = "fence/${name}.json";
         value.text = builtins.toJSON entry.settings + "\n";
       }) finalProfiles)
-      (lib.optionalAttrs (defaultProfileNames != [ ]) {
-        "fence/fence.json".text = builtins.toJSON finalProfiles.${lib.head defaultProfileNames}.settings + "\n";
-      })
     ];
 
     assertions = [
-      {
-        assertion = builtins.length defaultProfileNames <= 1;
-        message = "my.home.ai.harness.sandbox.profiles: at most one profile may set default = true, but found: ${lib.concatStringsSep ", " defaultProfileNames}";
-      }
       {
         assertion = localProvidersWithoutPort == [ ];
         message = "my.home.ai.providers: a loopback provider URL needs an explicit port, or a scheme to default the port from, for Fence to bridge it: ${lib.concatStringsSep ", " localProvidersWithoutPort}";
