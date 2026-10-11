@@ -246,6 +246,8 @@ let
     log
     todo-highlight-language-server
 
+    wakatime
+
     typos harper codebook pkgs.my.zed-extension-codespell-language-server
     xml
     toml tombi
