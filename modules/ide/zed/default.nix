@@ -101,6 +101,8 @@ let
           path = lib.getExe pkgs.unstable.codebook;
           arguments = [ "serve" ];
         };
+
+        lemminx.binary.path = lib.getExe pkgs.unstable.lemminx;
       };
 
       proxy = lib.optionalString config.my.home.networks.proxy.enable
@@ -246,6 +248,8 @@ let
     typos harper codebook
     xml
     toml tombi
+
+    pkgs.my.zed-extension-xml-language-server
   ];
 
   mergedSettings = defaultSettings // cfg.userSettings;
