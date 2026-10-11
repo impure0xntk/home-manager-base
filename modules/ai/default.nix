@@ -238,6 +238,17 @@ in
           };
         };
     };
+    programs.zed-editor.userSettings = {
+      edit_predictions = let modelInfo = searchModelByRole "autocomplete"; in rec {
+        provider = modelInfo.provider;
+        ${provider} = rec {
+          api_url = modelInfo.url;
+          model = modelInfo.model;
+          prompt_format = if lib.hasInfix "qwen" model then "qwen" else "infer";
+          max_output_tokens = 128;
+        };
+      };
+    };
 
     home.file = lib.optionalAttrs useContinueDev {
       ".continue/config.yaml".source = lib.my.toYaml {
