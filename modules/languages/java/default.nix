@@ -228,5 +228,32 @@ in {
         java
       ];
     };
+    my.home.ai.harness.sandbox.profiles =
+    let
+      excludes = [
+        "target"
+        ".mvn"
+        ".gradle"
+        "~/.m2"
+      ];
+      includes = [
+        "~/.m2/settings.xml" # includes tokens
+      ];
+      filesystem = {
+        allowRead = excludes;
+        allowWrite = excludes;
+        allowExecute = excludes;
+        denyRead = includes;
+        denyWrite = includes;
+        denyExecute = includes;
+      };
+    in {
+      fence.settings = {
+        inherit filesystem;
+      };
+      yolo.settings = {
+        inherit filesystem;
+      };
+    };
   };
 }
