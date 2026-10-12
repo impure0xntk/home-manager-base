@@ -204,11 +204,14 @@ in {
     programs.zed-editor = {
       userSettings = {
         lsp.jdtls = {
-          binary.path = lib.getExe pkgs.unstable.jdt-language-server;
+          binary = {
+            path = lib.getExe pkgs.unstable.jdt-language-server;
+            args = [
+              "-Djdt.core.sharedIndexLocation=${config.xdg.cacheHome + "/.jdt/index"}"
+            ] ++ tunedJavaArgs;
+          };
           settings = {
-            java_home = "${pkgs.jdk}";
-            vmargs = lib.concatStringsSep " " tunedJavaArgs;
-            "initialization_options" = {
+            initialization_options = {
               telemetry = false;
               diagnostic.nullAnalysis = {
                 mode = "automatic";
