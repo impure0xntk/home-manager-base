@@ -1,7 +1,9 @@
 diff --git a/crates/jcode-tui/src/tui/backend.rs b/crates/jcode-tui/src/tui/backend.rs
 --- a/crates/jcode-tui/src/tui/backend.rs
 +++ b/crates/jcode-tui/src/tui/backend.rs
-@@ -378,2 +378,27 @@ impl RemoteConnection {
+@@ -376,6 +376,31 @@
+         let subscribe_ms = subscribe_start.elapsed().as_millis();
+         conn.next_request_id += 1;
  
 +        // `jcode --model X` describes the session this process opens, and the flag
 +        // is consumed here rather than by the daemon: a daemon that already ran
@@ -29,10 +31,14 @@ diff --git a/crates/jcode-tui/src/tui/backend.rs b/crates/jcode-tui/src/tui/back
 +        }
 +
          // If resuming a session, the target-aware Subscribe attaches directly to
+         // that session and returns History, so avoid a second bootstrap request.
+         let bootstrap_request_start = Instant::now();
 diff --git a/src/cli/dispatch.rs b/src/cli/dispatch.rs
 --- a/src/cli/dispatch.rs
 +++ b/src/cli/dispatch.rs
-@@ -914,2 +914,20 @@ async fn run_default_command(args: Args) -> Result<()> {
+@@ -945,6 +945,24 @@
+     let explicit_provider_or_model = args.provider != ProviderChoice::Auto
+         || args.model.is_some()
          || args.provider_profile.is_some();
 +    // `--model` is a per-session setting, and this process owns the session it is
 +    // about to create, whether or not a daemon is already running. The client
@@ -53,7 +59,11 @@ diff --git a/src/cli/dispatch.rs b/src/cli/dispatch.rs
 +        crate::env::set_var("JCODE_CLIENT_MODEL_OVERRIDE", model);
 +    }
      let explicit_tool_options = args.tool_profile.is_some()
-@@ -1019,13 +1037,14 @@ async fn run_default_command(args: Args) -> Result<()> {
+         || args.tools.is_some()
+         || args.disabled_tools.is_some()
+@@ -1050,17 +1068,18 @@
+     }
+ 
      if server_running && explicit_provider_or_model {
 -        output::stderr_info(
 -            "Server already running; provider/model flags only apply when starting a new server.",
@@ -79,3 +89,5 @@ diff --git a/src/cli/dispatch.rs b/src/cli/dispatch.rs
 +            );
 +        }
      }
+ 
+     if server_running && explicit_tool_options {

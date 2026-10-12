@@ -10,6 +10,7 @@ jcodePkg = pkgs.jcode.overrideAttrs (old: {
     ++ [
       ../patches/jcode/ui-toggles.patch
       ../patches/jcode/model-override.patch
+      ../patches/jcode/system-prompt.patch
     ];
 });
 ```
@@ -28,14 +29,27 @@ GitHub tarball of a release tag, not `master`:
 
 | | |
 | --- | --- |
-| jcode version | `0.88.0` |
-| tag | `v0.88.0` |
-| tag object | `9a9c7e0438b03fc56b2e404a6556c80a8ca239fb` (annotated) |
-| tag commit | `ee4cd3db3311ce2e95ef9b82e9f125d56516dad3` |
-| `src.hash` | `sha256-KZhB4Yn2STIaxnWOUVjLeUVirR0Fqek+uNLJhQa040g=` |
-| `cargoHash` | `sha256-7sF46SnipH9yuvOf5PXPqm3i3MlpcuOFpu11L9WbF0g=` |
+| jcode version | `0.95.0` |
+| tag | `v0.95.0` |
+| tag object | `a74c00fb0a7aaf02a9896025d9b4c19ffff9657e` (annotated) |
+| tag commit | `6487bbd7e9a45e6f91822292d6128854d5a6c5c6` |
+| `src.hash` | `sha256-LboCn0ctUEVpO/wKoOhyZAMN8cSNh+TGAncdboVbzi4=` |
+| `cargoHash` | `sha256-SwPyYeYcm3gJEk6cp65M8xdDZQxOGsky0HfvFR0zet4=` |
 | package source | `numtide/llm-agents.nix`, `packages/jcode/package.nix` |
-| `llm-agents` pin | `efb10f28f7242f0330eb06436a672473dc91a2a9` |
+| `llm-agents` pin | `493c34b1bed086861b0e968a40d00bd06522f003` |
+
+### Drift worth knowing at 0.95.0
+
+Both call sites that moved read very close to what they were, which is why the
+0.88.0 hunks *applied* here and were still wrong:
+
+- `App::onboarding_welcome_active` gained an `onboarding_flow_drives_welcome()`
+  early return ahead of the old insertion point. The gate sits above it now,
+  because a running flow keeps the welcome screen up on its own.
+- `initial_header_pad_top` changed its input reserve from `4` to `5` lines. The
+  empty-header guard keys on `header_lines`, not on the flag, so it needs no
+  update -- but the hunk fails on context when regenerated, and either ignoring
+  or fuzzing that failure lands the guard nowhere.
 
 Re-derive the pin after a `nix flake update`:
 
@@ -54,7 +68,7 @@ working tree, which fails outright on an untracked socket like `.codegraph/`.
 `version`, `src.hash` and `cargoHash` are written down, and a version bump
 there is what invalidates this directory.
 
-If that `version` is no longer `0.88.0`, treat this directory as stale and
+If that `version` is no longer `0.95.0`, treat this directory as stale and
 follow [Upgrading](#upgrading) before anything else. A patch that still applies
 is not necessarily a patch that still means what its comment says.
 
@@ -84,7 +98,7 @@ Rules every patch here follows, and the reason each one exists:
 
 ## `ui-toggles.patch`
 
-TUI chrome this machine does not want, which upstream 0.88.0 hard-wires. Four
+TUI chrome this machine does not want, which upstream 0.95.0 hard-wires. Four
 keys are added, each defaulting to `true`, and `jcode.nix` sets all four to
 `false`:
 
@@ -189,7 +203,7 @@ package.
 ```bash
 # 1. Apply for real, to the tree this claims to target.
 PATCHES=.../modules/ai/patches/jcode            # this directory
-git clone --depth 1 --branch v0.88.0 https://github.com/1jehuang/jcode.git /tmp/jcode
+git clone --depth 1 --branch v0.95.0 https://github.com/1jehuang/jcode.git /tmp/jcode
 cd /tmp/jcode
 for p in "$PATCHES"/*.patch; do patch -p1 --forward < "$p"; done
 

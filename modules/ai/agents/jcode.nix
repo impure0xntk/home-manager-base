@@ -206,19 +206,24 @@ let
         tools = toolsSettings;
         features.check_updates = false;
         display.auto_server_reload = false;
-        memory.embeddings = false; # Use harness instead.
 
         display.show_thinking = true;
         display.reasoning_display = "current";
 
         features.swarm = true;
 
-        autoreview = {
+        # `reviewModel` is the whole model record (`provider` / `url` / `model`
+        # / `roles`). `[autoreview].model` is `Option<String>`, so emitting the
+        # record makes TOML type-check the table as a map and fail -- and one
+        # bad key rejects the whole `config.toml`, which silently falls jcode
+        # back to built-in defaults. Hence `.model`, as every other agent module
+        # does with `searchModelByRole`.
+        autoreview = lib.optionalAttrs (reviewModel != null) {
           enabled = true;
-          model = reviewModel;
+          model = reviewModel.model;
         };
 
-        # Chrome this machine's TUI does not want. jcode 0.88.0 hard-wires all
+        # Chrome this machine's TUI does not want. jcode 0.95.0 hard-wires all
         # three; the patch adds the keys behind the upstream defaults, so this is
         # the only place that has to be revisited on a version bump.
         #   features.onboarding          - the telemetry notice plus the guided
@@ -284,7 +289,7 @@ in
               jcode ships. This is an allow-list over the whole tool surface,
               MCP tools included, so an entry here that names an MCP tool keeps
               it and a missing one drops it. The default is the full inventory
-              jcode 0.88.0 advertises, so declaring it pins the surface rather
+              jcode 0.95.0 advertises, so declaring it pins the surface rather
               than narrowing it. Set to `[ ]` to expose MCP tools only.
             '';
             example = lib.literalExpression ''[ "read" "write" "bash" "mcp" ]'';
