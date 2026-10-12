@@ -11,6 +11,7 @@ let
   harness = config.my.home.ai.harness;
 
   chatModel = searchModelByRole "chat";
+  reviewModel = searchModelByRole "review";
 
   jcodePkg = pkgs.jcode.overrideAttrs (old: {
     patches = (old.patches or [ ]) ++ [
@@ -211,6 +212,11 @@ let
         display.reasoning_display = "current";
 
         features.swarm = true;
+
+        autoreview = {
+          enabled = true;
+          model = reviewModel;
+        };
 
         # Chrome this machine's TUI does not want. jcode 0.88.0 hard-wires all
         # three; the patch adds the keys behind the upstream defaults, so this is

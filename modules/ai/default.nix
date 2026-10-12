@@ -85,7 +85,7 @@ in
                     type = listOf (enum [
                       "chat"
                       "edit"
-                      "apply"
+                      "review"
                       "autocomplete"
                       "embed"
                       "rerank"
