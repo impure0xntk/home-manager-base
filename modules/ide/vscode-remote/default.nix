@@ -34,7 +34,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && config.programs.vscode.enable) {
     # Tips:
     # * If use Remote-SSH between Windows and WSL, recommend to enable
     #   "localhostForwarding=True" on %HOMEPATH%/.wslconfig

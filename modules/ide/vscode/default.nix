@@ -88,6 +88,8 @@ let
 in
 {
   options.my.home.ide.vscode = {
+    enable = lib.mkEnableOption "VS Code editor";
+
     package = lib.mkPackageOption pkgs "vscode" { };
     configDir = lib.mkOption {
       type = lib.types.path;
@@ -106,7 +108,7 @@ in
     };
   };
 
-  config = {
+  config = lib.mkIf config.my.home.ide.vscode.enable {
     programs.bash.shellAliases = shellAliases;
     home.packages = [ extensionInstallScript ];
 

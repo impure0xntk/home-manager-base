@@ -24,8 +24,8 @@ let
   configFilePath =
     name: basePath:
     "${basePath}/${lib.optionalString (name != "default") "profiles/${name}/"}settings.json";
-  # The following configs are not loaded by VS Code remote automatically.
-  # Copy them to each workspace manually.
+  # configs not loaded VS Code remote automatically.
+  # Copy them each workspace manually.
   tasksFilePath =
     name: basePath:
     "${basePath}/${lib.optionalString (name != "default") "profiles/${name}/"}tasks.json";
@@ -34,8 +34,6 @@ let
     "${basePath}/${lib.optionalString (name != "default") "profiles/${name}/"}keybindings.json";
   snippetDir =
     name: basePath: "${basePath}/${lib.optionalString (name != "default") "profiles/${name}/"}snippets";
-
-  allProfilesExceptDefault = removeAttrs config.programs.vscode.profiles [ "default" ];
 
   genUserSettingsForWsl = profile:
     (builtins.removeAttrs profile.userSettings cfg.excludeSettings)
@@ -101,7 +99,7 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && config.my.home.platform.settings.wsl.isDefaultUser) {
+  config = lib.mkIf (cfg.enable && config.my.home.platform.settings.wsl.isDefaultUser && config.programs.vscode.enable) {
     assertions = [
       {
         assertion = config.my.home.platform.type == "wsl";
@@ -153,6 +151,9 @@ in
 
     # To sync profiles
     home.activation.vscodeProfiles = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+      let
+        allProfilesExceptDefault = removeAttrs config.programs.vscode.profiles [ "default" ];
+      in
       let
         modifyGlobalStorage = pkgs.writeShellScript "vscode-global-storage-modify" ''
           PATH=${lib.makeBinPath [ pkgs.jq ]}''${PATH:+:}$PATH
