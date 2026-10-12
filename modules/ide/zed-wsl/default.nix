@@ -124,7 +124,7 @@ in
 
     # Zed manages its own extensions in only Windows, so we need to copy them
     home.activation."zed-copy-extensions" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      rm -rf ${cfg.windowsDataDir}/extensions/installed || true
+      rm -rf ${cfg.windowsDataDir}/extensions/installed 2>&1 >/dev/null || true
       mkdir -p ${cfg.windowsDataDir}/extensions
       cp -rLf ${config.xdg.dataHome}/zed/extensions/installed ${cfg.windowsDataDir}/extensions/ || true
     '';
