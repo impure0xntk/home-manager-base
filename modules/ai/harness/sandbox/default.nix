@@ -162,6 +162,10 @@ let
         "pacman"
         "pkexec"
 
+        # additional
+        "ssh"
+        "fence config init"
+
         # nix
         "switch-to-configuration"
         "nixos-rebuild switch"
