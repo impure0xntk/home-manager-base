@@ -99,7 +99,7 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && config.my.home.platform.settings.wsl.isDefaultUser && config.programs.vscode.enable) {
+  config = lib.mkIf (cfg.enable && config.my.home.platform.settings.wsl.isDefaultUser && config.my.home.ide.vscode.enable) {
     assertions = [
       {
         assertion = config.my.home.platform.type == "wsl";
