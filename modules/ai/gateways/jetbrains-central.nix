@@ -80,7 +80,7 @@ in
     home.packages = [ pkgs.my.jetbrains-central-cli ];
 
     # `central proxy start` forks the proxy into the background and exits, so
-    # systemd never sees the long-running process. oneshot + RemainAfterExit
+    # systemd never sees the long-running process. simple + RemainAfterExit
     # models that shape: the start command returns immediately while the proxy
     # it spawned keeps serving.
     systemd.user.services.jetbrains-central-gateway = {
@@ -92,7 +92,7 @@ in
       };
 
       Service = {
-        Type = "oneshot";
+        Type = "simple";
         RemainAfterExit = true;
 
         Environment = [
