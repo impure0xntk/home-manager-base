@@ -69,7 +69,7 @@
         inherit system;
       };
       lib = nix-lib.lib.${system};
-      
+
       createModules = args: {...}: args // {
         imports = [
           vscode-server.homeModules.default
@@ -90,6 +90,11 @@
         zed-extensions.overlays.default
         # Add 3rd-party packages as overlays because no overlays are provided.
         (final: prev: llm-agents.packages.${system})
+
+        (import "${(pkgs.fetchzip {
+          url = "https://github.com/gi-dellav/zerostack/archive/refs/tags/v1.8.5.tar.gz";
+          hash = "sha256-i6J+7OxXa3tD0Yq/yfHmMPf5kMn51tWvaXYzgRj6YS8=";
+          })}/nix/overlay")
       ];
     in
     {
