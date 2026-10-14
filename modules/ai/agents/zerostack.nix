@@ -89,7 +89,7 @@ let
         show_reasoning = false;
         show_tool_details = false; # Default: 3
         deny_repeated_reads = true;
-        mouse_capture = false; # Use terminal emulator. Default: true.
+        # mouse_capture = false; # Use terminal emulator. Default: true.
         "auto-update-prompts" = false;
         "auto-update-themes" = false;
         "enable-exa-mcp" = false;
