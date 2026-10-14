@@ -140,7 +140,7 @@ let
         9;
   in
   [
-    (sameContext "Editor || Terminal" [
+    (sameContext "Editor" [
       {
         key = "ctrl-w h";
         command = "workspace::ActivatePaneLeft";
