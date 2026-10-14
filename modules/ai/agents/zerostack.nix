@@ -131,17 +131,18 @@ let
       }
     ) cfg.zerostack.extraSettings;
 
+  # Zerostack calls SessionStart hooks synchronously and therefore waits them on startup.
   sessionStartHooks = lib.optionals harness.enable [
-    {
-      type = "command";
-      command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet";
-      timeout = 60;
-    }
-    {
-      type = "command";
-      command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${harness.codingAgentTools.zg.package}/bin/zg index";
-      timeout = 60;
-    }
+  #   {
+  #     type = "command";
+  #     command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet";
+  #     timeout = 60;
+  #   }
+  #   {
+  #     type = "command";
+  #     command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${harness.codingAgentTools.zg.package}/bin/zg index";
+  #     timeout = 60;
+  #   }
   ];
 
   preToolHooks =
@@ -181,7 +182,7 @@ let
     # Ignore old.cargoBuildFeatures that includes "acp" "memory" etc: https://github.com/gi-dellav/zerostack/blob/3eda478ac8ef8205bc016e8e4d9f0b930c93f885/nix/package/zerostack.nix#L32
     cargoBuildFeatures = lib.unique (
       ["mcp" "subagents" "status-signals" "logging"]
-      ++ [ "multithread" "hooks" "advisor" "rtk"]
+      ++ [ "multithread" "hooks" "advisor" "rtk" ]
     );
   });
 
