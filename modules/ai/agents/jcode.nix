@@ -19,6 +19,8 @@ let
       ../patches/jcode/model-override.patch
       ../patches/jcode/system-prompt.patch
     ];
+    # By default, enable "pdf" and "bedrock": https://github.com/1jehuang/jcode/blob/master/Cargo.toml
+    cargoBuildFeatures = lib.unique [];
   });
 
   jcode = pkgs.writeShellApplication {
