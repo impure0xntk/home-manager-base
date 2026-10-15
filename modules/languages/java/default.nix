@@ -211,6 +211,10 @@ in {
             ] ++ tunedJavaArgs;
           };
           settings = {
+            java_home = pkgs.jdk;
+            lombok_support = true;
+            jdk_auto_download = false;
+
             initialization_options = {
               telemetry = false;
               diagnostic.nullAnalysis = {
