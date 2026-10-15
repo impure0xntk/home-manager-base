@@ -243,10 +243,38 @@ in
         "zerostack/settings.json".source = pkgs.writeText "zerostack-settings.json" (builtins.toJSON hookSettings);
       })
     ];
-
     home.activation.installZerostackConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       rm -f "${config.xdg.configHome}/zerostack/config.toml"
       install -m 644 -D "${config.xdg.configHome}/zerostack/config.toml.orig" "${config.xdg.configHome}/zerostack/config.toml"
     '';
+
+
+    # ctx integration config
+    xdg.dataFile."ctx/plugins/zerostack".source = lib.optionalString cfg.harness.enable ../harness/tools/ctx/plugins/zerostack;
+
+    systemd.user = lib.optionalAttrs cfg.harness.enable {
+      services.zerostack-ctx-history-generator = let
+        ctxBin = lib.getExe config.my.home.ai.harness.codingAgentTools.ctx.package;
+      in {
+        Unit.Description = "Generate CTX history for ZeroStack at regular intervals";
+        Service = {
+          Type = "simple";
+          ExecStartPre = "${pkgs.python3}/bin/python ${../harness/tools/ctx/plugins/zerostack/zerostack-ctx-export}";
+          ExecStart = "${ctxBin} import --history-source zerostack/default";
+          TimeoutStartSec = "5min";
+          Restart = "no";
+        };
+        Install.WantedBy = ["default.target"];
+      };
+      timers.zerostack-ctx-history-generator = {
+        Unit.Description = "Generate CTX history for ZeroStack at regular intervals";
+        Timer = {
+          OnCalendar = "hourly";
+          Persistent = true;
+          Unit = "zerostack-ctx-history-generator.service";
+        };
+        Install.WantedBy = ["timers.target"];
+      };
+    };
   };
 }

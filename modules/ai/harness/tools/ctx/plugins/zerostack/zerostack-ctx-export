@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+"""Export zerostack session JSON files as ctx-history-jsonl-v2.
+
+Default paths:
+  Input:  $XDG_DATA_HOME/zerostack/sessions/*.json
+  Output: $XDG_DATA_HOME/zerostack/ctx-history/history.jsonl
+
+The exporter does not modify zerostack's session files. Zerostack does not
+store per-message timestamps in the observed schema, so each message uses the
+session's created_at value and event_index carries the stable message order.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+DATA_HOME = Path(
+    os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))
+).expanduser()
+SESSION_DIR = Path(
+    os.environ.get("ZEROSTACK_SESSION_DIR", str(DATA_HOME / "zerostack/sessions"))
+).expanduser()
+OUTPUT = Path(
+    os.environ.get(
+        "ZEROSTACK_CTX_HISTORY_PATH",
+        "/tmp/ctx-zerostack-history.jsonl",
+    )
+).expanduser()
+
+SOURCE_ID = "default"
+PROVIDER_KEY = "zerostack"
+SOURCE_FORMAT = "zerostack-session-json-v1"
+
+
+def parse_timestamp(value: Any, *, field: str, path: Path) -> str:
+    """Validate a session timestamp and return an RFC 3339-compatible ISO string."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{path}: {field} must be a non-empty ISO 8601 timestamp")
+
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{path}: invalid {field} timestamp {value!r}") from exc
+
+    # Zerostack may serialize a local/naive datetime. The earlier exporter
+    # treated naive values as UTC; retain that deterministic interpretation.
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.isoformat(
+        timespec="microseconds" if parsed.microsecond else "seconds"
+    )
+
+
+def json_line(record: dict[str, Any]) -> str:
+    return json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+
+
+def read_session(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Cannot read valid JSON from {path}: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: expected a JSON object")
+
+    session_id = data.get("id")
+    if (
+        not isinstance(session_id, str)
+        or not session_id
+        or session_id.strip() != session_id
+    ):
+        raise ValueError(f"{path}: id must be a non-empty, trimmed string")
+
+    messages = data.get("messages")
+    if not isinstance(messages, list):
+        raise ValueError(f"{path}: messages must be an array")
+
+    return data
+
+
+def make_records(path: Path, data: dict[str, Any]) -> list[dict[str, Any]]:
+    session_id = data["id"]
+    started_at = parse_timestamp(data.get("created_at"), field="created_at", path=path)
+    updated_at = data.get("updated_at")
+    ended_at = (
+        parse_timestamp(updated_at, field="updated_at", path=path)
+        if isinstance(updated_at, str) and updated_at.strip()
+        else None
+    )
+
+    session: dict[str, Any] = {
+        "record_type": "session",
+        "source_id": SOURCE_ID,
+        "provider_session_id": session_id,
+        "started_at": started_at,
+        "status": "imported",
+    }
+
+    cwd = data.get("working_dir")
+    if isinstance(cwd, str) and cwd:
+        session["cwd"] = cwd
+    if ended_at is not None:
+        session["ended_at"] = ended_at
+
+    records = [session]
+    for index, message in enumerate(data["messages"]):
+        if not isinstance(message, dict):
+            raise ValueError(f"{path}: messages[{index}] must be a JSON object")
+
+        content = message.get("content", "")
+        if not isinstance(content, str):
+            # Keep non-string message content losslessly represented as JSON text.
+            content = json.dumps(content, ensure_ascii=False)
+
+        payload: dict[str, Any] = {"text": content}
+        tool = message.get("tool")
+        if tool is not None:
+            payload["tool"] = tool
+
+        records.append(
+            {
+                "record_type": "event",
+                "source_id": SOURCE_ID,
+                "provider_session_id": session_id,
+                "event_index": index,
+                "event_type": "message",
+                "role": message.get("role")
+                if isinstance(message.get("role"), str)
+                else "unknown",
+                # Zerostack's observed message schema has no message timestamp.
+                # Do not fabricate time spacing; event_index preserves order.
+                "occurred_at": started_at,
+                "payload": payload,
+            }
+        )
+
+    return records
+
+
+def export() -> tuple[int, int]:
+    if not SESSION_DIR.is_dir():
+        raise ValueError(f"Session directory does not exist: {SESSION_DIR}")
+
+    files = sorted(SESSION_DIR.glob("*.json"))
+    if not files:
+        raise ValueError(f"No session JSON files found in {SESSION_DIR}")
+
+    lines = [
+        json_line(
+            {
+                "record_type": "manifest",
+                "schema_version": "ctx-history-jsonl-v2",
+                "producer": "zerostack-ctx-exporter",
+            }
+        ),
+        json_line(
+            {
+                "record_type": "source",
+                "source_id": SOURCE_ID,
+                "provider_key": PROVIDER_KEY,
+                "source_format": SOURCE_FORMAT,
+                "raw_source_path": str(SESSION_DIR),
+                "trust": "provider_export",
+                "fidelity": "imported",
+            }
+        ),
+    ]
+
+    seen_ids: set[str] = set()
+    session_count = 0
+    event_count = 0
+
+    for path in files:
+        data = read_session(path)
+        session_id = data["id"]
+        if session_id in seen_ids:
+            raise ValueError(f"Duplicate session id {session_id!r} (at {path})")
+        seen_ids.add(session_id)
+
+        records = make_records(path, data)
+        lines.extend(json_line(record) for record in records)
+        session_count += 1
+        event_count += len(records) - 1
+
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # History can contain private prompts and tool output.
+    try:
+        OUTPUT.parent.chmod(0o700)
+    except OSError:
+        pass
+
+    fd, temporary_name = tempfile.mkstemp(prefix=".history-", dir=OUTPUT.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+            stream.write("\n".join(lines) + "\n")
+        os.chmod(temporary_name, 0o600)
+        os.replace(temporary_name, OUTPUT)
+    finally:
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+
+    return session_count, event_count
+
+
+def main() -> int:
+    try:
+        session_count, event_count = export()
+    except (OSError, ValueError) as exc:
+        print(f"zerostack-ctx-export: error: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"Sessions: {session_count}")
+    print(f"Events:   {event_count}")
+    print(f"Output:   {OUTPUT}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
