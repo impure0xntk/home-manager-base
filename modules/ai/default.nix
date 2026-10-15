@@ -239,7 +239,7 @@ in
         };
     };
     programs.zed-editor.userSettings = {
-      edit_predictions = let modelInfo = searchModelByRole "autocomplete"; in rec {
+      edit_predictions = let modelInfo = searchModelByRole "autocomplete"; in lib.optionalAttrs (modelInfo != null) rec {
         provider = modelInfo.provider;
         ${provider} = rec {
           api_url = modelInfo.url;
