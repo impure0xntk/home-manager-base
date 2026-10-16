@@ -203,7 +203,7 @@ in {
     };
     programs.zed-editor = {
       userSettings = {
-        lsp.jdtls = {
+        lsp.jdtls = rec {
           binary = {
             path = lib.getExe pkgs.unstable.jdt-language-server;
             args = [
@@ -212,8 +212,12 @@ in {
           };
           settings = {
             java_home = pkgs.jdk;
-            lombok_support = true;
             jdk_auto_download = false;
+
+            jdtls_launcher = binary;
+
+            lombok_support = true;
+            lombok_jar = "${pkgs.lombok}/share/java/lombok.jar";
 
             initialization_options = {
               telemetry = false;
