@@ -1,0 +1,453 @@
+#!/usr/bin/env python3
+"""Export jcode session files as ctx-history-jsonl-v2.
+
+Default paths:
+  Input:  ${JCODE_HOME}/sessions/session_*.json (+ .journal.jsonl appends)
+  Output: ${XDG_DATA_HOME}/ctx/jcode-history/history.jsonl
+
+jcode keeps the authoritative snapshot in `session_<...>.json`, but also
+appends recent turns to a sibling `session_<...>.journal.jsonl` between
+snapshot rewrites. The journal is *not* only newer messages: after the first
+flush it repeats every message already in the snapshot, so merging on message
+id yields "snapshot plus appends" instead of duplicating the prefix.
+
+The exporter never modifies jcode's own files.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+DATA_HOME = Path(
+    os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))
+).expanduser()
+CONFIG_HOME = Path(
+    os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+).expanduser()
+
+SOURCE_ID = "default"
+PROVIDER_KEY = "jcode"
+SOURCE_FORMAT = "jcode-session-json-v1"
+
+# The first user turn carries a generated <system-reminder> block (date, OS,
+# git status). It is per-invocation noise that pollutes search results.
+_MAX_TEXT_CHARS = 65536
+
+
+def session_dir() -> Path:
+    env_home = os.environ.get("JCODE_HOME")
+    root = Path(env_home).expanduser() if env_home else CONFIG_HOME / "jcode"
+    return Path(
+        os.environ.get("JCODE_SESSION_DIR", str(root / "sessions"))
+    ).expanduser()
+
+
+def default_output() -> Path:
+    return Path(
+        os.environ.get(
+            "JCODE_CTX_HISTORY_PATH",
+            str(DATA_HOME / "ctx" / "jcode-history" / "history.jsonl"),
+        )
+    ).expanduser()
+
+
+def parse_timestamp(value: Any) -> str | None:
+    """Return an RFC 3339 string for an ISO 8601 input, or None."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.isoformat(
+        timespec="microseconds" if parsed.microsecond else "seconds"
+    )
+
+
+def json_line(record: dict[str, Any]) -> str:
+    return json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+
+
+def load_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def require_session_id(data: dict[str, Any], path: Path) -> str:
+    session_id = data.get("id")
+    if (
+        not isinstance(session_id, str)
+        or not session_id
+        or session_id.strip() != session_id
+    ):
+        raise ValueError(f"{path}: id must be a non-empty, trimmed string")
+    return session_id
+
+
+def collect_messages(data: dict[str, Any], path: Path) -> dict[str, dict[str, Any]]:
+    """Merge snapshot and journal messages into one id-keyed, order-stable map."""
+    messages = data.get("messages")
+    if not isinstance(messages, list):
+        # A half-written snapshot or a schema change should not abort the whole
+        # export; the remaining sessions are still worth indexing.
+        print(
+            f"warning: {path}: missing 'messages' array; exporting empty session",
+            file=sys.stderr,
+        )
+        messages = []
+
+    merged: dict[str, dict[str, Any]] = {}
+    for source in (messages, read_journal(path)):
+        for index, message in enumerate(source):
+            if not isinstance(message, dict):
+                print(
+                    f"warning: {path}: messages[{index}] is not an object; skipped",
+                    file=sys.stderr,
+                )
+                continue
+            message_id = message.get("id")
+            if not isinstance(message_id, str) or not message_id:
+                # No stable id means no safe merge key; fall back to position
+                # so the content is still exported exactly once.
+                message_id = f"__positional_{index}"
+            # Later source wins: the journal carries the freshest copy of a
+            # message that jcode has not yet rewritten into the snapshot.
+            merged[message_id] = message
+    return merged
+
+
+def read_journal(session_path: Path) -> list[dict[str, Any]]:
+    """Read appended turns, tolerating a journal truncated mid-write."""
+    journal_path = session_path.with_suffix(".journal.jsonl")
+    appended: list[dict[str, Any]] = []
+    if not journal_path.is_file():
+        return appended
+
+    for line_number, raw in enumerate(
+        journal_path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            record = json.loads(raw)
+        except json.JSONDecodeError:
+            # jcode appends the journal incrementally, so the tail line can be
+            # a partial write. Skip it rather than failing the whole export.
+            print(
+                f"warning: {journal_path}:{line_number}: skipping malformed journal line",
+                file=sys.stderr,
+            )
+            continue
+        messages = record.get("append_messages")
+        if isinstance(messages, list):
+            appended.extend(m for m in messages if isinstance(m, dict))
+    return appended
+
+
+def truncate(text: str) -> str:
+    if len(text) <= _MAX_TEXT_CHARS:
+        return text
+    return text[:_MAX_TEXT_CHARS] + "\n... [truncated by jcode-ctx-export]"
+
+
+def block_text(block: Any) -> str:
+    if isinstance(block, str):
+        return block
+    if isinstance(block, dict):
+        text = block.get("text")
+        if isinstance(text, str):
+            return text
+        # Unknown block kinds are kept losslessly instead of dropped.
+        return json.dumps(block, ensure_ascii=False)
+    return json.dumps(block, ensure_ascii=False)
+
+
+def tool_arguments(name: str, tool_input: Any) -> dict[str, Any]:
+    """Describe a tool call without embedding whole file bodies."""
+    if not isinstance(tool_input, dict):
+        return {"input": tool_input}
+
+    # `write` / `edit` payloads hold full file contents; keep the arguments
+    # useful for search without duplicating the file into history.
+    if name in {"write", "edit", "replace"}:
+        summary: dict[str, Any] = {}
+        for key in ("file_path", "path", "old_string"):
+            value = tool_input.get(key)
+            if isinstance(value, str):
+                summary[key] = truncate(value)
+        if "new_string" in tool_input:
+            summary["new_string_chars"] = len(str(tool_input.get("new_string")))
+        if "content" in tool_input:
+            summary["content_chars"] = len(str(tool_input.get("content")))
+        return summary
+    return tool_input
+
+
+def make_records(
+    session_path: Path, data: dict[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    session_id = require_session_id(data, session_path)
+    started_at = parse_timestamp(data.get("created_at"))
+    fallback_time = started_at or "1970-01-01T00:00:00Z"
+    # ld_active_at is rewritten on every turn, so it is the closest thing to
+    # "when did this session end" that jcode records.
+    ended_at = parse_timestamp(data.get("last_active_at")) or parse_timestamp(
+        data.get("updated_at")
+    )
+
+    session: dict[str, Any] = {
+        "record_type": "session",
+        "source_id": SOURCE_ID,
+        "provider_session_id": session_id,
+        "started_at": fallback_time,
+        "agent_scope": "primary" if data.get("parent_id") is None else "subagent",
+    }
+
+    cwd = data.get("working_dir")
+    if isinstance(cwd, str) and cwd:
+        session["cwd"] = cwd
+    if ended_at is not None:
+        session["ended_at"] = ended_at
+    if isinstance(data.get("title"), str) and data["title"]:
+        session["role_hint"] = data["title"]
+    session["status"] = normalize_status(data.get("status"))
+
+    events: list[dict[str, Any]] = []
+    for index, message in enumerate(collect_messages(data, session_path).values()):
+        role = message.get("role")
+        role = role if isinstance(role, str) and role else "unknown"
+        occurred_at = parse_timestamp(message.get("timestamp")) or fallback_time
+
+        content = message.get("content")
+        if content is None:
+            continue
+        if not isinstance(content, list):
+            # Edge records may keep content as a bare string.
+            content = [content]
+
+        for event_index, block in enumerate(content):
+            if not isinstance(block, dict):
+                block = {"type": "text", "text": block}
+            kind = block.get("type")
+            if kind in {"text", "reasoning", "tool_result"}:
+                event_role = role if kind != "tool_result" else "tool"
+                events.append(
+                    make_event(
+                        session_id,
+                        index,
+                        event_index,
+                        event_role,
+                        kind,
+                        occurred_at,
+                        {"text": truncate(block_text(block))},
+                    )
+                )
+            elif kind == "tool_use":
+                # Keep the call and its result as one unit so `ctx show` reads
+                # as an ordered transcript rather than two unrelated halves.
+                result = find_tool_result(message, block.get("id"))
+                payload: dict[str, Any] = {
+                    "tool": block.get("name"),
+                    "arguments": tool_arguments(block.get("name"), block.get("input")),
+                }
+                if result is not None:
+                    payload["text"] = truncate(block_text(result))
+                events.append(
+                    make_event(
+                        session_id,
+                        index,
+                        event_index,
+                        role,
+                        "tool_call",
+                        occurred_at,
+                        payload,
+                    )
+                )
+            elif kind == "tool_reference":
+                # A pointer to another tool turn; nothing new to index.
+                continue
+
+    return session, events
+
+
+def make_event(
+    session_id: str,
+    message_index: int,
+    block_index: int,
+    role: str,
+    event_type: str,
+    occurred_at: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    # ctx requires event_index unique per session; message index + block index
+    # is stable under re-export because both are positional.
+    return {
+        "record_type": "event",
+        "source_id": SOURCE_ID,
+        "provider_session_id": session_id,
+        "event_index": message_index * 1000 + block_index,
+        "event_id": f"{session_id}:{message_index}:{block_index}",
+        "event_type": event_type,
+        "role": role,
+        "occurred_at": occurred_at,
+        "payload": payload,
+        "fidelity": "full",
+    }
+
+
+def find_tool_result(message: dict[str, Any], tool_use_id: Any) -> Any:
+    """Return the tool_result payload matching a tool_use id, if present."""
+    if not isinstance(tool_use_id, str):
+        return None
+    content = message.get("content")
+    if not isinstance(content, list):
+        return None
+    for block in content:
+        if (
+            isinstance(block, dict)
+            and block.get("type") == "tool_result"
+            and block.get("tool_use_id") == tool_use_id
+        ):
+            content = block.get("content")
+            if isinstance(content, list):
+                # Anthropic-style content arrays: keep the whole thing readable.
+                return "\n".join(block_text(item) for item in content)
+            return content
+    return None
+
+
+def normalize_status(status: Any) -> str:
+    """Flatten jcode's status into the values ctx understands."""
+    if isinstance(status, dict):
+        # e.g. {"Crashed": {"message": "..."}}
+        return next(iter(status), "unknown").lower()
+    if isinstance(status, str) and status:
+        return status.lower()
+    return "unknown"
+
+
+def export(output: Path, session_dir_path: Path) -> tuple[int, int]:
+    if not session_dir_path.is_dir():
+        raise ValueError(f"Session directory does not exist: {session_dir_path}")
+
+    files = sorted(session_dir_path.glob("session_*.json"))
+    if not files:
+        raise ValueError(f"No session JSON files found in {session_dir_path}")
+
+    lines = [
+        json_line(
+            {
+                "record_type": "manifest",
+                "schema_version": "ctx-history-jsonl-v2",
+                "metadata": {"producer": "jcode-ctx-exporter"},
+            }
+        ),
+        json_line(
+            {
+                "record_type": "source",
+                "source_id": SOURCE_ID,
+                "provider_key": PROVIDER_KEY,
+                "source_format": SOURCE_FORMAT,
+                "raw_source_path": str(session_dir_path),
+                "trust": "provider_export",
+                "fidelity": "full",
+            }
+        ),
+    ]
+
+    seen_ids: set[str] = set()
+    session_count = 0
+    event_count = 0
+    failures = 0
+
+    for path in files:
+        try:
+            data = load_json(path)
+        except (OSError, json.JSONDecodeError) as exc:
+            failures += 1
+            print(f"warning: skipping unreadable session {path}: {exc}", file=sys.stderr)
+            continue
+        if not isinstance(data, dict):
+            failures += 1
+            print(f"warning: skipping non-object session {path}", file=sys.stderr)
+            continue
+        try:
+            session_id = require_session_id(data, path)
+        except ValueError as exc:
+            failures += 1
+            print(f"warning: {exc}; skipping", file=sys.stderr)
+            continue
+        if session_id in seen_ids:
+            raise ValueError(f"Duplicate session id {session_id!r} (at {path})")
+        seen_ids.add(session_id)
+
+        session, events = make_records(path, data)
+        lines.append(json_line(session))
+        lines.extend(json_line(event) for event in events)
+        session_count += 1
+        event_count += len(events)
+
+    if session_count == 0:
+        raise ValueError(f"No session could be exported from {session_dir_path}")
+    if failures:
+        print(f"warning: skipped {failures} unreadable session file(s)", file=sys.stderr)
+
+    write_atomic(output, lines)
+    return session_count, event_count
+
+
+def write_atomic(output: Path, lines: list[str]) -> None:
+    """Replace the export atomically so a concurrent ctx import never reads a
+    half-written file."""
+    output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        output.parent.chmod(0o700)  # history can contain private prompts
+    except OSError:
+        pass
+
+    fd, temporary_name = tempfile.mkstemp(prefix=".history-", dir=output.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+        os.replace(temporary_name, output)
+    except BaseException:
+        Path(temporary_name).unlink(missing_ok=True)
+        raise
+    try:
+        output.chmod(0o600)
+    except OSError:
+        pass
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=default_output(),
+        help="destination JSONL path (default: $XDG_DATA_HOME/ctx/jcode-history/history.jsonl)",
+    )
+    parser.add_argument(
+        "--session-dir",
+        type=Path,
+        default=session_dir(),
+        help="jcode sessions directory (default: $JCODE_HOME/sessions)",
+    )
+    args = parser.parse_args()
+
+    sessions, events = export(args.output, args.session_dir)
+    print(f"exported {sessions} sessions, {events} events -> {args.output}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

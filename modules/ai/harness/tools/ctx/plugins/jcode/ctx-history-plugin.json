@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "name": "jcode",
+  "display_name": "jcode Session History",
+  "version": "1.0.0",
+  "history_sources": [
+    {
+      "id": "default",
+      "provider_key": "jcode",
+      "source_id": "default",
+      "source_format": "jcode-session-json-v1",
+      "path": "/home/nixos/.local/share/ctx/jcode-history/history.jsonl",
+      "enabled": true,
+      "refresh": "manual"
+    }
+  ]
+}
