@@ -211,6 +211,7 @@ let
 
         display.show_thinking = true;
         display.reasoning_display = "current";
+        display.latex.rendering = "unicode";
 
         features.swarm = true;
 
