@@ -205,7 +205,7 @@ in {
       userSettings = {
         lsp.jdtls = rec {
           binary = {
-            path = lib.getExe pkgs.unstable.jdt-language-server;
+            path = lib.getExe pkgs.unstable.jdt-language-server; # This is not work. Use settings.jdtls_launcher instead.
             args = [
               "-Djdt.core.sharedIndexLocation=${config.xdg.cacheHome + "/.jdt/index"}"
             ] ++ tunedJavaArgs;
