@@ -24,6 +24,12 @@ let
     + (lib.optionalString cfgNetworks.proxy.enable (" " + cfgNetworks.proxy.snippet.javaOpts)); # consider proxy
 
   scripts = import ./script.nix { inherit pkgs lib config; };
+
+  # Use community fork of palantir-java-format, for all deps jar.
+  open-java-format = pkgs.fetchurl {
+    url = "https://github.com/openjavaformat/open-java-format/releases/download/2.98.0.6/open-java-format-2.98.0.6-all.jar";
+    hash = "sha256-UgmMvkSwNENOItD9atJl+ttzUEG7EsiWLU7nzb/ebUg=";
+  };
 in {
   options.my.home.languages.java.enable = lib.mkEnableOption "Java development environment";
 
@@ -203,11 +209,24 @@ in {
     };
     programs.zed-editor = {
       userSettings = {
+        languages."Java".formatter = {
+          external = {
+            command = "${pkgs.jdk}/bin/java";
+            arguments = [
+              "-jar"
+              open-java-format
+              # "--palantir" # https://github.com/openjavaformat/open-java-format#coming-from-palantir-java-format
+              "-"
+            ];
+          };
+        };
+
         lsp.jdtls = rec {
           binary = {
             path = lib.getExe pkgs.unstable.jdt-language-server; # This is not work. Use settings.jdtls_launcher instead.
             args = [
               "-Djdt.core.sharedIndexLocation=${config.xdg.cacheHome + "/.jdt/index"}"
+              "--jvm-args=-javaagent:${pkgs.lombok}/share/java/lombok.jar"
             ] ++ tunedJavaArgs;
           };
           settings = {
