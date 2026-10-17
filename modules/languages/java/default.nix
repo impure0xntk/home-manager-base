@@ -217,7 +217,6 @@ in {
             jdtls_launcher = binary;
 
             lombok_support = true;
-            lombok_jar = "${pkgs.lombok}/share/java/lombok.jar";
 
             initialization_options = {
               telemetry = false;
