@@ -73,6 +73,8 @@ let
         trust_all_worktrees = true;
       };
 
+      load_direnv = "shell_hook";
+
       telemetry = {
         diagnostics = false;
         metrics = false;
