@@ -71,6 +71,13 @@ in
               default = null;
             };
             isLocal = mkEnableOption "Whether the model is hosted locally (e.g., Ollama or Litellm proxy) or remotely. Local models may have different performance and capabilities.";
+            # Off by default: the probe adds a startup request to each
+            # provider, so it stays opt-in per provider rather than global.
+            modelCatalog = mkOption {
+              description = "Whether to query the provider's /v1/models endpoint at runtime and let any served model id be selected, instead of offering only the statically declared ones.";
+              type = bool;
+              default = false;
+            };
             models = mkOption {
               description = "List of models with roles";
               type = listOf (submodule {

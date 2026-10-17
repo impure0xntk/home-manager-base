@@ -85,18 +85,58 @@ in
             args = [ "serve" "--mcp" ];
           };
         };
-        ctx = rec {
-          package = createWrappedPackage pkgs.ctx {
-            CTX_DATA_ROOT = "${config.xdg.dataHome}/ctx";
-            CTX_ANALYTICS_ENABLED = "false";
-            CTX_UPGRADE_AUTO = "off";
-          };
+        ctx = lib.mkIf config.my.home.ai.harness.memory.enable {
+          package = config.my.home.ai.harness.memory.package;
           prompt = builtins.readFile ./CTX.md;
+          # Command and exclusion list are `harness.memory` options, declared in
+          # `harness/memory/default.nix`. Read one path at a time: binding that
+          # whole set into a `cfg` here would make this default wait on the very
+          # `codingAgentTools` entry it helps build.
           mcpServer = {
-            command = lib.getExe package;
+            command = lib.getExe config.my.home.ai.harness.memory.package;
             args = [ "mcp" "serve" ];
             excludeTools = [
-              # graph: delegate to codegraph
+              # Modify nothing: no historical session is ever rewritten.
+              "archive"
+              "archive_export_bundle"
+              "archive_import_bundle"
+              "archive_verify_bundle"
+              "import_merge_history"
+              "session_delete"
+              "sources_config_add_jsonl"
+              "sources_config_remove_jsonl"
+              "sources_config_update_jsonl"
+              "sources_identity_forget"
+              "sources_identity_overwrite"
+              # Supervision belongs to ctx's own units, never to an agent.
+              "daemon_service_install"
+              "daemon_service_uninstall"
+              "daemon_start"
+              "daemon_stop"
+              "daemon_restart"
+              "setup_config_init"
+              "setup_daemon"
+              "install"
+              "uninstall"
+              "update"
+              # Reach the server through `ctx-server`, if it is ever wanted.
+              "server_init"
+              "server_stop"
+              "server_run"
+              "login_start"
+              "login_status"
+              "logout"
+              # Delegated to other backends, which are already available and
+              # cheaper: rtk condenses command output, zvec-grep does lexical
+              # search and codegraph answers structural questions.
+              "files_read"
+              "files_grep"
+              "code_search"
+              "tree"
+              "docs"
+              "document_fetch"
+              "prompt_optimize"
+              "look_at"
               "graph_query"
               "graph_show"
               "graph_callers"
@@ -104,7 +144,6 @@ in
               "graph_impact"
               "graph_path"
               "graph_stats"
-              # sift: delegate to rtk
               "output_compact"
               "output_restore"
             ];
@@ -133,29 +172,5 @@ in
       ${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk trust --yes
     '';
 
-    systemd.user.services.ctx-history =
-    let
-      ctxBin = lib.getExe config.my.home.ai.harness.codingAgentTools.ctx.package;
-    in {
-      Unit.Description = "Index local coding-agent history for CTX";
-      Service = {
-        Type = "simple";
-        ExecStartPre = "${ctxBin} setup --no-daemon --quiet";
-        ExecStart = "${ctxBin} daemon run";
-
-        # ctx 2.x refreshes through a persistent daemon whose scheduler can retry a
-        # stuck generation indefinitely and saturate a core with no code activity
-        # (ctxrs/ctx#1030). Manual mode forbids the persistent daemon, so a timer
-        # runs one finite Core worker instead; searches only read its output.
-        TimeoutStartSec = "30min";
-        # Never restart: a wedged refresh must not become a retry loop, and the
-        # timer already owns the cadence.
-        Restart = "no";
-        CPUQuota = "50%";
-        Nice = 10;
-        IOSchedulingClass = "idle";
-      };
-      Install.WantedBy = ["default.target"];
-    };
   };
 }

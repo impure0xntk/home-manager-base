@@ -53,7 +53,7 @@ def default_output() -> Path:
     return Path(
         os.environ.get(
             "JCODE_CTX_HISTORY_PATH",
-            str(DATA_HOME / "ctx" / "jcode-history" / "history.jsonl"),
+            "/tmp/ctx-jcode-history.jsonl",
         )
     ).expanduser()
 
@@ -434,7 +434,7 @@ def main() -> int:
         "--output",
         type=Path,
         default=default_output(),
-        help="destination JSONL path (default: $XDG_DATA_HOME/ctx/jcode-history/history.jsonl)",
+        help="destination JSONL path (default: /tmp/ctx-jcode-history.jsonl)",
     )
     parser.add_argument(
         "--session-dir",

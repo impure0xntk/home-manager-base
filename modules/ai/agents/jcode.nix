@@ -376,6 +376,22 @@ in
       })
     ];
 
+    # Same shape as zerostack: the exporter ships here, so declaring it keeps
+    # the path in one place. jcode owns its sessions under `JCODE_HOME`, and the
+    # installer owns the destination, so both are pinned rather than inherited.
+    my.home.ai.harness.memory.historySources.jcode = {
+      providerKey = "jcode";
+      sourceFormat = "jcode-session-json-v1";
+      exporter = {
+        script = ../harness/memory/plugins/jcode/jcode-ctx-export;
+        outputEnvVar = "JCODE_CTX_HISTORY_PATH";
+        environment = {
+          JCODE_SESSION_DIR = "${config.xdg.configHome}/jcode/sessions";
+          JCODE_HOME = "${config.xdg.configHome}/jcode";
+        };
+      };
+    };
+
     # To use OAUTH provider
     home.activation."copy-jcode-config" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       rm -f ${config.xdg.configHome}/jcode/config.toml

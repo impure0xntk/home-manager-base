@@ -222,11 +222,51 @@ let
       "/nix/var/nix/profiles"
       "/nix/store"
     ];
+    # Each enabled agent and tool keeps state outside the working directory, so
+    # a profile allowing only the workspace leaves those on a read-only bind and
+    # the agent fails with EROFS on its first write. Derived from the switches
+    # that install them rather than hardcoded, so disabling one removes its
+    # directory.
+    #
+    # Absolute paths only: a literal `~` resolves against fence's own sandbox
+    # home, not the user's, and a bare relative name against the working
+    # directory, so either form allows nothing useful.
+    stateRoots = let
+      tools = cfg.harness.codingAgentTools or { };
+    in
+      lib.unique (
+        lib.optionals (cfg.jcode.enable or false) [
+          "${config.xdg.configHome}/jcode"
+          "${config.xdg.cacheHome}/jcode"
+        ]
+        ++ lib.optionals (cfg.codex.enable or false) [ "${config.xdg.configHome}/codex" ]
+        ++ lib.optionals (cfg.goose.enable or false) [ "${config.xdg.configHome}/goose" ]
+        ++ lib.optionals (cfg.qwen-code.enable or false) [ "${config.xdg.configHome}/qwen" ]
+        ++ lib.optionals (cfg.copilot-cli.enable or false) [ "${config.xdg.configHome}/copilot" ]
+        ++ lib.optionals (cfg.junie.enable or false) [ "${config.xdg.dataHome}/junie" ]
+        ++ lib.optionals ((tools.ctx.mcpServer or null) != null) [
+          "${config.xdg.dataHome}/ctx"
+          "${config.xdg.stateHome}/ctx"
+        ]
+        ++ lib.optionals ((tools.zg.mcpServer or null) != null) [
+          "${config.xdg.configHome}/zvec-grep"
+          "${config.xdg.dataHome}/zvec-grep"
+        ]
+        ++ lib.optionals ((tools.rtk.package or null) != null) [ "${config.xdg.dataHome}/rtk" ]
+        # ctx writes its own index under this root, and the per-source exporters
+        # write the JSONL history into it, so a read-only bind here breaks both
+        # search and export. Reached through `codingAgentTools.ctx` rather than
+        # `harness.memory`: that entry already exists for every installed tool,
+        # and reading the memory namespace from here made it wait on this
+        # profile's own contribution to `my.home.ai`.
+        ++ lib.optionals ((tools.ctx.mcpServer or null) != null) [ "${config.xdg.dataHome}/ctx" ]
+      );
   in {
     "$schema" = "https://raw.githubusercontent.com/fencesandbox/fence/main/docs/schema/fence.schema.json";
     filesystem = {
       allowRead = fs;
       allowExecute = fs;
+      allowWrite = stateRoots;
     };
     command.acceptSharedBinaryCannotRuntimeDeny = coreutilsCommands;
   }

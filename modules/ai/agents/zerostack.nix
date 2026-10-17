@@ -249,31 +249,18 @@ in
     '';
 
 
-    # ctx integration config
-    xdg.dataFile."ctx/plugins/zerostack".source = lib.optionalString cfg.harness.enable ../harness/tools/ctx/plugins/zerostack;
-
-    systemd.user = lib.optionalAttrs cfg.harness.enable {
-      services.zerostack-ctx-history-generator = let
-        ctxBin = lib.getExe config.my.home.ai.harness.codingAgentTools.ctx.package;
-      in {
-        Unit.Description = "Generate CTX history for ZeroStack at regular intervals";
-        Service = {
-          Type = "simple";
-          ExecStartPre = "${pkgs.python3}/bin/python ${../harness/tools/ctx/plugins/zerostack/zerostack-ctx-export}";
-          ExecStart = "${ctxBin} import --history-source zerostack/default";
-          TimeoutStartSec = "5min";
-          Restart = "no";
-        };
-        Install.WantedBy = ["default.target"];
-      };
-      timers.zerostack-ctx-history-generator = {
-        Unit.Description = "Generate CTX history for ZeroStack at regular intervals";
-        Timer = {
-          OnCalendar = "hourly";
-          Persistent = true;
-          Unit = "zerostack-ctx-history-generator.service";
-        };
-        Install.WantedBy = ["timers.target"];
+    # Declared here rather than in the machine config: the exporter ships with
+    # this agent, so reaching into the submodule's tree from `machines/` would
+    # only duplicate the path. Unconditional, because `harness/memory` already
+    # emits nothing at all when it is disabled.
+    my.home.ai.harness.memory.historySources.zerostack = {
+      providerKey = "zerostack";
+      sourceFormat = "zerostack-session-json-v1";
+      exporter = {
+        script = ../harness/memory/plugins/zerostack/zerostack-ctx-export;
+        # Takes no arguments, so the destination can only arrive by environment.
+        outputEnvVar = "ZEROSTACK_CTX_HISTORY_PATH";
+        environment.ZEROSTACK_SESSION_DIR = "${config.xdg.dataHome}/zerostack/sessions";
       };
     };
   };

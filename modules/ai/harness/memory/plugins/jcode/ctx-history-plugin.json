@@ -9,7 +9,7 @@
       "provider_key": "jcode",
       "source_id": "default",
       "source_format": "jcode-session-json-v1",
-      "path": "/home/nixos/.local/share/ctx/jcode-history/history.jsonl",
+      "path": "/tmp/ctx-jcode-history.jsonl",
       "enabled": true,
       "refresh": "manual"
     }
