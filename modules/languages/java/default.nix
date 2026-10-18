@@ -15,7 +15,7 @@ let
     "-XX:+UseStringDeduplication"
     "-XX:+UseZGC" # "-XX:+ZGenerational" is the default.
     "-XX:+UseLargePages"
-    "-XX:+UseCompactObjectHeaders" # will be default in Java 27
+    # "-XX:+UseCompactObjectHeaders" # will be default in Java 27
   ];
 
   # Vmargs for VS code tools.
@@ -25,10 +25,30 @@ let
 
   scripts = import ./script.nix { inherit pkgs lib config; };
 
+  jdtls = pkgs.writeShellApplication {
+    name = "jdtls";
+    runtimeInputs = [ pkgs.unstable.jdt-language-server ];
+    text =
+    let
+      args = tunedJavaArgs ++ [
+        "-Djdt.core.sharedIndexLocation=${config.xdg.cacheHome + "/.jdt/index"}"
+        "-javaagent:${pkgs.lombok}/share/java/lombok.jar"
+      ];
+    in ''
+      exec jdtls \
+        ${lib.concatStringsSep " " (lib.forEach args (arg: "--jvm-arg=${arg}"))} \
+        "''$@"
+    '';
+  };
+
   # Use community fork of palantir-java-format, for all deps jar.
   open-java-format = pkgs.fetchurl {
     url = "https://github.com/openjavaformat/open-java-format/releases/download/2.98.0.6/open-java-format-2.98.0.6-all.jar";
     hash = "sha256-UgmMvkSwNENOItD9atJl+ttzUEG7EsiWLU7nzb/ebUg=";
+  };
+  java-debug-plugin = pkgs.fetchurl {
+    url = "https://github.com/zed-industries/java-debug/releases/download/0.53.2/com.microsoft.java.debug.plugin-0.53.2.jar";
+    hash = "sha256-UnUZWQUBXOeG/GMYyNA5/vQ6H62h0DrN7CTGmjubqDw=";
   };
 in {
   options.my.home.languages.java.enable = lib.mkEnableOption "Java development environment";
@@ -221,21 +241,17 @@ in {
           };
         };
 
-        lsp.jdtls = rec {
-          binary = {
-            path = lib.getExe pkgs.unstable.jdt-language-server; # This is not work. Use settings.jdtls_launcher instead.
-            args = [
-              "-Djdt.core.sharedIndexLocation=${config.xdg.cacheHome + "/.jdt/index"}"
-              "--jvm-args=-javaagent:${pkgs.lombok}/share/java/lombok.jar"
-            ] ++ tunedJavaArgs;
-          };
+        lsp.jdtls = {
           settings = {
             java_home = pkgs.jdk;
             jdk_auto_download = false;
 
-            jdtls_launcher = binary;
+            jdtls_launcher = lib.getExe jdtls;
 
             lombok_support = true;
+            lombok_jar = "${pkgs.lombok}/share/java/lombok.jar";
+
+            java_debug_jar = java-debug-plugin;
 
             initialization_options = {
               telemetry = false;
