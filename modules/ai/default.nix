@@ -265,12 +265,13 @@ in
         #   provider = chatModelInfo.provider;
         #   model = chatModelInfo.model;
         # };
-        commit_message_model = {
+        commit_message_instructions = "Use the Conventional Commits format: <type>(<scope>): <description>.";
+        commit_message_model = lib.optionalAttrs (autoCompleteModelInfo != null) {
           provider = autoCompleteModelInfo.provider;
           model = autoCompleteModelInfo.model;
         } ;
       };
-      edit_predictions = rec {
+      edit_predictions = lib.optionalAttrs (autoCompleteModelInfo != null) rec {
         provider = autoCompleteModelInfo.provider;
         ${provider} = rec {
           model = autoCompleteModelInfo.model;
