@@ -111,7 +111,7 @@ let
       proxy = lib.optionalString config.my.home.networks.proxy.enable
         config.my.home.networks.proxy.default;
 
-      agent.enabled = false;
+      agent.enabled = lib.mkDefault false;
     };
 
   # Default keymaps

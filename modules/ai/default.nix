@@ -245,12 +245,35 @@ in
           };
         };
     };
-    programs.zed-editor.userSettings = {
-      edit_predictions = let modelInfo = searchModelByRole "autocomplete"; in lib.optionalAttrs (modelInfo != null) rec {
-        provider = modelInfo.provider;
+    programs.zed-editor.userSettings =
+    let
+      # chatModelInfo = searchModelByRole "chat";
+      autoCompleteModelInfo = searchModelByRole "autocomplete";
+
+      # generateModelSetting = modelInfo: {
+      #   api_url = modelInfo.url;
+      #   available_models = [ { name = modelInfo.model; max_tokens = 2000000; } ];
+      # };
+    in {
+      # language_models = {
+      #   openai_compatible."${chatModelInfo.provider}" = generateModelSetting chatModelInfo;
+      #   openai_compatible."${autoCompleteModelInfo.provider}" = generateModelSetting autoCompleteModelInfo;
+      # };
+      agent = {
+        enabled = true;
+        # default = {
+        #   provider = chatModelInfo.provider;
+        #   model = chatModelInfo.model;
+        # };
+        commit_message_model = {
+          provider = autoCompleteModelInfo.provider;
+          model = autoCompleteModelInfo.model;
+        } ;
+      };
+      edit_predictions = rec {
+        provider = autoCompleteModelInfo.provider;
         ${provider} = rec {
-          api_url = modelInfo.url;
-          model = modelInfo.model;
+          model = autoCompleteModelInfo.model;
           prompt_format = if lib.hasInfix "qwen" model then "qwen" else "infer";
           max_output_tokens = 64;
         };
