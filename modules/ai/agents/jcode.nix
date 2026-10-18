@@ -209,7 +209,7 @@ let
         features.check_updates = false;
         display.auto_server_reload = false;
 
-        display.show_thinking = true;
+        display.show_thinking = false;
         display.reasoning_display = "current";
         display.latex.rendering = "unicode";
 
