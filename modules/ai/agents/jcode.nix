@@ -10,6 +10,35 @@ let
   cfg = config.my.home.ai;
   harness = config.my.home.ai.harness;
 
+  # Shared builder turning this agent's sessions into a ctx history source.
+  # Imported rather than read off `harness.memory`: deriving the plugin and unit
+  # from arguments keeps this contribution out of the namespace it lands in,
+  # which is what building a shared registry there evaluated as infinite
+  # recursion for. Only `memory.package` is read, and nothing here contributes
+  # to that.
+  historySources = import ../harness/memory/history-source.nix { inherit lib pkgs; };
+
+  # jcode's own sessions, exported for ctx. The exporter ships here, so the
+  # plugin and refresh unit are built in place rather than declared into a
+  # registry elsewhere. Sessions live under `JCODE_HOME` and the exporter reads
+  # its destination from the environment, so both are pinned rather than
+  # inherited.
+  jcodeHistory = historySources.mkHistorySource {
+    package = config.my.home.ai.harness.memory.package;
+    source = {
+      providerKey = "jcode";
+      sourceFormat = "jcode-session-json-v1";
+      exporter = {
+        script = ../harness/memory/plugins/jcode/jcode-ctx-export;
+        outputEnvVar = "JCODE_CTX_HISTORY_PATH";
+        environment = {
+          JCODE_SESSION_DIR = "${config.xdg.configHome}/jcode/sessions";
+          JCODE_HOME = "${config.xdg.configHome}/jcode";
+        };
+      };
+    };
+  };
+
   chatModel = searchModelByRole "chat";
   reviewModel = searchModelByRole "review";
 
@@ -376,21 +405,10 @@ in
       })
     ];
 
-    # Same shape as zerostack: the exporter ships here, so declaring it keeps
-    # the path in one place. jcode owns its sessions under `JCODE_HOME`, and the
-    # installer owns the destination, so both are pinned rather than inherited.
-    my.home.ai.harness.memory.historySources.jcode = {
-      providerKey = "jcode";
-      sourceFormat = "jcode-session-json-v1";
-      exporter = {
-        script = ../harness/memory/plugins/jcode/jcode-ctx-export;
-        outputEnvVar = "JCODE_CTX_HISTORY_PATH";
-        environment = {
-          JCODE_SESSION_DIR = "${config.xdg.configHome}/jcode/sessions";
-          JCODE_HOME = "${config.xdg.configHome}/jcode";
-        };
-      };
-    };
+    # Nothing indexes this history without ctx itself, hence the second gate on
+    # `memory.enable`.
+    xdg.dataFile = lib.mkIf config.my.home.ai.harness.memory.enable jcodeHistory.xdg.dataFile;
+    systemd.user = lib.mkIf config.my.home.ai.harness.memory.enable jcodeHistory.systemd.user;
 
     # To use OAUTH provider
     home.activation."copy-jcode-config" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

@@ -3,6 +3,9 @@
 #
 # This module owns what `codingAgentTools` cannot express: ctx is the only entry
 # in that map with mutable state, a data root, plugins and background indexing.
+# It deliberately does **not** own the history sources. Each agent declares its
+# own through `mkHistorySource` from `history-source.nix`; see that file for why
+# collecting them back together here evaluates as infinite recursion.
 #
 # The projection into `codingAgentTools.ctx` lives in `projection.nix`, not here,
 # and that split is load bearing. `harness/mcp.nix` reads
@@ -28,8 +31,6 @@ let
         exec ${lib.getExe package} "$@"
       '';
     };
-
-  internals = import ./history-source-internals.nix { inherit lib pkgs; };
 in
 {
   options.my.home.ai.harness.memory =
@@ -158,22 +159,5 @@ in
         '';
       };
 
-      historySources = lib.mkOption {
-          type = lib.types.attrsOf (import ./history-source-type.nix { inherit lib pkgs; });
-          default = { };
-          description = ''
-            Local tools whose history ctx indexes. Each entry contributes a plugin
-            manifest plus the units keeping it current.
-          '';
-        };
     };
-  config = lib.mkIf config.my.home.ai.harness.memory.enable (
-    internals.projected {
-      package = config.my.home.ai.harness.memory.package;
-      sources = {
-        jcode = config.my.home.ai.harness.memory.historySources.jcode;
-        zerostack = config.my.home.ai.harness.memory.historySources.zerostack;
-      };
-    }
-  );
 }

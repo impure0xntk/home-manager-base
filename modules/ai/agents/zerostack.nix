@@ -10,6 +10,32 @@ let
   cfg = config.my.home.ai;
   harness = cfg.harness;
 
+  # Shared builder turning this agent's sessions into a ctx history source.
+  # Imported rather than read off `harness.memory`: deriving the plugin and unit
+  # from arguments keeps this contribution out of the namespace it lands in,
+  # which is what building a shared registry there evaluated as infinite
+  # recursion for. Only `memory.package` is read, and nothing here contributes
+  # to that.
+  historySources = import ../harness/memory/history-source.nix { inherit lib pkgs; };
+
+  # zerostack's own sessions, exported for ctx. The exporter ships here, so the
+  # plugin and refresh unit are built in place rather than declared into a
+  # registry elsewhere. Its exporter takes no arguments at all, so the
+  # destination can only arrive by environment variable.
+  zerostackHistory = historySources.mkHistorySource {
+    package = config.my.home.ai.harness.memory.package;
+    source = {
+      providerKey = "zerostack";
+      sourceFormat = "zerostack-session-json-v1";
+      exporter = {
+        script = ../harness/memory/plugins/zerostack/zerostack-ctx-export;
+        # Takes no arguments, so the destination can only arrive by environment.
+        outputEnvVar = "ZEROSTACK_CTX_HISTORY_PATH";
+        environment.ZEROSTACK_SESSION_DIR = "${config.xdg.dataHome}/zerostack/sessions";
+      };
+    };
+  };
+
   chatModel = searchModelByRole "chat";
   reviewModel = searchModelByRole "review";
   workerModel = searchModelByRole "worker";
@@ -249,19 +275,9 @@ in
     '';
 
 
-    # Declared here rather than in the machine config: the exporter ships with
-    # this agent, so reaching into the submodule's tree from `machines/` would
-    # only duplicate the path. Unconditional, because `harness/memory` already
-    # emits nothing at all when it is disabled.
-    my.home.ai.harness.memory.historySources.zerostack = {
-      providerKey = "zerostack";
-      sourceFormat = "zerostack-session-json-v1";
-      exporter = {
-        script = ../harness/memory/plugins/zerostack/zerostack-ctx-export;
-        # Takes no arguments, so the destination can only arrive by environment.
-        outputEnvVar = "ZEROSTACK_CTX_HISTORY_PATH";
-        environment.ZEROSTACK_SESSION_DIR = "${config.xdg.dataHome}/zerostack/sessions";
-      };
-    };
+    # Nothing indexes this history without ctx itself, hence the second gate on
+    # `memory.enable`.
+    xdg.dataFile = lib.mkIf config.my.home.ai.harness.memory.enable zerostackHistory.xdg.dataFile;
+    systemd.user = lib.mkIf config.my.home.ai.harness.memory.enable zerostackHistory.systemd.user;
   };
 }
