@@ -252,7 +252,7 @@ in
           api_url = modelInfo.url;
           model = modelInfo.model;
           prompt_format = if lib.hasInfix "qwen" model then "qwen" else "infer";
-          max_output_tokens = 128;
+          max_output_tokens = 64;
         };
       };
     };
