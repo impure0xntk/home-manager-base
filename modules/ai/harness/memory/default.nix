@@ -45,9 +45,10 @@ in
         description = ''
           Root holding ctx's index installation, `config.toml`, the search
           generation pointer, usage data, machine identity, and both generation
-          directories. Exported history lives here too, under
-          `<dataRoot>/<source>-history/`.
-        '';
+      directories. Exported history deliberately lives **outside** this root,
+      under `/tmp` (see `historySources.<name>.path`), because ctx refuses a
+      provider source root that overlaps its own data root.
+    '';
       };
 
       # `default` rather than a `config` assignment, matching `harness/hooks.nix`:
@@ -168,7 +169,6 @@ in
     };
   config = lib.mkIf config.my.home.ai.harness.memory.enable (
     internals.projected {
-      dataRoot = config.my.home.ai.harness.memory.dataRoot;
       package = config.my.home.ai.harness.memory.package;
       sources = {
         jcode = config.my.home.ai.harness.memory.historySources.jcode;

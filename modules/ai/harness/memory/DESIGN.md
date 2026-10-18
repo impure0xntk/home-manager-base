@@ -48,9 +48,12 @@ not planned.
 | jcode | `%CTX_DATA_ROOT%/jcode-history/history.jsonl` | `available`, `importable: true` | |
 | zerostack | `/tmp/ctx-zerostack-history.jsonl` | `missing`, `importable: false` | the declared provider-owned durable source path is not a regular non-symlink file |
 
-ctx 1.0 plugin route requires a durable provider-owned **regular file**. `/tmp`
-is not durable, so zerostack can never import. jcode already gets this right
-with the `%CTX_DATA_ROOT%/` prefix in its manifest.
+The zerostack row was absence, not location: nothing in this repo wrote the
+file at all. The durable-file requirement still holds once it is written.
+Location is then constrained the other way, see below: a provider source root
+may not overlap or contain the data root, so `%CTX_DATA_ROOT%/...`, which
+looked like the correct answer when jcode alone was measured, is rejected
+outright for any source this module exports.
 
 ### The index is broken by double supervision
 
@@ -214,9 +217,12 @@ harness.memory.historySources.zerostack = {
 Derived per entry:
 
 - `ctx-history-plugin.json`, generated from the options rather than hand-written,
-  with `path` baked to the **absolute** `<dataRoot>/<name>/history.jsonl`. The
-  `%CTX_DATA_ROOT%` prefix expands nowhere, so Nix must resolve it; that also
-  keeps manifests readable if a machine overrides `dataRoot`.
+  with `path` baked to the **absolute** `/tmp/ctx-<name>-history.jsonl`. It has
+  to point outside the data root: `ctx import --history-source` measures
+  `provider source root "<dataRoot>/<name>-history/history.jsonl" is unsafe
+  relative to ctx data root "<dataRoot>": provider source root overlaps or
+  contains the ctx data root`, and fails the unit. `/tmp` is also what both
+  bundled exporters fall back to, so the unit and the script cannot disagree.
 - **Do not emit `lineage_contract`.** The doc requires it to exactly match the
   durable JSONL manifest record, and neither exporter writes it (verified: both
   emit only `schema_version`, plus `producer`). Declaring it in the plugin
@@ -229,7 +235,8 @@ Derived per entry:
   `ctx import --history-source <providerKey>/default`, plus its timer. This
   exists because plugin sources are explicitly excluded from `ctx import --all`.
 
-This removes the `/tmp` path and makes zerostack importable.
+This gives zerostack a durable file the unit actually writes, and keeps both
+source roots out of the data root.
 
 ### `mcp`
 
@@ -282,10 +289,10 @@ so keeping the projection also keeps ctx on PATH with no second install site.
    `config.toml`. Add the assertion barring `auto` from also declaring a unit.
 4. Add `history-sources.nix` with generated manifests. Port zerostack onto it
    and delete its ~40 lines from `agents/zerostack.nix`; add the jcode entry.
-5. Repair the live root, in this order: stop the foreign unit, clear the stale
-   daemon lock, move `/tmp/ctx-zerostack-history.jsonl` under the CTX data root,
-   drop the old broken source registration, then
-   `ctx import --history-source zerostack/default` and confirm with `ctx status`.
+5. Repair the live root, in order: stop the foreign unit, clear the stale
+   daemon lock, drop the old broken source registration (its path sits inside
+   the data root, so it must be dropped rather than rewritten there), then run
+   `ctx import --history-source zerostack/default` and confirm `ctx status`.
    This step mutates private search history, so it wants explicit go-ahead.
 6. Add `filesystem.allowWrite` for `dataRoot` to the fence baseline in
    `harness/sandbox/default.nix`. `settingsForNixEnv` grants read and execute
@@ -299,8 +306,8 @@ so keeping the projection also keeps ctx on PATH with no second install site.
 
 - The old `ctx-history.service` is replaced. A live one holding a stale lock has
   to be stopped before the new one starts.
-- `/tmp/ctx-zerostack-history.jsonl` must move into the data root, not just be
-  rewritten there, or the broken source registration survives.
+- Old registrations pointed into the data root. They have to be dropped, not
+  merely rewritten in place, or the containment check keeps rejecting the unit.
 - `history.jsonl` files contain private prompts and tool output. Both exporters
   already chmod 0600 and 0700 their output; keep that.
 - `machines/oci-arm` keeps pointing at `lean-ctx`, unchanged.

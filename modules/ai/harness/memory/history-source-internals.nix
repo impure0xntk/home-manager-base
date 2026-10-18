@@ -1,12 +1,11 @@
 # Helpers behind `harness.memory.historySources`: per-source plugin manifest,
 # exporter unit, and the projection tying them into the home.
 #
-# Both failures in `ctx sources` traced back to this tree. One durable history
-# file was missing because nothing in this repo wrote it, and it sat under
-# `/tmp` because a hand-written manifest declared it there; ctx reported
-# `declared provider-owned durable source path is not regular non-symlink file`
-# and refused to import anything. Both are now derived from options, so a
-# rebuild repairs them.
+# The one failure `ctx sources` reports against this tree is containment, not
+# existence: `ctx import --history-source` refuses a provider source root that
+# overlaps or contains its own data root, so every export has to be written
+# outside `~/.local/share/ctx`. All of it is derived from options now, so a
+# rebuild repairs a wrong path.
 #
 # `projected` takes every input it needs as an argument instead of accepting the
 # whole `harness.memory` set. Requesting that set resolves each option in it, and
@@ -104,27 +103,32 @@ rec {
     };
 
   normalize =
-    { dataRoot, source }:
-    # `displayName`, `dataSubdir` and the exporter's `interpreter` spell their own
-    # defaults here rather than in the type: each references a sibling option or
-    # the module's `dataRoot`, and a submodule `default` sees neither. All three
-    # default to null rather than being absent, so `or` would preserve the null.
+    { source }:
+    # `displayName` and the exporter's `interpreter` spell their own defaults
+    # here rather than in the type: each references a sibling option, and a
+    # submodule `default` sees neither. Both default to null rather than being
+    # absent, so `or` would preserve the null.
+    #
+    # `dataRoot` deliberately plays no part: ctx refuses a provider source root
+    # that overlaps or contains it. `/tmp` also matches the fallback both
+    # bundled exporters already carry, so a source whose environment variable
+    # never reaches them still describes the file they would have written.
     let
-      subdir = if source.dataSubdir != null then source.dataSubdir else "${source.providerKey}-history";
+      defaultPath = "/tmp/ctx-${source.providerKey}-history.jsonl";
     in
       source
       // {
         displayName = if source.displayName != null then source.displayName else source.providerKey;
-        path = if source.path != null then source.path else "${dataRoot}/${subdir}/history.jsonl";
+        path = if source.path != null then source.path else defaultPath;
         exporter = source.exporter;
       };
 
   # Resolved of its inputs rather than of the declaring namespace, so each piece
   # arrives on demand instead of pulling the set that contains it.
   projected =
-    { dataRoot, package, sources }:
+    { package, sources }:
     let
-      resolved = lib.mapAttrs (_: source: normalize { inherit dataRoot source; }) sources;
+      resolved = lib.mapAttrs (_: source: normalize { inherit source; }) sources;
     in
     lib.mkMerge [
       {

@@ -40,42 +40,30 @@ lib.types.submodule {
       description = "Human readable name shown by `ctx sources`. Defaults to the provider key.";
     };
 
-    # Derived in `history-sources.nix` from `providerKey` and the module
-    # `dataRoot`, because a default here could not see either of them.
-    # Derived here rather than left null for `history-source-internals.nix` to
-    # fill: `defaultText` is documentation, so a reference to the module
-    # `dataRoot` inside it is inert, whereas resolving the path outside this
-    # submodule forced the same namespace this option lives in to be evaluated
-    # while it was still being declared, which is infinite recursion at build
-    # time. `config.my.home.ai.harness.memory.dataRoot` reads one already-resolved
-    # value, not the whole set.
+    # Left null for `history-source-internals.nix` to fill: it cannot be derived
+    # here. A `default` in a submodule sees no sibling `providerKey`, and
+    # resolving the path outside this submodule forced the same namespace this
+    # option lives in to be evaluated while it was still being declared, which
+    # is infinite recursion at build time.
     path = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      defaultText = lib.literalExpression ''"''${dataRoot}/''${providerKey}-history/history.jsonl"'';
+      defaultText = lib.literalExpression ''"/tmp/ctx-''${providerKey}-history.jsonl"'';
       description = ''
-        Absolute path to the durable provider-owned regular file holding the
+        Absolute path to the durable provider-owned regular file holding
         exported `ctx-history-jsonl-v2` records.
 
-        It must live inside the ctx data root. `/tmp` measures as `declared
-        provider-owned durable source path is not regular non-symlink file`
-        once the exporter stops writing it, and `ctx import --history-source`
-        then refuses the source outright, so nothing ever became importable
-        there. Unlike the installer-visible data root, this path is never
-        relocated, so it is a plain string rather than a store path.
-      '';
-    };
-
-    dataSubdir = lib.mkOption {
-      type = lib.types.nullOr (lib.types.strMatching "[A-Za-z0-9._-]+");
-      default = null;
-      defaultText = lib.literalExpression ''"''${providerKey}-history"'';
-      description = ''
-        Directory under the module `dataRoot` holding the exported file, when
-        `path` is left unset. Defaults to `<providerKey>-history`, which only the
-        derivation can spell because a `default` here cannot see the sibling
-        `providerKey`. Exporters create it 0700 and the JSONL 0600, because the
-        records contain prompts and tool output.
+        It must lie **outside** the module `dataRoot`: `ctx import
+        --history-source` rejects a provider source root that overlaps or
+        contains the data root itself -- measured on ctx 2.2.8 as
+        `provider source root "<dataRoot>/<providerKey>-history/history.jsonl"
+        is unsafe relative to ctx data root "<dataRoot>": provider source root
+        overlaps or contains the ctx data root`. That is why the default sits
+        under `/tmp` rather than next to the index. Each source's unit writes
+        the file before importing it, so a reboot that clears `/tmp` only
+        defers the next hourly export. Unlike installer-visible data root, this
+        path is never relocated, so it is a plain string rather than a store
+        path.
       '';
     };
 

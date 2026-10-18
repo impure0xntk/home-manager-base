@@ -3,15 +3,18 @@
 
 Default paths:
   Input:  ${JCODE_HOME}/sessions/session_*.json (+ .journal.jsonl appends)
-  Output: ${XDG_DATA_HOME}/ctx/jcode-history/history.jsonl
+  Output: ${JCODE_CTX_HISTORY_PATH} (default /tmp/ctx-jcode-history.jsonl)
+
+The destination must sit outside ctx's own data root: `ctx import
+--history-source` refuses a provider source root that overlaps it. The output
+file is written atomically and replaced whole on every run, and jcode's own
+session files are never modified.
 
 jcode keeps the authoritative snapshot in `session_<...>.json`, but also
 appends recent turns to a sibling `session_<...>.journal.jsonl` between
 snapshot rewrites. The journal is *not* only newer messages: after the first
 flush it repeats every message already in the snapshot, so merging on message
 id yields "snapshot plus appends" instead of duplicating the prefix.
-
-The exporter never modifies jcode's own files.
 """
 
 from __future__ import annotations

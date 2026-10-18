@@ -2,12 +2,17 @@
 """Export zerostack session JSON files as ctx-history-jsonl-v2.
 
 Default paths:
-  Input:  $XDG_DATA_HOME/zerostack/sessions/*.json
-  Output: $XDG_DATA_HOME/zerostack/ctx-history/history.jsonl
+  Input:  ${XDG_DATA_HOME}/zerostack/sessions/*.json
+  Output: ${ZEROSTACK_CTX_HISTORY_PATH} (default /tmp/ctx-zerostack-history.jsonl)
 
-The exporter does not modify zerostack's session files. Zerostack does not
-store per-message timestamps in the observed schema, so each message uses the
-session's created_at value and event_index carries the stable message order.
+The destination must sit outside ctx's own data root: `ctx import
+--history-source` refuses a provider source root that overlaps it. This
+exporter accepts no arguments, so the destination arrives only as that
+environment variable. The output file is written atomically and replaced whole
+on every run, and zerostack's own session files are never modified. Zerostack
+does not store per-message timestamps in the observed schema, so each message
+uses the session's created_at value and event_index carries the stable message
+order.
 """
 
 from __future__ import annotations
