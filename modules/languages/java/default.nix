@@ -18,6 +18,74 @@ let
     # "-XX:+UseCompactObjectHeaders" # will be default in Java 27
   ];
 
+  jdtlsSettings = rec {
+    memory = {
+      min = "4g";
+      max = "8g";
+    };
+    sharedIndexLocation = "${config.xdg.cacheHome + "/.jdt/index"}"; # shared index location for jdtls.
+    lombokJar = "${pkgs.lombok}/share/java/lombok.jar";
+    initializationOptions.settings = {
+      java = {
+        configuration = {
+          updateBuildConfiguration = "interactive";
+          runtimes = [ # name allows "JavaSE-NN" only.
+            {
+              "name" = "JavaSE-${lib.versions.major config.programs.java.package.version}";
+              "path" = config.programs.java.package;
+              "default" = true;
+            }
+            (
+              # Cannot set GraalVM as JavaSE.
+              # Maybe should use "GraalVM Tools for Java" extension.
+              lib.mkIf (!lib.hasPrefix "graalvm" pkgs.jdk.name) {
+                "name" = "JavaSE-${lib.versions.major pkgs.jdk.version}";
+                "path" = pkgs.jdk;
+                "default" = false;
+              }
+            )
+          ];
+        };
+        jdt.ls = {
+          protobufSupport.enable = true;
+          groovySupport.enable = false;
+          kotlinSuport.enable = false;
+          scalaSupport.enable = false;
+          aspectjSupport.enable = false;
+          androidSupport.enable = false;
+          # javac.enabled = true;
+        };
+
+        maxConcurrentBuilds = 2;
+
+        home = pkgs.jdk;
+        telemetry = false;
+        format.onType.enabled = false;
+        inlayHints.parameterNames.enabled = "all";
+        diagnostic.nullAnalysis ={
+          mode = "automatic";
+          nonnull = [ "jakarta.annotation.Nonnull" "org.jspecify.annotations.NonNull" ];
+          nullable = [ "jakarta.annotation.Nullable" "org.jspecify.annotations.Nullable" ];
+          nonnullbydefault = [ "org.jspecify.annotations.NullMarked" ];
+        };
+      };
+    };
+    vmArgs = {
+      vscode = tunedJavaArgs ++ [
+        "-Xms${jdtlsSettings.memory.min}"
+        "-Xmx${jdtlsSettings.memory.max}"
+        # shared index location and lombok support are set in extension settings.
+      ];
+      zed = tunedJavaArgs ++ [
+        # memory options are set in extension settings, but not work
+        "-Xms${jdtlsSettings.memory.min}"
+        "-Xmx${jdtlsSettings.memory.max}"
+
+        "-Djdt.core.sharedIndexLocation=${sharedIndexLocation}"
+      ];
+    };
+  };
+
   # Vmargs for VS code tools.
   # It includes tuned java args, and proxy if needed.
   toolsVscodeVmargs = (lib.concatStringsSep " " tunedJavaArgs)
@@ -25,18 +93,12 @@ let
 
   scripts = import ./script.nix { inherit pkgs lib config; };
 
-  jdtls = pkgs.writeShellApplication {
+  jdtlsForZed = pkgs.writeShellApplication {
     name = "jdtls";
     runtimeInputs = [ pkgs.unstable.jdt-language-server ];
-    text =
-    let
-      args = tunedJavaArgs ++ [
-        "-Djdt.core.sharedIndexLocation=${config.xdg.cacheHome + "/.jdt/index"}"
-        "-javaagent:${pkgs.lombok}/share/java/lombok.jar"
-      ];
-    in ''
+    text = ''
       exec jdtls \
-        ${lib.concatStringsSep " " (lib.forEach args (arg: "--jvm-arg=${arg}"))} \
+        ${lib.concatStringsSep " " (lib.forEach jdtlsSettings.vmArgs.zed (arg: "--jvm-arg=${arg}"))} \
         "''$@"
     '';
   };
@@ -135,52 +197,31 @@ in {
           };
         } // lib.my.flatten "_flattenIgnore" {
           # "Runtime at '{jdk path}' is incompatible with the 'JavaSE-NN' environment." workaround.
-          java = {
-            jdt.ls = {
+          java = with jdtlsSettings.initializationOptions.settings.java; {
+            jdt.ls = jdt.ls // {
               java.home = "${pkgs.jdk}"; # config.programs.java.package;
-              vmargs = lib.concatStringsSep " " tunedJavaArgs;
+              vmargs = lib.concatStringsSep " " jdtlsSettings.vmArgs.vscode;
             };
-            configuration = {
+            configuration = configuration // {
               detectJdksAtStart = false;
-              runtimes = [ # name allows "JavaSE-NN" only.
-                {
-                  "name" = "JavaSE-${lib.versions.major config.programs.java.package.version}";
-                  "path" = config.programs.java.package;
-                  "default" = true;
-                }
-                (
-                  # Cannot set GraalVM as JavaSE.
-                  # Maybe should use "GraalVM Tools for Java" extension.
-                  lib.mkIf (!lib.hasPrefix "graalvm" pkgs.jdk.name) {
-                    "name" = "JavaSE-${lib.versions.major pkgs.jdk.version}";
-                    "path" = pkgs.jdk;
-                    "default" = false;
-                  }
-                )
-              ];
-              updateBuildConfiguration = "interactive";
             };
 
-            compile.nullAnalysis = {
-              mode = "automatic";
-              nonnull = [ "jakarta.annotation.Nonnull" "org.jspecify.annotations.NonNull" ];
-              nullable = [ "jakarta.annotation.Nullable" "org.jspecify.annotations.Nullable" ];
-              nonnullbydefault = [ "org.jspecify.annotations.NullMarked" ];
-            };
+            compile.nullAnalysis = diagnostic.nullAnalysis;
             debug.settings = {
               showHex = true;
               showQualifiedNames = false;
               showLogicalStructure = true;
             };
-            format.onType.enabled = false;
-            inlayHints.parameterNames.enabled = "all";
+            format = format;
+            inlayHints = inlayHints;
+            maxConcurrentBuilds = maxConcurrentBuilds;
 
             # Experimental so if not work, remove them.
             # "java.jdt.ls.javac.enabled" = if (lib.versionAtLeast pkgs.jdk.version "24") then "on" else "off" ;
             # "java.completion.engine" = "dom";
             sharedIndexes = {
               enabled = "on";
-              location= config.xdg.cacheHome + "/.jdt/index";
+              location= jdtlsSettings.sharedIndexLocation;
             };
           };
 
@@ -246,24 +287,18 @@ in {
             java_home = pkgs.jdk;
             jdk_auto_download = false;
 
-            jdtls_launcher = lib.getExe jdtls;
+            jdtls_launcher = lib.getExe jdtlsForZed;
 
             lombok_support = true;
-            lombok_jar = "${pkgs.lombok}/share/java/lombok.jar";
+            lombok_jar = jdtlsSettings.lombokJar;
 
             java_debug_jar = java-debug-plugin;
 
-            initialization_options = {
-              telemetry = false;
-              diagnostic.nullAnalysis = {
-                mode = "automatic";
-                nonnull = [ "jakarta.annotation.Nonnull" "org.jspecify.annotations.NonNull" ];
-                nullable = [ "jakarta.annotation.Nullable" "org.jspecify.annotations.Nullable" ];
-                nonnullbydefault = [ "org.jspecify.annotations.NullMarked" ];
-              };
-              format.onType.enabled = false;
-              inlayHints.parameterNames.enabled = "all";
-            };
+            # Not work
+            min_memory = jdtlsSettings.memory.min;
+            max_memory = jdtlsSettings.memory.max;
+
+            initialization_options = jdtlsSettings.initializationOptions;
           };
         };
       };
