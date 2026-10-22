@@ -255,8 +255,8 @@ let
           model = reviewModel.model;
         };
 
-        # Chrome this machine's TUI does not want. jcode 0.95.0 hard-wires all
-        # three; the patch adds the keys behind the upstream defaults, so this is
+        # Chrome this machine's TUI does not want. Upstream hard-wires all of
+        # it; the patch adds the keys behind the upstream defaults, so this is
         # the only place that has to be revisited on a version bump.
         #   features.onboarding          - the telemetry notice plus the guided
         #                                  login walkthrough, which on a machine
@@ -321,8 +321,8 @@ in
               jcode ships. This is an allow-list over the whole tool surface,
               MCP tools included, so an entry here that names an MCP tool keeps
               it and a missing one drops it. The default is the full inventory
-              jcode 0.95.0 advertises, so declaring it pins the surface rather
-              than narrowing it. Set to `[ ]` to expose MCP tools only.
+              jcode advertises, so declaring it pins the surface rather than
+              narrowing it. Set to `[ ]` to expose MCP tools only.
             '';
             example = lib.literalExpression ''[ "read" "write" "bash" "mcp" ]'';
           };

@@ -29,23 +29,34 @@ GitHub tarball of a release tag, not `master`:
 
 | | |
 | --- | --- |
-| jcode version | `0.95.0` |
-| tag | `v0.95.0` |
-| tag object | `a74c00fb0a7aaf02a9896025d9b4c19ffff9657e` (annotated) |
-| tag commit | `6487bbd7e9a45e6f91822292d6128854d5a6c5c6` |
-| `src.hash` | `sha256-LboCn0ctUEVpO/wKoOhyZAMN8cSNh+TGAncdboVbzi4=` |
-| `cargoHash` | `sha256-SwPyYeYcm3gJEk6cp65M8xdDZQxOGsky0HfvFR0zet4=` |
+| jcode version | `0.99.0` |
+| tag | `v0.99.0` |
+| `src.outputHash` | `sha256-yqa40Kh1pkbS8+PsieZD3rg+qOAEsnoF/PCPJQXh6kc=` |
+| `cargoHash` | `sha256-nvha2+ZthVC2Zoe2GYuOgr+0LwDEA8vXzEaPt9X1RBw=` |
+| `src.url` | `https://github.com/1jehuang/jcode/archive/refs/tags/v0.99.0.tar.gz` |
 | package source | `numtide/llm-agents.nix`, `packages/jcode/package.nix` |
-| `llm-agents` pin | `493c34b1bed086861b0e968a40d00bd06522f003` |
+| `llm-agents` pin | `8fa7ff4193be923056b342d48d5bb38466791fe1` |
 
-### Drift worth knowing at 0.95.0
+### Drift worth knowing at 0.99.0
 
-Both call sites that moved read very close to what they were, which is why the
-0.88.0 hunks *applied* here and were still wrong:
+One call site moved far enough that its hunk stopped applying at all, and that
+rejection was the whole build failure this upgrade was:
 
-- `App::onboarding_welcome_active` gained an `onboarding_flow_drives_welcome()`
-  early return ahead of the old insertion point. The gate sits above it now,
-  because a running flow keeps the welcome screen up on its own.
+- `build_header_sections` absorbed both halves it used to delegate. It now calls
+  `build_persistent_header_with_auth` and `build_header_lines_with_auth`
+  directly, and the surviving `build_persistent_header` / `build_header_lines`
+  are `#[cfg(test)]` wrappers over *it*. The 0.95.0 insertion point was the
+  first line of the body, which in 0.99.0 is a `Instant::now()` timing probe,
+  so the gate has to go above that rather than at the old offset. Gating an
+  inner builder instead would gate only tests: `prepare_header_cached` is the
+  single render-path caller, and it goes through `build_header_sections`.
+
+Everywhere else read close enough to 0.95.0 that the old hunks landed
+unchanged, including the two that moved most last time:
+
+- `App::onboarding_welcome_active` still carries the
+  `onboarding_flow_drives_welcome()` early return below this gate, because a
+  running flow keeps the welcome screen up on its own.
 - `initial_header_pad_top` changed its input reserve from `4` to `5` lines. The
   empty-header guard keys on `header_lines`, not on the flag, so it needs no
   update -- but the hunk fails on context when regenerated, and either ignoring
@@ -68,7 +79,22 @@ working tree, which fails outright on an untracked socket like `.codegraph/`.
 `version`, `src.hash` and `cargoHash` are written down, and a version bump
 there is what invalidates this directory.
 
-If that `version` is no longer `0.95.0`, treat this directory as stale and
+The rest of the table is the same evaluation, two more attributes deep:
+
+```bash
+nix eval --impure --raw --expr \
+  "(builtins.getFlake \"git+file://$PWD\").inputs.llm-agents.packages.x86_64-linux.jcode.src.outputHash"
+nix eval --impure --raw --expr \
+  "(builtins.getFlake \"git+file://$PWD\").inputs.llm-agents.packages.x86_64-linux.jcode.cargoHash"
+```
+
+`src.outputHash` rather than `src.hash`: `hash` is the legacy alias and reads
+both variables at once, which is why it prints the single string appended to
+itself. The tag object and commit rows the 0.95.0 table carried are gone
+deliberately -- this package builds from a GitHub *tarball* URL, not a git
+fetch, so nothing here can check either one.
+
+If that `version` is no longer `0.99.0`, treat this directory as stale and
 follow [Upgrading](#upgrading) before anything else. A patch that still applies
 is not necessarily a patch that still means what its comment says.
 
@@ -98,9 +124,8 @@ Rules every patch here follows, and the reason each one exists:
 
 ## `ui-toggles.patch`
 
-TUI chrome this machine does not want, which upstream 0.95.0 hard-wires. Four
-keys are added, each defaulting to `true`, and `jcode.nix` sets all four to
-`false`:
+TUI chrome this machine does not want, which upstream hard-wires. Four keys are
+added, each defaulting to `true`, and `jcode.nix` sets all four to `false`:
 
 | key | default | effect when `false` |
 | --- | --- | --- |
@@ -118,7 +143,7 @@ Files and where each key is gated:
 | `crates/jcode-tui/src/tui/app/onboarding_flow_control.rs` | skips the guided flow on both the startup path and the after-login path |
 | `crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs` | gates the welcome screen and the suggestion cards |
 | `crates/jcode-tui/src/tui/info_widget.rs` | seeds `WidgetsState::enabled` from the key; the `Alt+I` toggle is untouched |
-| `crates/jcode-tui/src/tui/ui_header.rs` | returns both header sections empty |
+| `crates/jcode-tui/src/tui/ui_header.rs` | returns both header sections empty, gated on the one function the render path calls |
 | `crates/jcode-tui/src/tui/ui_input.rs` | one `prompt_number_label` helper used by the three prompt-drawing sites, so the label and the width never disagree |
 | `crates/jcode-tui/src/tui/ui_prepare.rs` | collapses the top pad when the header is empty, keyed on height rather than on the flag |
 
@@ -203,9 +228,22 @@ package.
 ```bash
 # 1. Apply for real, to the tree this claims to target.
 PATCHES=.../modules/ai/patches/jcode            # this directory
-git clone --depth 1 --branch v0.95.0 https://github.com/1jehuang/jcode.git /tmp/jcode
+git clone --depth 1 --branch v0.99.0 https://github.com/1jehuang/jcode.git /tmp/jcode
 cd /tmp/jcode
 for p in "$PATCHES"/*.patch; do patch -p1 --forward < "$p"; done
+```
+
+Cloning needs GitHub reachable, which a fenced session often is not. The tree
+the build actually patches is already local then, and it is the same bytes:
+
+```bash
+# Same tree, no network. Compare skips nothing: this is inputHash, not a cache.
+mkdir -p /tmp/jcode && cd /tmp/jcode
+nix build --impure --no-link '.?submodules=1#legacyPackages' # or locate the src:
+nix eval --impure --expr \
+  "(builtins.getFlake \"git+file://$PWD\").inputs.llm-agents.packages.x86_64-linux.jcode.src"
+# then extract the printed store path, chmod -R u+w, and patch as above.
+```
 
 # 2. Do the patched files still parse, and are the hunks still formatted?
 #    Step 1 has to have run: the pristine tree parses trivially.
