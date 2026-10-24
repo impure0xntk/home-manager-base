@@ -75,7 +75,7 @@ in
           prompt = builtins.readFile ./RTK.md;
         };
         codegraph = rec {
-          package = createWrappedPackage pkgs.my.codegraph {
+          package = createWrappedPackage pkgs.codegraph {
             CODEGRAPH_TELEMETRY = "0";
             DO_NOT_TRACK = "1";
           };
