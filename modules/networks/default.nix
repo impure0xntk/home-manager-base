@@ -43,6 +43,12 @@ in
         default = lib.stringLength config.my.home.networks.proxy.default > 0;
       };
       snippet = {
+        noProxyVar = lib.mkOption {
+          type = lib.types.str;
+          description = "no_proxy value. Do not edit this: set from my.home.networks.hostname.";
+          default = noProxyVar;
+          example = "127.0.0.1,localhost,examplehost";
+        };
         withoutSchema = lib.mkOption {
           type = lib.types.str;
           description = "Proxy without schema for connect command. Do not edit this: set from my.home.networks.proxy.default.";

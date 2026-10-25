@@ -87,6 +87,23 @@ let
       name = "init-filesystem.bat";
       text = builtins.readFile ./batch/init-filesystem.bat;
     })
+  ] ++ lib.optionals config.my.home.networks.proxy.enable [
+    (lib.my.writeBatApplicationAttr {
+      name = "toggle-proxy.bat";
+      text = lib.strings.replaceStrings
+        [
+          "@PROXY_SERVER@"
+          "@PROXY_URL@"
+          "@NO_PROXY@"
+        ]
+        [
+          config.my.home.networks.proxy.snippet.withoutSchema
+          config.my.home.networks.proxy.default
+          config.my.home.networks.proxy.snippet.noProxyVar
+        ]
+        (builtins.readFile ./batch/toggle-proxy.bat);
+    })
+  ] ++ [
     (lib.my.writeNoWindowBatApplicationAttr {
       name = "avoid-screensaver.vbs";
       command = "avoid-screensaver.ps1.bat"; # this creates by the below "writePowershellApplicationAttrs" that has name "avoid-screensaver.ps1"
