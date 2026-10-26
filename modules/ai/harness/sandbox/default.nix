@@ -280,9 +280,15 @@ let
   }) mergedProfiles;
 
   profileAliases = lib.mapAttrs' (name: _: {
-    name = "fence-${name}";
-    value = "fence --settings ${config.xdg.configHome}/fence/${name}.json";
+    name = "fence-worktree-${name}";
+    value = "fence-worktree --settings ${config.xdg.configHome}/fence/${name}.json";
   }) (lib.filterAttrs (name: _: name != "fence") finalProfiles);
+
+  # fence does NOT support worktree: if uses fence in worktree, git commands will fail because .git directory is out of the sandbox.
+  # So use custom script.
+  fence-worktree = pkgs.callPackage ./fence-worktree.nix {
+    inherit (pkgs) fence;
+  };
 in
 {
   options.my.home.ai.harness.sandbox = with lib; with lib.types; {
@@ -322,7 +328,8 @@ in
   };
   config = lib.mkIf (cfg.harness.enable && cfg.harness.sandbox.enable) {
     home.packages = with pkgs; [
-      fence
+      # fence
+      fence-worktree
     ];
 
     programs.bash.shellAliases = profileAliases;
