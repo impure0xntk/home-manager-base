@@ -242,6 +242,11 @@ let
         display.reasoning_display = "current";
         display.latex.rendering = "unicode";
 
+
+        # Upstream defaults this true: it emits an unsolicited "KV cache
+        # miss" line per call.
+        features.kv_cache_miss_notices = false;
+
         features.swarm = true;
 
         # `reviewModel` is the whole model record (`provider` / `url` / `model`
