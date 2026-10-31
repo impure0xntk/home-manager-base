@@ -26,6 +26,7 @@ in
     (import ./junie.nix (args // { inherit searchModelByRole; }))
     (import ./copilot-cli.nix (args // { inherit searchModelByRole; }))
     (import ./zerostack.nix (args // { inherit searchModelByRole; }))
+    (import ./fx.nix (args // { inherit searchModelByRole; }))
     # Future agents can be added here:
     # (import ./agent-deck.nix (args // { inherit searchModelByRole; }))
     # (import ./other-agent.nix (args // { inherit searchModelByRole; }))

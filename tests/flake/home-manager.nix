@@ -27,6 +27,7 @@
     (import ./../modules/ai/harness-sandbox.nix)
     (import ./../modules/ai/jetbrains-central.nix)
     (import ./../modules/ai/junie.nix)
+    (import ./../modules/ai/fx.nix)
     # (import ./../modules/ide/jetbrains-remote.nix args)
     # (import ./../modules/languages/java.nix args)
   ];

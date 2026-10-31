@@ -41,7 +41,6 @@ in
     my.home.ai.harness.sandbox.enable = true;
     my.home.ai.codex.enable = true;
     my.home.ai.jcode.enable = true;
-    my.home.ai.jcode.preToolUse.enable = true;
 
     assertions = [
       {
