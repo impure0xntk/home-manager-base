@@ -28,6 +28,9 @@ let
       );
     in
     if builtins.length models > 0 then builtins.head models else null;
+
+  litellm-chatgpt-login = import ./litellm-provider-login.nix (args // { providerName = "chatgpt"; });
+  litellm-github-copilot-login = import ./litellm-provider-login.nix (args // { providerName = "github_copilot"; });
 in
 {
   imports = [
@@ -280,6 +283,11 @@ in
         };
       };
     };
+
+    home.packages = [
+      litellm-chatgpt-login
+      litellm-github-copilot-login
+    ];
 
     home.file = lib.optionalAttrs useContinueDev {
       ".continue/config.yaml".source = lib.my.toYaml {
