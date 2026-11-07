@@ -205,6 +205,7 @@ let
       "ctrl-t" = [ "terminal::SendKeystroke" "ctrl-t" ]; # terminal file search
       "ctrl-n" = [ "terminal::SendKeystroke" "ctrl-n" ];
       "ctrl-p" = [ "terminal::SendKeystroke" "ctrl-p" ];
+      "ctrl-shift-u" = [ "workspace::ToggleZoom" "ctrl-shift-u" ];
     })
 
     (sameContext "BufferSearchBar" [
