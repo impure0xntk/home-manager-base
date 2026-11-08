@@ -267,7 +267,7 @@ in
   options.my.home.ide.zed = {
     enable = lib.mkEnableOption "Zed editor";
 
-    package = lib.mkPackageOption pkgs.unstable "zed-editor" { };
+    package = lib.mkPackageOption pkgs.stable "zed-editor" { };
 
     # Main settings - flexible attrset like upstream
     userSettings = lib.mkOption {
