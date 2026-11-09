@@ -267,7 +267,12 @@ in
   options.my.home.ide.zed = {
     enable = lib.mkEnableOption "Zed editor";
 
-    package = lib.mkPackageOption pkgs.stable "zed-editor" { };
+    # package = lib.mkPackageOption pkgs.unstable "zed-editor" { };
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.multiverse.versions.zed-editor."1.27.0";
+      description = "Zed package";
+    };
 
     # Main settings - flexible attrset like upstream
     userSettings = lib.mkOption {
