@@ -12,7 +12,7 @@ in
     # (my.cli-agent-orchestrator.override {
     #   tmux = config.programs.tmux.package;
     # })
-    my.multistack
+    # my.multistack
   ];
 
   programs.bash.shellAliases = shellAliases;
