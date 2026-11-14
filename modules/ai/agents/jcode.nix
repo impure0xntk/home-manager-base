@@ -436,9 +436,9 @@ in
       (lib.optionalAttrs
         (harness.enable && (harness.agentsMd.source != null || harness.agentsMd.text != ""))
         {
-          "jcode/prompt-overlay.md".source = harness.agentsMd.source or (pkgs.writeText "prompt-overlay.md" (
-            harness.agentsMd.text ++ additionalPrompt
-          ));
+          "jcode/prompt-overlay.md".source = pkgs.writeText "prompt-overlay.md" (
+            (builtins.readFile harness.agentsMd.source) + additionalPrompt
+          );
         })
       (lib.optionalAttrs generateSwarm {
         "jcode/swarm-prompt.md" = {
