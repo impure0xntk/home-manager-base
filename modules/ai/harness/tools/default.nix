@@ -40,6 +40,11 @@ let
   };
 in
 {
+  imports = [
+    ./rtk.nix
+    ./codegraph.nix
+  ];
+
   options.my.home.ai.harness.codingAgentTools =
     with lib;
     with lib.types;
@@ -47,6 +52,11 @@ in
       description = ''
         Tools exposed as standalone commands and to coding agents (codex, junie, goose, etc.).
         Each tool defines a package, environment variables, and a prompt fragment.
+
+        No tool is enabled by default: `harness/tools/rtk.nix`,
+        `harness/tools/codegraph.nix` and `harness/memory/default.nix` contribute
+        the rtk, codegraph and ctx defaults respectively through `mkDefault`, so
+        every entry can be removed, replaced or extended from a machine config.
       '';
       type = attrsOf (submodule {
         options = {
@@ -69,95 +79,18 @@ in
           };
         };
       });
-      default = {
-        rtk = {
-          package = pkgs.rtk;
-          prompt = builtins.readFile ./RTK.md;
-        };
-        codegraph = rec {
-          package = createWrappedPackage pkgs.codegraph {
-            CODEGRAPH_TELEMETRY = "0";
-            DO_NOT_TRACK = "1";
-          };
-          prompt = builtins.readFile ./CODEGRAPH.md; # Self maid
-          mcpServer = {
-            command = lib.getExe package;
-            args = [ "serve" "--mcp" ];
-          };
-        };
-        ctx = lib.mkIf config.my.home.ai.harness.memory.enable {
-          package = config.my.home.ai.harness.memory.package;
-          prompt = builtins.readFile ./CTX.md;
-          # Command and exclusion list are `harness.memory` options, declared in
-          # `harness/memory/default.nix`. Read one path at a time: binding that
-          # whole set into a `cfg` here would make this default wait on the very
-          # `codingAgentTools` entry it helps build.
-          mcpServer = {
-            command = lib.getExe config.my.home.ai.harness.memory.package;
-            args = [ "mcp" "serve" ];
-            excludeTools = [
-              # Modify nothing: no historical session is ever rewritten.
-              "archive"
-              "archive_export_bundle"
-              "archive_import_bundle"
-              "archive_verify_bundle"
-              "import_merge_history"
-              "session_delete"
-              "sources_config_add_jsonl"
-              "sources_config_remove_jsonl"
-              "sources_config_update_jsonl"
-              "sources_identity_forget"
-              "sources_identity_overwrite"
-              # Supervision belongs to ctx's own units, never to an agent.
-              "daemon_service_install"
-              "daemon_service_uninstall"
-              "daemon_start"
-              "daemon_stop"
-              "daemon_restart"
-              "setup_config_init"
-              "setup_daemon"
-              "install"
-              "uninstall"
-              "update"
-              # Reach the server through `ctx-server`, if it is ever wanted.
-              "server_init"
-              "server_stop"
-              "server_run"
-              "login_start"
-              "login_status"
-              "logout"
-              # Delegated to other backends, which are already available and
-              # cheaper: rtk condenses command output and codegraph answers structural questions.
-              "files_read"
-              "files_grep"
-              "code_search"
-              "tree"
-              "docs"
-              "document_fetch"
-              "prompt_optimize"
-              "look_at"
-              "graph_query"
-              "graph_show"
-              "graph_callers"
-              "graph_callees"
-              "graph_impact"
-              "graph_path"
-              "graph_stats"
-              "output_compact"
-              "output_restore"
-            ];
-          };
-        };
-      };
+      default = { };
     };
 
   config = lib.mkIf cfg.harness.enable {
     home.packages = lib.forEach (builtins.attrValues config.my.home.ai.harness.codingAgentTools) (v: v.package);
     xdg.configFile = lib.mkMerge defaultCodingAgentToolsXdgConfigDirs;
 
-    home.activation.trustRtkCustomFilter = lib.hm.dag.entryAfter [ "trust-rtk-custom-filter" ] ''
+    home.activation.trustRtkCustomFilter = lib.mkIf (
+      builtins.hasAttr "rtk" config.my.home.ai.harness.codingAgentTools
+    ) (lib.hm.dag.entryAfter [ "trust-rtk-custom-filter" ] ''
       ${config.my.home.ai.harness.codingAgentTools.rtk.package}/bin/rtk trust --yes
-    '';
+    '');
 
   };
 }

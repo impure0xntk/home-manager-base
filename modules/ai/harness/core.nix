@@ -48,7 +48,7 @@
           };
           "hooks/hooks.json" = {
             hooks = {
-              SessionStart = [
+              SessionStart = lib.optionals (builtins.hasAttr "codegraph" config.my.home.ai.harness.codingAgentTools) [
                 { hooks = [
                   {
                     type = "command";
@@ -57,7 +57,7 @@
                   }
                 ]; }
               ];
-              UserPromptSubmit = [
+              UserPromptSubmit = lib.optionals (builtins.hasAttr "codegraph" config.my.home.ai.harness.codingAgentTools) [
                 { hooks = [
                   {
                     type = "command";

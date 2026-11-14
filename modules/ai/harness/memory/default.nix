@@ -71,7 +71,7 @@ in
 
       prompt = mkOption {
         type = nullOr str;
-        default = builtins.readFile ./CTX.md;
+        default = builtins.readFile ../tools/CTX.md;
         description = "Prompt fragment describing the ctx search route.";
       };
 
@@ -159,4 +159,19 @@ in
       };
 
     };
+
+  config = lib.mkIf (config.my.home.ai.harness.enable && config.my.home.ai.harness.memory.enable) {
+    my.home.ai.harness.codingAgentTools = lib.mkDefault {
+      ctx = {
+        package = config.my.home.ai.harness.memory.package;
+        prompt = config.my.home.ai.harness.memory.prompt;
+        mcpServer = lib.optionalAttrs config.my.home.ai.harness.memory.mcp.enable {
+          enabled = true;
+          command = lib.getExe config.my.home.ai.harness.memory.package;
+          args = [ "mcp" "serve" ];
+          excludeTools = config.my.home.ai.harness.memory.mcp.excludeTools;
+        };
+      };
+    };
+  };
 }
