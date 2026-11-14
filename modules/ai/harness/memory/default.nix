@@ -116,8 +116,7 @@ in
             "login_status"
             "logout"
             # Delegated to other backends, which are already available and
-            # cheaper: rtk condenses command output, zvec-grep does lexical
-            # search and codegraph answers structural questions.
+            # cheaper: rtk condenses command output and codegraph answers structural questions.
             "files_read"
             "files_grep"
             "code_search"

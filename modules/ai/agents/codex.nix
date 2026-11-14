@@ -252,8 +252,8 @@ in
       "com.openai/hooks/hooks.json" = {
         hooks = {
           PreToolUse = [
-            # codegraph and zvec-grep are registered as MCP servers, so a raw
-            # cat/rg spends context on a weaker answer than the index already
+            # codegraph is registered as an MCP server, so a raw cat/rg
+            # spends context on a weaker answer than the index already
             # holds. Deny it and name the tools to call instead.
             # { hooks = [
             #   (lib.optionalAttrs config.my.home.ai.harness.enable {

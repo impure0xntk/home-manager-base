@@ -335,10 +335,7 @@ in
         assertion = lib.any (command: lib.hasInfix ".codegraph" command) (hooks.session_start or [ ]);
         message = "the jcode session_start hook must refresh the codegraph index where it already governs the tree.";
       }
-      {
-        assertion = lib.any (command: lib.hasInfix ".zvec-grep" command) (hooks.session_start or [ ]);
-        message = "the jcode session_start hook must refresh the zvec-grep index where it already governs the tree.";
-      }
+
     ];
   };
 }

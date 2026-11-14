@@ -23,11 +23,11 @@ in
     assertions = [
       {
         assertion = lib.elem redirect (hookCommands goosePreToolUse);
-        message = "goose must deny raw read/grep shell calls in favour of the codegraph and zvec-grep MCP tools.";
+        message = "goose must deny raw read/grep shell calls in favour of the codegraph MCP tool.";
       }
       {
         assertion = lib.elem redirect (hookCommands codexPreToolUse);
-        message = "codex must deny raw read/grep shell calls in favour of the codegraph and zvec-grep MCP tools.";
+        message = "codex must deny raw read/grep shell calls in favour of the codegraph MCP tool.";
       }
     ];
   };

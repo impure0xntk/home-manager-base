@@ -250,10 +250,7 @@ in
         assertion = lib.any (command: lib.hasInfix ".codegraph" command) sessionStartCommands;
         message = "the junie SessionStart hook must refresh the codegraph index where it already governs the tree.";
       }
-      {
-        assertion = lib.any (command: lib.hasInfix ".zvec-grep" command) sessionStartCommands;
-        message = "the junie SessionStart hook must refresh the zvec-grep index where it already governs the tree.";
-      }
+
       {
         assertion = builtins.hasAttr "mcpServers" junieMcp && !(builtins.hasAttr "servers" junieMcp);
         message = "junie reads its MCP file under the mcpServers key.";

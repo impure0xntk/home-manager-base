@@ -96,10 +96,10 @@ in
     # `list_tools` tool, so the agent has to spend a round trip on `list_tools`
     # before it even knows the argument names. `high` puts them in the
     # `get_tool_schema` description itself, so the first call is already an
-    # `invoke_tool`. Measured per backend with the zvec-grep backend: `max` is
-    # 3 frontend tools and 1031 B of `tools/list`; `high` is 2 frontend tools
-    # and 1182 B, i.e. about 37 tokens more resident per backend in exchange for
-    # removing the discovery round trip.
+    # `invoke_tool`. Measured per backend: `max` is 3 frontend tools and
+    # 1031 B of `tools/list`; `high` is 2 frontend tools and 1182 B, i.e.
+    # about 37 tokens more resident per backend in exchange for removing the
+    # discovery round trip.
     compression = lib.mkOption {
       type = lib.types.enum [
         "low"

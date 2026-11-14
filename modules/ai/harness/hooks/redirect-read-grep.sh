@@ -1,26 +1,21 @@
 # PreToolUse hook shared by codex and goose.
 #
-# codegraph and zvec-grep are already registered with both agents as MCP
-# servers, so a raw cat/rg spends context on a weaker answer than the index
-# gives back. This hook inspects the leading fragment of a shell command,
-# denies the recognised read/search shapes with the MCP tool names to call
-# instead, and passes everything else through as `{}` so the hook never
-# becomes the reason a task stalls.
+# codegraph is already registered with both agents as an MCP server, so a raw
+# cat/rg spends context on a weaker answer than the index gives back. This hook
+# inspects the leading fragment of a shell command, denies the recognised
+# read/search shapes with the MCP tool names to call instead, and passes
+# everything else through as `{}` so the hook never becomes the reason a task
+# stalls.
 #
-# Both agents speak the Claude hook dialect, so one script serves both; the
-# tool names differ but are never inspected for shell calls, only the payload.
+# Both agents speak the Claude hook dialect, so one script serves both; the tool
+# names differ but are never inspected for shell calls, only the payload.
 #
 # Every tool name printed below has to be a real backend tool, or the deny
 # points at a name the agent cannot call and the only remaining move is a raw
 # grep, which this script also denies. Messages name backend tools only: the
-# transport that carries them (the multiplexing in `harness/mcp.nix`) is not
-# the agent's business, and naming it would break these messages the day the
+# transport that carries them (the multiplexing in `harness/mcp.nix`) is not the
+# agent's business, and naming it would break these messages the day the
 # transport changes.
-# The zvec-grep daemon runs its `agent` toolset, which registers
-# `zvec_grep_search` alone -- the managed-rg surface (`zvec_grep_rg`) is not
-# available, because exposing it means switching the shared daemon to the
-# `full` toolset, which every client of that daemon inherits.
-# Re-check against `zg server --stdio` tools/list before naming a tool below.
 
 set -euo pipefail
 
@@ -32,8 +27,6 @@ Fall back to a raw read only when the index has no coverage for the file, and sa
 
 readonly SEARCH_MESSAGE='Blocked: a workspace-wide rg/grep is not the retrieval path on this machine. Route it by what the answer is, not by habit:
 
-- sweep, you want the matching lines themselves -> zvec_grep_search with fts, bounded by globs / fileTypes. fts is the lexical route over the same index, so one call answers an exact literal, filename, config key, error string or regex. There is no separate rg tool registered here: the managed-rg surface is not part of the installed toolset, so naming it only wastes a round trip.
-- sweep, you want concepts, symbols, how-does-X-work -> zvec_grep_search with query / queries / vector.
 - small scoped lookup: one symbol, one module, one file you are about to edit -> codegraph_explore with an explicit maxFiles. Verbatim source with line numbers plus the call path, and cheaper than Read plus Grep.
 
 Never codegraph query for a sweep. It expands the bindings around every node, so 79 real hits come back as 147 nodes and 25200 bytes against the lexical route 10686 (2.4x), 40 hits cost 20512 against 3660 (5.6x), and it saturates near 20-25K bytes whatever the hit count is. Counting or listing hits is the one shape it fits, and only as codegraph query -l <n>.
@@ -43,15 +36,13 @@ The snippets a search returns are already-read evidence. Fall back to a raw grep
 readonly ENUM_MESSAGE='Blocked: this search only counts hits or lists hit paths, so a workspace-wide rg/grep is the wrong tool.
 
 - codegraph query -l <n> answers it. The -l <n> cap is the only form of codegraph query that stays inside the byte budget: a bare query returns the surrounding bindings with every node and saturates near 20-25K bytes whatever the hit count, which is 2.4-5.6x the lexical route on the same query.
-- zvec_grep_search with fts answers it when what you want is the hit paths and the matching lines rather than a count.
 
 Say which of the two you are after, then call that one.'
 
 readonly STRUCTURE_MESSAGE='Blocked: walking the tree with find/ls is not the retrieval path on this machine.
 
-The codegraph and zvec-grep MCP servers are registered, so name the area instead of searching for it:
+The codegraph MCP server is registered, so name the area instead of searching for it:
 - codegraph_explore takes the module, package, or symbol and returns its files with the symbols and call paths in them
-- zvec_grep_search takes globs and fileTypes to match paths inside the index
 
 Fall back to a raw find only for a path the index does not cover, and say why in the response.'
 
@@ -141,7 +132,7 @@ readonly READ_VERBS=(
   diff
 )
 
-# Languages codegraph and zvec-grep actually index. Extensions outside this list
+# Languages codegraph actually indexes. Extensions outside this list
 # (lock files, logs, plain docs) stay readable, because pointing the agent at an
 # index that never ingested the file is worse than the raw read.
 readonly CODE_EXTENSIONS=(

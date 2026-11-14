@@ -97,11 +97,6 @@ let
             command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet";
             timeout = 30;
           }
-          {
-            type = "command";
-            command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${harness.codingAgentTools.zg.package}/bin/zg index";
-            timeout = 300;
-          }
         ];
       }
     ];
@@ -117,7 +112,6 @@ let
       }
     ];
     PreToolUse = [
-      # codegraph and zvec-grep are registered as MCP servers above, so raw
       # read/search/structure calls spend context on a weaker answer than the
       # index gives back. The names are qwen's own; the script judges the
       # leading command fragment, not the tool.

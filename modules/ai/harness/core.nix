@@ -55,11 +55,6 @@
                     command = "${config.my.home.ai.harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${config.my.home.ai.harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet";
                     timeout = 30;
                   }
-                  {
-                    type = "command";
-                    command = "${config.my.home.ai.harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${config.my.home.ai.harness.codingAgentTools.zg.package}/bin/zg index";
-                    timeout = 300;
-                  }
                 ]; }
               ];
               UserPromptSubmit = [

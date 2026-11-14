@@ -1,12 +1,12 @@
 # Hook scripts shared by codex and goose, one packaged script per event.
 #
 # retrieval-redirect is the PreToolUse hook that keeps both agents off raw
-# read/grep calls. codegraph and zvec-grep are already registered with both
-# agents as MCP servers (see mcp.nix), so a raw cat/rg spends context on a
-# weaker answer than the index returns with line numbers and call paths
-# attached. Both agents speak the Claude hook dialect, so one script serves
-# both: only the tool name in each plugin's matcher differs, and the script
-# judges the leading command fragment instead of the tool name.
+# read/grep calls. codegraph is already registered with both agents as MCP
+# servers (see mcp.nix), so a raw cat/rg spends context on a weaker answer
+# than the index returns with line numbers and call paths attached. Both
+# agents speak the Claude hook dialect, so one script serves both: only the
+# tool name in each plugin's matcher differs, and the script judges the
+# leading command fragment instead of the tool name.
 #
 # refresh-index is the SessionStart counterpart: it runs the refresh command
 # only where the index already governs the working directory the session was
@@ -38,7 +38,7 @@
         defaultText = lib.literalExpression ''pkgs.writeShellApplication { name = "retrieval-redirect"; ... }'';
         description = ''
           PreToolUse hook that denies read/grep-shaped tool calls and names the
-          codegraph / zvec-grep MCP tools to call instead. Anything the hook does
+          codegraph MCP tool to call instead. Anything the hook does
           not recognise, including searches confined to a single non-source file,
           passes through as an empty object, so it never becomes the reason a
           task stalls.

@@ -159,16 +159,11 @@ let
 
   # Zerostack calls SessionStart hooks synchronously and therefore waits them on startup.
   sessionStartHooks = lib.optionals harness.enable [
-  #   {
-  #     type = "command";
-  #     command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet";
-  #     timeout = 60;
-  #   }
-  #   {
-  #     type = "command";
-  #     command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${harness.codingAgentTools.zg.package}/bin/zg index";
-  #     timeout = 60;
-  #   }
+    #   {
+    #     type = "command";
+    #     command = "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet";
+    #     timeout = 60;
+    #   }
   ];
 
   preToolHooks =

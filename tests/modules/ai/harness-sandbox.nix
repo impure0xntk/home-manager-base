@@ -94,10 +94,6 @@ let
         "${config.xdg.dataHome}/ctx"
         "${config.xdg.stateHome}/ctx"
       ]
-      ++ lib.optionals (cfg.harness.codingAgentTools.zg.mcpServer != null) [
-        "${config.xdg.configHome}/zvec-grep"
-        "${config.xdg.dataHome}/zvec-grep"
-      ]
       ++ lib.optionals (cfg.harness.codingAgentTools.rtk.package != null) [ "${config.xdg.dataHome}/rtk" ]
     );
 

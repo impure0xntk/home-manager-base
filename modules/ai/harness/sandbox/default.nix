@@ -248,18 +248,7 @@ let
           "${config.xdg.dataHome}/ctx"
           "${config.xdg.stateHome}/ctx"
         ]
-        ++ lib.optionals ((tools.zg.mcpServer or null) != null) [
-          "${config.xdg.configHome}/zvec-grep"
-          "${config.xdg.dataHome}/zvec-grep"
-        ]
         ++ lib.optionals ((tools.rtk.package or null) != null) [ "${config.xdg.dataHome}/rtk" ]
-        # ctx writes its own index under this root, and the per-source exporters
-        # write the JSONL history into it, so a read-only bind here breaks both
-        # search and export. Reached through `codingAgentTools.ctx` rather than
-        # `harness.memory`: that entry already exists for every installed tool,
-        # and reading the memory namespace from here made it wait on this
-        # profile's own contribution to `my.home.ai`.
-        ++ lib.optionals ((tools.ctx.mcpServer or null) != null) [ "${config.xdg.dataHome}/ctx" ]
       );
   in {
     "$schema" = "https://raw.githubusercontent.com/fencesandbox/fence/main/docs/schema/fence.schema.json";

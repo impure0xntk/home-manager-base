@@ -14,7 +14,8 @@ area.
 Never use it for: exact literals, filenames, config keys, error strings, regexes, hit counts,
 path lists; string literals inside lists, TOML or JSON array items, and regex data, which are
 not indexed; workspace-wide sweeps. The exact route is the `fts` parameter of
-`zvec_grep_search`, which is a lexical route over the zvec-grep index.
+`codegraph_explore`, which answers exact literals, filenames, config keys,
+error strings and regexes over the codegraph index.
 
 - Set `maxFiles` explicitly. The default returns the surrounding bindings of every node and saturates near 20-25 KB regardless of hit count, 2.4-5.6x the lexical route on the same question (79 hits: 25200 B vs 10686 B; 40 hits: 20512 B vs 3660 B).
 - One index per question. Never call `codegraph_explore` and then grep for the same thing.

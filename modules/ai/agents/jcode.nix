@@ -149,7 +149,6 @@ let
     hooks = {
       session_start = [
         "${harness.hooks.refreshIndex.package}/bin/refresh-index .codegraph ${harness.codingAgentTools.codegraph.package}/bin/codegraph sync --quiet"
-        "${harness.hooks.refreshIndex.package}/bin/refresh-index .zvec-grep ${harness.codingAgentTools.zg.package}/bin/zg index"
       ];
       pre_tool =
         lib.optionals (harness.sandbox.enable) [

@@ -127,8 +127,7 @@ in
               "login_status"
               "logout"
               # Delegated to other backends, which are already available and
-              # cheaper: rtk condenses command output, zvec-grep does lexical
-              # search and codegraph answers structural questions.
+              # cheaper: rtk condenses command output and codegraph answers structural questions.
               "files_read"
               "files_grep"
               "code_search"
@@ -147,18 +146,6 @@ in
               "output_compact"
               "output_restore"
             ];
-          };
-        };
-        zg = rec {
-          package = createWrappedPackage pkgs.my.zvec-grep {
-            ZVEC_GREP_HOME = "${config.xdg.configHome}/zvec-grep";
-            ZVEC_GREP_MODEL_CACHE = "${config.xdg.dataHome}/zvec-grep";
-            ZVEC_GREP_EMBEDDING = "local/qwen3-embedding-0.6b";
-          };
-          prompt = builtins.readFile ./ZVEC-GREP.md;
-          mcpServer = {
-            command = lib.getExe package;
-            args = [ "server" "--stdio" ];
           };
         };
       };

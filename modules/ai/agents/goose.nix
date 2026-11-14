@@ -221,11 +221,9 @@ in
         hooks = {
           PreToolUse = [
             # {
-            #   # codegraph and zvec-grep are registered as MCP servers, so a
-            #   # raw cat/rg spends context on a weaker answer than the index
-            #   # already holds. Deny it and name the tools to call instead.
-            #   # The tree tool is the native form of the same walk, and goose is
-            #   # the only agent here that ships one.
+            #   # codegraph is registered as an MCP server, so a raw cat/rg
+            #   # spends context on a weaker answer than the index already
+            #   # holds. Deny it and name the tools to call instead.
             #   matcher = "^(shell|tree)$";
             #   hooks = [
             #     (lib.optionalAttrs config.my.home.ai.harness.enable {
