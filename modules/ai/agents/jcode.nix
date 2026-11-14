@@ -302,7 +302,46 @@ let
   additionalPrompt = ''
     ## Jcode specific instructions
 
+    ### Tools
+
     - Use the `batch` tool if available. This command allows you to run multiple requests in parallel.
+
+    ### Skills
+
+    - Identify relevant Skills based on the task requirements and
+      available Skill descriptions.
+    - When a Skill is relevant, load and follow its instructions
+      before performing the work it covers.
+    - Prefer applicable Skills over independently recreating
+      their workflows or procedures.
+    - Combine multiple Skills when the task spans multiple domains.
+    - Re-evaluate Skill relevance when the task scope changes.
+    - Do not load unrelated Skills or enumerate all available Skills.
+    - Do not silently ignore clearly applicable Skills.
+
+    ### Swarm and Subagents
+
+    - Actively evaluate whether a task would benefit from delegation
+      to swarm agents.
+    - Prefer parallel execution when a task contains independent
+      workstreams that can be investigated or executed concurrently.
+    - Consider delegation for:
+      - Independent codebase exploration and architecture analysis.
+      - Research across different upstream projects or documentation.
+      - Independent implementation and testing.
+      - Separate code review and verification.
+    - Decompose delegated work into clearly bounded subtasks.
+    - Assign each agent a specific objective, scope, constraints,
+      and expected deliverables.
+    - Run independent subtasks concurrently whenever possible.
+    - Avoid duplicate assignments and unnecessary delegation.
+    - Do not delegate trivial tasks or inherently sequential work
+      when coordination overhead exceeds the expected benefit.
+    - Treat agent results as unverified input and verify important
+      findings independently.
+    - The main agent remains responsible for coordinating agents,
+      integrating results, resolving conflicts, and completing
+      the overall task.
   '';
 in
 {
