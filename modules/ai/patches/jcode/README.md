@@ -20,47 +20,48 @@ source hash and the vendor hash stay owned by `llm-agents.nix`, and every other
 consumer of `pkgs.jcode` on this machine keeps the unpatched build. `patches`
 is a `mkDerivation` attribute consumed during `patchPhase`, so the vendor
 closure -- and therefore `cargoHash` -- is unaffected by anything in this
-directory. Only the Rust sources change.
+directory. Only source files change; the vendor closure is not touched.
 
 ## Target version
 
-Both patches are written against one exact upstream tree, and the tree is the
-GitHub tarball of a release tag, not `master`:
+All three patches are written against one exact upstream tree, and that tree is
+the GitHub tarball of a release tag, not `master`:
 
 | | |
 | --- | --- |
-| jcode version | `0.99.0` |
-| tag | `v0.99.0` |
-| `src.outputHash` | `sha256-yqa40Kh1pkbS8+PsieZD3rg+qOAEsnoF/PCPJQXh6kc=` |
-| `cargoHash` | `sha256-nvha2+ZthVC2Zoe2GYuOgr+0LwDEA8vXzEaPt9X1RBw=` |
-| `src.url` | `https://github.com/1jehuang/jcode/archive/refs/tags/v0.99.0.tar.gz` |
+| jcode version | `1.0.0` |
+| tag | `v1.0.0` |
+| `src.outputHash` | `sha256-Iui5yqSFc+7Jc+rJAorGz0mcrPTWnRnG0BZdDKDVnQI=` |
+| `cargoHash` | `sha256-jqecPMahg6sTN50ZfQmPwwo46R2KWEYwkLPcvJLT5cs=` |
+| `src.url` | `https://github.com/1jehuang/jcode/archive/refs/tags/v1.0.0.tar.gz` |
 | package source | `numtide/llm-agents.nix`, `packages/jcode/package.nix` |
-| `llm-agents` pin | `8fa7ff4193be923056b342d48d5bb38466791fe1` |
+| `llm-agents` pin | `3e6e622935b31f805b3ef893d71b97c1469965e1` |
 
-### Drift worth knowing at 0.99.0
+### Drift worth knowing at 1.0.0
 
-One call site moved far enough that its hunk stopped applying at all, and that
-rejection was the whole build failure this upgrade was:
+The shared header builder and input composer both gained new responsibilities, so
+those gates must cover the actual render paths rather than the older helpers:
 
-- `build_header_sections` absorbed both halves it used to delegate. It now calls
-  `build_persistent_header_with_auth` and `build_header_lines_with_auth`
-  directly, and the surviving `build_persistent_header` / `build_header_lines`
-  are `#[cfg(test)]` wrappers over *it*. The 0.95.0 insertion point was the
-  first line of the body, which in 0.99.0 is a `Instant::now()` timing probe,
-  so the gate has to go above that rather than at the old offset. Gating an
-  inner builder instead would gate only tests: `prepare_header_cached` is the
-  single render-path caller, and it goes through `build_header_sections`.
+- `build_header_sections` is still the shared render entry point for the
+  persistent and secondary headers. The gate belongs before its replay guard,
+  so both sections stay hidden in normal rendering and the test-only wrappers
+  remain untouched.
+- `prompt_number_label` is used by the live composer width calculation,
+  wrapped-input preview and status renderer. Keep them on one helper so hidden
+  numbers do not leave reserved columns or reappear in one rendering path.
+- `initial_header_pad_top` takes `header_lines: usize`; the empty-header guard
+  collapses the vertical centering gap when the rendered header height is zero,
+  not when the config flag is off. This remains valid if any other path
+  produces an empty header.
 
-Everywhere else read close enough to 0.95.0 that the old hunks landed
-unchanged, including the two that moved most last time:
+All other gates still apply to the same behavior as the preceding release:
+onboarding is suppressed on both startup and after-login paths, the welcome
+screen and starter cards have independent gates, and the info widget can still
+be toggled back on.
 
-- `App::onboarding_welcome_active` still carries the
-  `onboarding_flow_drives_welcome()` early return below this gate, because a
-  running flow keeps the welcome screen up on its own.
-- `initial_header_pad_top` changed its input reserve from `4` to `5` lines. The
-  empty-header guard keys on `header_lines`, not on the flag, so it needs no
-  update -- but the hunk fails on context when regenerated, and either ignoring
-  or fuzzing that failure lands the guard nowhere.
+Every hunk is re-derived against the 1.0.0 tree, so `patch -p1` reports no
+offsets and no fuzz. Fuzz on a later version means a gate moved and the hunk
+needs re-deriving, not a wider context.
 
 Re-derive the pin after a `nix flake update`:
 
@@ -90,11 +91,10 @@ nix eval --impure --raw --expr \
 
 `src.outputHash` rather than `src.hash`: `hash` is the legacy alias and reads
 both variables at once, which is why it prints the single string appended to
-itself. The tag object and commit rows the 0.95.0 table carried are gone
-deliberately -- this package builds from a GitHub *tarball* URL, not a git
-fetch, so nothing here can check either one.
+itself. The source is a GitHub tarball, not a git fetch, so the tag's commit
+object is not part of the package input and cannot be verified here.
 
-If that `version` is no longer `0.99.0`, treat this directory as stale and
+If that `version` is no longer `1.0.0`, treat this directory as stale and
 follow [Upgrading](#upgrading) before anything else. A patch that still applies
 is not necessarily a patch that still means what its comment says.
 
@@ -105,11 +105,10 @@ Rules every patch here follows, and the reason each one exists:
 - **Additive, behind the upstream default.** A new option defaults to whatever
   upstream already did, so applying the patch to an unconfigured install is a
   no-op. Anything else would make this directory a fork.
-- **Two lines of context, no `index` lines.** `patchPhase` runs GNU `patch -p1`
+- **Minimal context, no `index` lines.** `patchPhase` runs GNU `patch -p1`
   against a tarball that has no `.git`, so a `git apply`-only patch is not
-  enough and a full-context patch fails on unrelated drift. Two context lines
-  keeps hunks independent of each other, so one drifted site does not reject the
-  whole file.
+  enough and a full-context patch fails on unrelated drift. Small hunks keep
+  independently changed sites from rejecting the whole file.
 - **Comments explain why, not what.** The code already says what it does. Every
   comment added by these patches answers "why is this here", and says what
   breaks without it.
@@ -144,7 +143,8 @@ Files and where each key is gated:
 | `crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs` | gates the welcome screen and the suggestion cards |
 | `crates/jcode-tui/src/tui/info_widget.rs` | seeds `WidgetsState::enabled` from the key; the `Alt+I` toggle is untouched |
 | `crates/jcode-tui/src/tui/ui_header.rs` | returns both header sections empty, gated on the one function the render path calls |
-| `crates/jcode-tui/src/tui/ui_input.rs` | one `prompt_number_label` helper used by the three prompt-drawing sites, so the label and the width never disagree |
+| `crates/jcode-tui/src/tui/ui_input.rs` | one `prompt_number_label` helper used by the width calculation, the live composer, and the test-only idle resume composer |
+| `crates/jcode-tui/src/tui/ui_input_status_rendering.rs` | the status-line composer calls the same helper, so hidden numbers do not reappear in that rendering path |
 | `crates/jcode-tui/src/tui/ui_prepare.rs` | collapses the top pad when the header is empty, keyed on height rather than on the flag |
 
 Two of these are worth knowing about when a hunk fails to apply, because both
@@ -228,8 +228,8 @@ package.
 ```bash
 # 1. Apply for real, to the tree this claims to target.
 PATCHES=.../modules/ai/patches/jcode            # this directory
-git clone --depth 1 --branch v0.99.0 https://github.com/1jehuang/jcode.git /tmp/jcode
-cd /tmp/jcode
+git clone --depth 1 --branch v1.0.0 https://github.com/1jehuang/jcode.git "$JCODE_SCRATCH_DIR/jcode"
+cd "$JCODE_SCRATCH_DIR/jcode"
 for p in "$PATCHES"/*.patch; do patch -p1 --forward < "$p"; done
 ```
 
@@ -238,7 +238,7 @@ the build actually patches is already local then, and it is the same bytes:
 
 ```bash
 # Same tree, no network. Compare skips nothing: this is inputHash, not a cache.
-mkdir -p /tmp/jcode && cd /tmp/jcode
+mkdir -p "$JCODE_SCRATCH_DIR/jcode" && cd "$JCODE_SCRATCH_DIR/jcode"
 nix build --impure --no-link '.?submodules=1#legacyPackages' # or locate the src:
 nix eval --impure --expr \
   "(builtins.getFlake \"git+file://$PWD\").inputs.llm-agents.packages.x86_64-linux.jcode.src"
@@ -257,6 +257,7 @@ nix shell nixpkgs#rustfmt -c rustfmt --edition 2024 --check \
   crates/jcode-tui/src/tui/info_widget.rs \
   crates/jcode-tui/src/tui/ui_header.rs \
   crates/jcode-tui/src/tui/ui_input.rs \
+  crates/jcode-tui/src/tui/ui_input_status_rendering.rs \
   crates/jcode-tui/src/tui/ui_prepare.rs
 
 # 3. Does the module still evaluate?

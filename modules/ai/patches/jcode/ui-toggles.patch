@@ -1,29 +1,30 @@
 diff --git a/crates/jcode-config-types/src/display.rs b/crates/jcode-config-types/src/display.rs
 --- a/crates/jcode-config-types/src/display.rs
 +++ b/crates/jcode-config-types/src/display.rs
-@@ -95,4 +95,21 @@
+@@ -100,4 +100,22 @@
      #[serde(default = "default_true")]
      pub keybinding_hints: bool,
 +    /// Render the persistent header above the transcript: the `jcode` /
 +    /// `server:` / `client:` identity lines carrying the client and server
 +    /// versions, plus the provider + model line (default: true). Set false to
-+    /// start the transcript directly with the first message.
++    /// start the transcript directly at the first message.
 +    #[serde(default = "default_true")]
 +    pub show_header: bool,
 +    /// Prefix the input line with the running turn count, rendering `1> `
-+    /// instead of a bare `> ` (default: true). Set false to drop the number and
-+    /// reclaim its columns on the input line.
++    /// instead of a bare `> ` (default: true). Set false to drop the number
++    /// and reclaim its columns on the input line.
 +    #[serde(default = "default_true")]
 +    pub show_prompt_numbers: bool,
-+    /// Show the info widget docked in the transcript margin: model and provider,
-+    /// session and token counts, spend, and git status (default: true). Set
-+    /// false to start with the margin empty; the in-TUI toggle still works, so
-+    /// the widget remains reachable for the rest of the session.
++    /// Show the info widget docked in the transcript margin: model and
++    /// provider, session and token counts, spend, and git status (default:
++    /// true). Set false to start with the margin empty; the in-TUI toggle
++    /// still works, so the widget remains reachable for the rest of the
++    /// session.
 +    #[serde(default = "default_true")]
 +    pub show_info_widget: bool,
      /// Color theme: "auto" (detect terminal background), "dark", or "light".
-     /// Auto queries the terminal's background color (OSC 11) at startup and
-@@ -158,4 +175,7 @@
+     /// Auto queries the terminal's background color (OSC 11) at startup,
+@@ -241,4 +259,7 @@
              native_scrollbars: NativeScrollbarConfig::default(),
              keybinding_hints: true,
 +            show_header: true,
@@ -34,76 +35,67 @@ diff --git a/crates/jcode-config-types/src/display.rs b/crates/jcode-config-type
 diff --git a/crates/jcode-config-types/src/lib.rs b/crates/jcode-config-types/src/lib.rs
 --- a/crates/jcode-config-types/src/lib.rs
 +++ b/crates/jcode-config-types/src/lib.rs
-@@ -1214,4 +1214,10 @@
-     /// Update channel: "stable" (releases only) or "main" (latest commits)
-     pub update_channel: UpdateChannel,
+@@ -1135,4 +1135,10 @@
+     /// warning, while explained misses are informational (default: true).
+     pub kv_cache_miss_notices: bool,
 +    /// Show the guided first-run onboarding screen (telemetry notice, welcome
-+    /// title, and the login/model walkthrough) on a fresh install (default:
-+    /// true). Set false for a machine whose `config.toml` already names a
-+    /// provider, where the walkthrough is a startup wall rather than guidance.
++    /// title, and login/model walkthrough) on a fresh install (default: true).
++    /// Set false when a machine's `config.toml` already names a provider, so
++    /// the walkthrough is not a startup wall of guidance.
 +    #[serde(default = "default_true")]
 +    pub onboarding: bool,
- }
- 
-@@ -1228,4 +1234,5 @@
+     /// Update channel: "stable" (default), "preview" (v1 previews), or "main" (latest commits).
+     pub update_channel: UpdateChannel,
+@@ -1152,4 +1158,5 @@
+             persist_memory_injections: false,
              kv_cache_miss_notices: true,
-             update_channel: UpdateChannel::default(),
 +            onboarding: true,
+             update_channel: UpdateChannel::default(),
          }
-     }
 diff --git a/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs b/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs
 --- a/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs
 +++ b/crates/jcode-tui/src/tui/app/onboarding_flow_control.rs
 @@ -75,4 +75,9 @@
      /// re-auth aren't dragged through onboarding.
      pub(super) fn maybe_begin_onboarding_flow_after_login(&mut self) {
-+        // `[features] onboarding = false`, same as on the startup path: a login
-+        // must not drag an opted-out install into the guided flow either.
++        // `[features] onboarding = false` applies on the login path too: a
++        // login must not drag an opted-out install into the guided flow.
 +        if !crate::config::config().features.onboarding {
 +            return;
 +        }
          // If the flow is already running, a successful login means we should
          // leave the in-TUI `Login` phase and continue into model selection.
-@@ -105,4 +110,14 @@
-             self.onboarding_startup_checked = true;
+@@ -102,4 +107,11 @@
              return;
-+        }
-+        // `[features] onboarding = false`. Gating only the welcome screen still
-+        // leaves the flow to run, and a running flow pushes its own Login notice
-+        // into the status line and the transcript. Skipping the flow here is what
-+        // keeps the launch completely free of onboarding output; the screen
-+        // itself is gated separately, because it has a second, independent cause
-+        // in the suggestion cards on an empty screen.
+         }
++        // `[features] onboarding = false`. Gate the whole flow, not just the
++        // welcome screen: the startup path is what can push onboarding output
++        // into an otherwise opted-out launch.
 +        if !crate::config::config().features.onboarding {
 +            self.onboarding_startup_checked = true;
 +            return;
-         }
-         // Don't hijack a session that already has real activity (resume,
++        }
+         if self.onboarding_flow.is_some() {
+             self.onboarding_startup_checked = true;
 diff --git a/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs b/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs
 --- a/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs
 +++ b/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs
-@@ -1435,4 +1435,14 @@
+@@ -1429,4 +1429,10 @@
              return false;
          }
-+        // `[features] onboarding = false`. This is the one predicate the renderer
-+        // asks, and it is true from two independent causes -- an active guided
-+        // flow, or starter suggestion cards on an empty screen -- so gating it
-+        // here is what actually keeps the telemetry notice, the welcome title,
-+        // and the login walkthrough off the launch, rather than just the flow.
-+        // Placed above `onboarding_flow_drives_welcome` because the flow keeps
-+        // the welcome screen up on its own once it is active.
++        // `[features] onboarding = false`. This predicate decides whether the
++        // telemetry notice and welcome title render, so it keeps them off an
++        // opted-out launch.
 +        if !crate::config::config().features.onboarding {
 +            return false;
 +        }
          // While the guided onboarding flow is driving the pre-suggestion phases
          // (model select / continue prompt), keep the welcome screen up even
-@@ -1547,4 +1557,11 @@
+@@ -1468,4 +1474,9 @@
              return Vec::new();
          }
-+        // `[features] onboarding = false`. The suggestion cards are the third
-+        // onboarding surface: they render in the transcript itself, so hiding the
-+        // welcome screen and skipping the flow would still leave the
-+        // "Log in to get started" card on an empty launch.
++        // `[features] onboarding = false`. The starter cards render in the
++        // transcript itself, independently of the welcome screen.
 +        if !crate::config::config().features.onboarding {
 +            return Vec::new();
 +        }
@@ -112,12 +104,12 @@ diff --git a/crates/jcode-tui/src/tui/app/state_ui_input_helpers.rs b/crates/jco
 diff --git a/crates/jcode-tui/src/tui/info_widget.rs b/crates/jcode-tui/src/tui/info_widget.rs
 --- a/crates/jcode-tui/src/tui/info_widget.rs
 +++ b/crates/jcode-tui/src/tui/info_widget.rs
-@@ -992,5 +992,8 @@
+@@ -1006,5 +1006,8 @@
      fn default() -> Self {
          Self {
 -            enabled: true,
-+            // `[display] show_info_widget` only sets the starting state. The
-+            // Alt+I toggle still flips `enabled` from here, so opting out of the
++            // `[display] show_info_widget` only sets the initial state. The
++            // Alt+I toggle still flips `enabled` here, so opting out of the
 +            // margin at launch does not take the widget away for the session.
 +            enabled: crate::config::config().display.show_info_widget,
              widget_states: HashMap::new(),
@@ -125,27 +117,22 @@ diff --git a/crates/jcode-tui/src/tui/info_widget.rs b/crates/jcode-tui/src/tui/
 diff --git a/crates/jcode-tui/src/tui/ui_header.rs b/crates/jcode-tui/src/tui/ui_header.rs
 --- a/crates/jcode-tui/src/tui/ui_header.rs
 +++ b/crates/jcode-tui/src/tui/ui_header.rs
-@@ -966,4 +966,16 @@
+@@ -1061,4 +1061,11 @@
      width: u16,
  ) -> (Vec<Line<'static>>, Vec<Line<'static>>) {
-+    // `[display] show_header = false`. Gating here rather than on either half
-+    // covers both sections at once: the persistent `jcode` / `server:` /
-+    // `client:` identity lines and the secondary inventory, which is the
-+    // `/login to add provider` heading, one dim dot per unconfigured provider,
-+    // and the `mcp:` / `skills:` / working-directory lines.
-+    //
-+    // 0.99.0 folded both builders into this one function: the surviving
-+    // `build_persistent_header` / `build_header_lines` are `#[cfg(test)]`
-+    // wrappers over it, so gating an inner builder would gate only tests.
++    // `[display] show_header = false`. Both header sections share this render
++    // entry point in 1.0, so one gate covers the persistent identity lines and
++    // the secondary provider/MCP/skills inventory without changing the
++    // test-only builders.
 +    if !crate::config::config().display.show_header {
 +        return (Vec::new(), Vec::new());
 +    }
-     let start = std::time::Instant::now();
-     let auth = app.auth_status();
+     // No historical startup/account-router snapshot was recorded. Do not
+     // manufacture one using today's version, authentication and update state.
 diff --git a/crates/jcode-tui/src/tui/ui_input.rs b/crates/jcode-tui/src/tui/ui_input.rs
 --- a/crates/jcode-tui/src/tui/ui_input.rs
 +++ b/crates/jcode-tui/src/tui/ui_input.rs
-@@ -330,5 +330,16 @@
+@@ -335,5 +335,16 @@
  pub(crate) fn input_prompt_len(app: &dyn TuiState, next_prompt: usize) -> usize {
      let (prompt_char, _) = input_prompt(app);
 -    next_prompt.to_string().chars().count() + prompt_char.chars().count()
@@ -163,33 +150,41 @@ diff --git a/crates/jcode-tui/src/tui/ui_input.rs b/crates/jcode-tui/src/tui/ui_
 +    }
  }
  
-@@ -349,5 +360,5 @@
+@@ -356,5 +367,5 @@
      }
  
 -    let num_str = next_prompt.to_string();
 +    let num_str = prompt_number_label(next_prompt);
      let (prompt_char, caret_color) = input_prompt(app);
-     let (lines, _, _) = wrap_input_text(
-@@ -2370,5 +2381,5 @@
+     let preview = app.voice_composer_preview();
+@@ -1644,5 +1655,5 @@
+ #[cfg(test)]
+ pub(crate) fn draw_preview_input(frame: &mut Frame, area: Rect, next_prompt: usize) {
+-    let number = next_prompt.to_string();
++    let number = prompt_number_label(next_prompt);
+     let prompt = "> ";
+     let prompt_len = number.len() + prompt.len();
+diff --git a/crates/jcode-tui/src/tui/ui_input_status_rendering.rs b/crates/jcode-tui/src/tui/ui_input_status_rendering.rs
+--- a/crates/jcode-tui/src/tui/ui_input_status_rendering.rs
++++ b/crates/jcode-tui/src/tui/ui_input_status_rendering.rs
+@@ -333,5 +333,5 @@
  
      let (prompt_char, caret_color) = input_prompt(app);
 -    let num_str = format!("{}", next_prompt);
-+    let num_str = prompt_number_label(next_prompt);
++    let num_str = super::prompt_number_label(next_prompt);
      let prompt_len = input_prompt_len(app, next_prompt);
      let reserved_width = send_mode_reserved_width(app);
 diff --git a/crates/jcode-tui/src/tui/ui_prepare.rs b/crates/jcode-tui/src/tui/ui_prepare.rs
 --- a/crates/jcode-tui/src/tui/ui_prepare.rs
 +++ b/crates/jcode-tui/src/tui/ui_prepare.rs
-@@ -678,5 +678,14 @@
- /// so the same value can be re-applied above the header once messages exist,
+@@ -652,4 +652,12 @@
  /// keeping the header from jumping when the first prompt is sent.
-+///
-+/// Zero for an empty header. The whole value is "space to centre the header
-+/// in", so with nothing to centre it would leave half the chat area blank at
-+/// the top -- which is what `[display] show_header = false` produces. Keyed on
-+/// the height rather than the flag, so any other route to an empty header
-+/// collapses the gap too.
- fn initial_header_pad_top(height: u16, header_lines: usize) -> usize {
+ pub(crate) fn initial_header_pad_top(height: u16, header_lines: usize) -> usize {
++    // Zero for an empty header. The whole value is "space to centre the header
++    // in", so with nothing to centre it would leave half the chat area blank at
++    // the top -- which is what `[display] show_header = false` produces. Keyed
++    // on the height rather than the flag, so any other route to an empty header
++    // collapses the gap too.
 +    if header_lines == 0 {
 +        return 0;
 +    }

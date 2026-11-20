@@ -1,29 +1,22 @@
 diff --git a/crates/jcode-tui/src/tui/backend.rs b/crates/jcode-tui/src/tui/backend.rs
 --- a/crates/jcode-tui/src/tui/backend.rs
 +++ b/crates/jcode-tui/src/tui/backend.rs
-@@ -393,4 +393,29 @@
+@@ -529,4 +529,22 @@
          conn.next_request_id += 1;
  
-+        // `jcode --model X` describes the session this process opens, and the flag
-+        // is consumed here rather than by the daemon: a daemon that already ran
-+        // was never told about it, and a daemon this process just spawned rebuilds
-+        // its provider for every new session, which resets a bare `--model` back to
-+        // `[provider].default_model` because only an explicit `--provider` is
-+        // carried across that rebuild. The client already speaks
-+        // `Request::SetModel` to the session it attached to -- the request the
-+        // in-TUI `/model` command sends -- so send it here. Between Subscribe and
-+        // GetHistory means the first History already describes the requested model
-+        // instead of flashing the server default and correcting it. Reconnect and
-+        // reload paths run this again, which is the right repeat: the override
-+        // describes this launch, not this connection, and a re-exec'd daemon
-+        // reloads `config.toml`.
++        // The client's `--model` override describes the session this process
++        // opens. Send it between `Subscribe` and `GetHistory` so the first
++        // `History` already describes the requested model instead of rendering
++        // the server default and correcting it. Reconnect and reload paths run
++        // this again on purpose: the override describes the launch, not the
++        // connection, and a re-exec'd daemon reloads `config.toml`.
 +        if let Some(model) = std::env::var("JCODE_CLIENT_MODEL_OVERRIDE")
 +            .ok()
 +            .filter(|model| !model.trim().is_empty())
 +        {
 +            if let Err(error) = conn.set_model(model.trim()).await {
 +                crate::logging::error(&format!(
-+                    "Client --model override rejected by the server: {}",
++                    "Client --model override rejected by server: {}",
 +                    error
 +                ));
 +            }
@@ -34,19 +27,15 @@ diff --git a/crates/jcode-tui/src/tui/backend.rs b/crates/jcode-tui/src/tui/back
 diff --git a/src/cli/dispatch.rs b/src/cli/dispatch.rs
 --- a/src/cli/dispatch.rs
 +++ b/src/cli/dispatch.rs
-@@ -795,4 +795,22 @@
+@@ -756,4 +756,18 @@
          || args.model.is_some()
          || args.provider_profile.is_some();
-+    // `--model` is a per-session setting, and this process owns the session it is
-+    // about to create, whether or not a daemon is already running. The client
-+    // already speaks `Request::SetModel` to that session -- the same request the
-+    // in-TUI `/model` command sends -- so hand the flag over in both cases
-+    // instead of dropping it. The `serve` spawn below also forwards `--model` to
-+    // the daemon, but that cannot be relied on: the server rebuilds its provider
-+    // for every new session, and its one branch that carries a CLI selection over
-+    // to that rebuild is gated on an explicitly chosen *provider*, so a bare
-+    // `--model` falls through to a fresh read of `[provider].default_model` from
-+    // `config.toml`.
++    // `--model` describes the session this process opens, and the flag is
++    // consumed here rather than by the daemon: a daemon that is already running
++    // was never told about it, and a daemon this process spawns rebuilds its
++    // provider for every new session, resetting a bare `--model` back to
++    // `[provider].default_model`. The client already speaks `Request::SetModel`
++    // to the session it attaches to, so hand the flag over that way.
 +    let client_model_override = args
 +        .model
 +        .as_deref()
@@ -57,7 +46,7 @@ diff --git a/src/cli/dispatch.rs b/src/cli/dispatch.rs
 +    }
      let explicit_tool_options = args.tool_profile.is_some()
          || args.tools.is_some()
-@@ -900,15 +918,16 @@
+@@ -861,15 +875,16 @@
  
      if server_running && explicit_provider_or_model {
 -        output::stderr_info(
@@ -76,11 +65,11 @@ diff --git a/src/cli/dispatch.rs b/src/cli/dispatch.rs
 +                "Server already running; applying --model {model} to this session."
 +            ));
 +        }
-+        // The provider is server-wide: it is chosen once at `serve` bootstrap
-+        // and every attached session inherits it, so it still needs a restart.
++        // The provider is server-wide: chosen once at `serve` bootstrap, and
++        // every attached session inherits it. It still needs a restart.
 +        if args.provider != ProviderChoice::Auto || args.provider_profile.is_some() {
 +            output::stderr_info(
-+                "Server already running; --provider/--provider-profile only apply when starting a new server. Current server settings control `/model`; restart the server to change the provider.",
++                "Server already running; --provider/--provider-profile only apply to a new server. Current server settings control `/model`; restart the server to change provider.",
 +            );
 +        }
      }
