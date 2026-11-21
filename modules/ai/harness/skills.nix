@@ -30,6 +30,15 @@ let
       includes = [ ];
       excludes = [ ];
     };
+    ponytail = {
+      path = pkgs.fetchgit {
+        url = "https://github.com/DietrichGebert/ponytail.git";
+        rev = "7801d061243d7b753bad0e0b3c057cd250b11755";
+        sha256 = "sha256-CY0EifTY0UVc6/FPGVJjEfYEf/8QLsINQmoYYKZYh98=";
+      };
+      includes = [ ];
+      excludes = [ ];
+    };
     awesome-copilot = {
       path = pkgs.fetchgit {
         url = "https://github.com/github/awesome-copilot.git";
