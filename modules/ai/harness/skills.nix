@@ -67,6 +67,15 @@ let
       ];
       excludes = [ ];
     };
+    avoid-ai-writing = {
+      path = pkgs.fetchgit {
+        url = "https://github.com/conorbronsdon/avoid-ai-writing";
+        rev = "a5d6bae7c0d762dbcff74ca86c17a7ac9fee4151";
+        sha256 = "sha256-cL7N/P2JsdZiDX7egDlChn6SHWMVHD0opVpUjTdCnrM=";
+      };
+      includes = [ ];
+      excludes = [ ];
+    };
     "5-whys" = {
       path = pkgs.fetchgit {
         url = "https://github.com/awesome-skills/5-whys-skill";
