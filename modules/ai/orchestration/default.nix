@@ -3,6 +3,9 @@ let
   shellAliases = {
     ms = "multistack --no-worktree";
   };
+  agent-manager = pkgs.agent-manager.override {
+    tmux = config.programs.tmux.package;
+  };
 in
 {
   home.packages = with pkgs; [
@@ -13,6 +16,7 @@ in
     #   tmux = config.programs.tmux.package;
     # })
     # my.multistack
+    agent-manager
   ];
 
   programs.bash.shellAliases = shellAliases;
