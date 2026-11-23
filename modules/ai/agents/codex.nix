@@ -71,6 +71,19 @@ let
         "nixos-reactor-harness-for-all-agents@local-repo".enabled = true;
         "nixos-reactor-harness-for-codex@local-repo".enabled = true;
       };
+
+      tui = {
+        collapse_turn_details = true;
+        show_tooltips = false;
+        animations = true;
+        show_server_version_notice = false;
+
+        status_line = [];
+        terminal_title = [];
+        alternate_screen = "never";
+      };
+
+      analytics.enabled = false;
     } // (lib.optionalAttrs config.my.home.ai.harness.enable {
       mcp_servers = defaultMcpServers;
     }) //
