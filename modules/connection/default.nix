@@ -15,6 +15,8 @@ in {
       ForwardAgent = true;
       ControlMaster = "auto";
       ControlPersist = "60s";
+      ControlPath = "~/.ssh/cm-%C";
+
       UserKnownHostsFile = "/dev/null";
       HashKnownHosts = false;  # for host completion
       ServerAliveCountMax = 3; # keepalive
