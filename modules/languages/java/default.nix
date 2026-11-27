@@ -316,9 +316,7 @@ in {
         ".gradle"
         "~/.m2"
       ];
-      includes = [
-        "~/.m2/settings.xml" # includes tokens
-      ];
+      includes = [];
       filesystem = {
         allowRead = excludes;
         allowWrite = excludes;
