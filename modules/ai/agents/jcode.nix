@@ -342,6 +342,36 @@ let
     - The main agent remains responsible for coordinating agents,
       integrating results, resolving conflicts, and completing
       the overall task.
+
+    ### Spawning swarm workers
+
+    Decide delegation at the start of every turn, before doing the work
+    yourself. If part of the task can be delegated, spawn it first, then
+    continue your own part while it runs.
+
+    - Spawn with `swarm spawn`, always naming one of the roles listed in
+      the swarm prompt as `label`; the coordinator routes by role.
+    - Make the spawn subject specific: `[Action verb] + [Target/Scope] +
+      [Context]`. Never `"research"`, `"explore"`, or empty.
+    - Give every worker in its prompt: objective, explicit scope boundary,
+      one-sentence completion criteria, the validation it must run, and
+      the output shape (findings plus `file:line` evidence).
+    - Spawn all independent workers in a single `batch` call. Sequential
+      spawns throw away the parallelism that is the point of spawning.
+    - 2-4 workers by default. Beyond that, coordination cost beats the
+      speedup; scale up only for bulk mechanical work.
+    - Pass only what the subtask needs. Never paste the parent transcript
+      or unrelated history into a spawn prompt: it costs the worker context
+      and it is how wrong assumptions propagate.
+    - Parallel workers must not own the same files. When write ownership
+      overlaps, sequence them instead.
+    - Keep architecture decisions, integration, and final validation with
+      yourself; delegate research, exploration, independent edits, and review.
+    - A finished worker is idle, not done with its budget. Integrate its
+      result, then `swarm stop` it rather than leaving it to accumulate.
+    - For work that decomposes into a plan, prefer a `todo` lane with
+      `lane_owner = "worker"` over hand-spawning: the lane queue spawns the
+      worker when its prerequisites are met and keeps the plan in sync.
   '';
 in
 {
